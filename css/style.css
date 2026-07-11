@@ -812,3 +812,120 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .hero-rank { margin: 10px 0 4px; padding: 9px 14px; border-radius: 12px; font-size: 14px;
   background: rgba(214,166,66,.08); border: 1px solid rgba(214,166,66,.25); color: var(--ink); }
 .dex-wall[hidden] { display: none; }
+
+/* ══════════ 詞靈系統 ══════════ */
+/* 星圖 */
+#pg-canvas { width: 100%; display: block; border-radius: 12px; background:
+  radial-gradient(circle at 50% 45%, rgba(111,159,201,.10), rgba(43,43,43,.04) 70%);
+  border: 1px solid var(--line); cursor: grab; touch-action: none; }
+#pg-canvas:active { cursor: grabbing; }
+.pg-hint { font-size: 13.5px; color: rgba(43,43,43,.72); margin: 4px 0 10px; line-height: 1.6; }
+.pg-fam { margin-top: 12px; padding: 12px 14px; background: var(--paper2); border: 1px solid var(--line);
+  border-radius: 12px; font-size: 14px; line-height: 1.7; }
+.pg-fam-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.pg-tag { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 99px;
+  background: #fff; border: 1px solid var(--line); font-size: 13px; cursor: pointer; color: var(--ink); }
+.pg-tag span { font-size: 11px; color: rgba(43,43,43,.5); }
+.pg-tag:hover { border-color: var(--accent2); }
+.pg-fam .dex-wall { border-radius: 10px; margin-top: 8px; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+.pg-fam .dex-cell { aspect-ratio: auto; padding: 4px 6px; font-size: 12.5px; text-align: center;
+  border-radius: 6px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-fam .dex-cell.gold { color: #fff; }
+.pg-side .wc-card-body { padding-top: 14px; }
+.pg-total { font-size: 15px; margin-bottom: 6px; }
+.pg-sub { font-weight: 700; font-size: 13.5px; margin: 14px 0 6px; color: rgba(43,43,43,.75); }
+.pg-row { display: grid; grid-template-columns: 78px 1fr 52px auto; align-items: center; gap: 8px;
+  padding: 4px 0; font-size: 13px; }
+.pg-form { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-bar { position: relative; height: 7px; border-radius: 99px; background: var(--paper2);
+  border: 1px solid var(--line); overflow: hidden; }
+.pg-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 99px; }
+.pg-bar .top { background: linear-gradient(90deg, #e4c26e, #c99a35); }
+.pg-bar .weak { background: rgba(111,159,201,.55); }
+.pg-num { text-align: right; color: rgba(43,43,43,.6); font-variant-numeric: tabular-nums; }
+.pg-pet { font-size: 12px; color: rgba(43,43,43,.5); }
+.pg-empty { font-size: 13px; color: rgba(43,43,43,.55); padding: 6px 0; }
+.btn.small { padding: 4px 12px; font-size: 13px; }
+
+/* 詞靈清單/詳情 */
+.pet-grid .wc-mcard.locked .wc-mcard-img,
+.pet-sil { filter: grayscale(1) brightness(1.12) contrast(.82) opacity(.75); }
+.pet-detail { position: relative; }
+.pet-stage { max-height: 340px; object-fit: contain; background:
+  radial-gradient(circle at 50% 60%, rgba(111,159,201,.12), transparent 70%); }
+.pet-deco { position: absolute; top: 10px; right: 14px; font-size: 34px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); }
+.pet-deco.big { font-size: 56px; top: 6px; right: 10px; }
+.pet-lv { font-size: 15px; color: var(--accent2); font-weight: 700; margin-left: 4px; }
+.pet-stats { display: flex; gap: 10px; margin: 10px 0; }
+.pet-stat { flex: 1; text-align: center; padding: 10px 6px; border-radius: 12px; background: var(--paper2);
+  border: 1px solid var(--line); font-size: 12.5px; color: rgba(43,43,43,.65); }
+.pet-stat b { display: block; font-size: 19px; color: var(--ink); margin-top: 2px; }
+.pet-actrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
+.pet-max { align-self: center; color: #c99a35; font-weight: 700; }
+.pet-skills { display: flex; flex-direction: column; gap: 6px; }
+.pet-skill { display: grid; grid-template-columns: 34px auto 1fr; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 10px; background: var(--paper2); border: 1px solid var(--line); font-size: 13.5px; }
+.pet-skill i { font-style: normal; color: rgba(43,43,43,.6); font-size: 12.5px; text-align: right; }
+.pet-skill.locked { opacity: .55; }
+.ps-ico { font-size: 20px; text-align: center; }
+.pet-equips { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.pet-eq { padding: 10px 8px; border-radius: 10px; border: 1px dashed var(--line); background: #fff;
+  font-size: 13px; text-align: center; color: var(--ink); cursor: pointer; }
+.pet-eq i { display: block; font-style: normal; font-size: 12px; color: rgba(43,43,43,.55); margin-top: 3px; }
+.pet-eq.empty { cursor: default; color: rgba(43,43,43,.45); background: var(--paper2); }
+.pet-eq.t-rare { border: 1.5px solid rgba(111,159,201,.7); }
+.pet-eq.t-legendary { border: 1.5px solid #c99a35; box-shadow: 0 0 8px rgba(214,166,66,.35); }
+.pet-decos { display: flex; gap: 6px; flex-wrap: wrap; }
+.pet-dbtn { min-width: 44px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line);
+  background: #fff; font-size: 17px; cursor: pointer; }
+.pet-dbtn.on { border-color: var(--accent2); background: rgba(111,159,201,.14); }
+.pet-evo, .pet-closeup { position: relative; text-align: center; max-width: min(86vw, 460px); animation: chestPop .5s ease; }
+.pet-evo img, .pet-closeup img { width: 100%; max-height: 62vh; object-fit: contain; border-radius: 16px;
+  animation: petBreath 3.2s ease-in-out infinite; }
+.pet-evo-txt { color: #fff; font-size: 21px; font-weight: 700; margin-top: 12px; text-shadow: 0 2px 8px rgba(0,0,0,.5); }
+@keyframes petBreath { 0%,100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+.vg-petav { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; margin-left: -8px;
+  border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.2); align-self: center; }
+
+/* 競技 */
+.pb-floors { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; margin-bottom: 4px; }
+.pb-floor { padding: 10px 8px; border-radius: 12px; border: 1px solid var(--line); background: #fff;
+  text-align: center; font-size: 13px; cursor: pointer; color: var(--ink); }
+.pb-floor i { display: block; font-style: normal; font-size: 12px; color: rgba(43,43,43,.55); margin: 2px 0; }
+.pb-floor .pb-fico { font-size: 24px; display: block; }
+.pb-drop { font-size: 11.5px; color: rgba(43,43,43,.55); }
+.pb-floor.t-rare:not(.locked) { border-color: rgba(111,159,201,.6); }
+.pb-floor.t-legendary:not(.locked) { border-color: #c99a35; }
+.pb-floor.locked { opacity: .5; cursor: default; background: var(--paper2); }
+.pb-floor:not(.locked):hover { border-color: var(--accent2); transform: translateY(-1px); }
+.pb-shadowrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.pb-face { width: 84px; height: 84px; border-radius: 50%; overflow: hidden; display: flex;
+  align-items: center; justify-content: center; background: var(--paper2); border: 2px solid var(--line); }
+.pb-face img { width: 100%; height: 100%; object-fit: cover; }
+.pb-face.me { border-color: var(--accent2); }
+.pb-hue { filter: hue-rotate(140deg) saturate(.85); }
+.pb-dropcard { margin: 12px auto; padding: 14px 18px; border-radius: 14px; max-width: 300px;
+  background: var(--paper2); border: 1.5px solid var(--line); font-size: 14.5px; animation: chestPop .5s ease; }
+.pb-dropcard i { display: block; font-style: normal; font-size: 13px; color: rgba(43,43,43,.6); margin: 3px 0 8px; }
+.pb-dropcard .pb-dropico { font-size: 34px; }
+.pb-dropcard.t-rare { border-color: rgba(111,159,201,.7); }
+.pb-dropcard.t-legendary { border-color: #c99a35; box-shadow: 0 0 14px rgba(214,166,66,.4); }
+.pb-board { display: flex; flex-direction: column; gap: 5px; margin: 10px 0; }
+.pb-brow { display: grid; grid-template-columns: 38px 1fr auto 56px; gap: 8px; align-items: center;
+  padding: 8px 12px; border-radius: 10px; background: var(--paper2); border: 1px solid var(--line); font-size: 14px; }
+.pb-brow.me { border-color: var(--accent2); background: rgba(111,159,201,.12); }
+.pb-rank { text-align: center; font-weight: 700; }
+.pb-bpet { font-size: 12.5px; color: rgba(43,43,43,.6); }
+.pb-brow b { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 彈性習慣每日任務（易/中/難三檔） */
+.vg-daily-sub { font-style: normal; font-weight: 400; font-size: 12px; color: rgba(43,43,43,.55); margin-left: 6px; }
+.vg-quest.elastic .vg-q-body { display: flex; flex-direction: column; gap: 4px; }
+.vg-q-cur { font-style: normal; font-size: 12px; color: rgba(43,43,43,.55); margin-left: 8px; }
+.vg-q-tiers { display: flex; flex-wrap: wrap; gap: 5px; }
+.vg-tier { font-size: 11.5px; padding: 3px 9px; border-radius: 99px; border: 1px solid var(--line);
+  background: #fff; color: rgba(43,43,43,.65); }
+.vg-tier.claimed { background: var(--paper2); color: rgba(43,43,43,.45); border-style: dashed; }
+.vg-tier.claim { background: linear-gradient(135deg, #e4c26e, #c99a35); color: #fff; border: none;
+  font-weight: 700; cursor: pointer; box-shadow: 0 1px 5px rgba(201,154,53,.4); animation: tierPulse 1.6s ease-in-out infinite; }
+@keyframes tierPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }

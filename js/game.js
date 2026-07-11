@@ -151,7 +151,8 @@ const VDGame = (() => {
     { id: 'exam50', ico: '📝', name: '會考老手', desc: '會考答對 50 題', chk: s => s.ss.exam >= 50 },
     { id: 'lv5', ico: '🎖️', name: '登堂入室', desc: '達到 5 級', chk: () => level() >= 5 },
     { id: 'lv10', ico: '🏅', name: '登峰造極', desc: '達到 10 級', chk: () => level() >= 10 },
-    { id: 'dailyall', ico: '✅', name: '每日全清', desc: '一天完成三項任務', chk: s => s.quests.claimed.length >= 3 },
+    { id: 'dailyall', ico: '✅', name: '每日全清', desc: '一天完成三項任務', chk: s => new Set(s.quests.claimed.map(c => String(c).split(':')[0])).size >= 3 },
+    { id: 'dailyhard', ico: '🌋', name: '挑戰者之心', desc: '同一天三項任務都完成「難」', chk: s => [0, 1, 2].every(i => s.quests.claimed.includes(`${i}:2`)) },
     { id: 'rich', ico: '💰', name: '字幣富翁', desc: '存到 500 字幣', chk: s => s.coins >= 500 },
     { id: 'comeback', ico: '🩸', name: '背水逆轉', desc: '血量<30 時獲勝', chk: s => !!s.badges.comeback },
     { id: 'dexE', ico: '🖼️', name: '國小圖鑑', desc: '國小 1200 全點亮', chk: () => dexFull('E') },
@@ -180,22 +181,38 @@ const VDGame = (() => {
     return any;
   }
 
-  /* ── 每日任務 ── */
+  /* ── 每日任務：彈性習慣三檔（易/中/難）——挑越難、領越多，三檔可疊領 ── */
+  const QTIERS = ['易', '中', '難'];
+  const hasClaim = (i, t) => g.quests.claimed.includes(`${i}:${t}`) || (t === 0 && g.quests.claimed.includes(i));
   function quests() {
     rollDaily();
     const p = g.quests.prog;
+    const mk = (i, ico, name, cur, unit, goals, rewards) => ({
+      i, ico, name, unit, cur: Math.min(cur, goals[2]),
+      tiers: goals.map((goal, t) => ({
+        t, label: QTIERS[t], goal, reward: rewards[t],
+        done: cur >= goal, claimed: hasClaim(i, t)
+      }))
+    });
     return [
-      { i: 0, ico: '✍️', name: '答對 15 題', cur: Math.min(p.correct, 15), goal: 15, reward: 40 },
-      { i: 1, ico: '🎭', name: '打 1 場對戰', cur: Math.min(p.battle, 1), goal: 1, reward: 30 },
-      { i: 2, ico: '🃏', name: '練 10 張閃卡', cur: Math.min(p.flash, 10), goal: 10, reward: 30 }
-    ].map(q => ({ ...q, done: q.cur >= q.goal, claimed: g.quests.claimed.includes(q.i) }));
+      mk(0, '✍️', '每日答題', p.correct, '題', [10, 25, 50], [25, 60, 130]),
+      mk(1, '🎭', '每日對戰', p.battle, '場', [1, 3, 6], [20, 50, 110]),
+      mk(2, '🃏', '每日閃卡', p.flash, '張', [10, 25, 50], [20, 50, 110])
+    ];
   }
-  function claimQuest(i) {
+  function claimQuest(i, t) {
     const q = quests().find(x => x.i === i);
-    if (!q || !q.done || q.claimed) return null;
-    g.quests.claimed.push(i);
-    const chest = openChest(q.reward);
-    if (g.quests.claimed.length === 3) { g.coins += 50; g.xp += 50; toast('🎁 三任務全清！額外 +50 XP +50 字幣'); }
+    const tier = q && q.tiers[t];
+    if (!tier || !tier.done || tier.claimed) return null;
+    g.quests.claimed.push(`${i}:${t}`);
+    const chest = openChest(tier.reward);
+    // 全清 = 三軌各領過至少一檔（一天只發一次）
+    const tracks = new Set(g.quests.claimed.map(c => String(c).split(':')[0]));
+    if (tracks.size >= 3 && !g.quests.allBonus) {
+      g.quests.allBonus = true;
+      g.coins += 50; g.xp += 50;
+      toast('🎁 三任務全清！額外 +50 XP +50 字幣');
+    }
     checkBadges(); save();
     return chest;
   }
@@ -330,9 +347,10 @@ const VDGame = (() => {
     const lp = levelProgress();
     cands.push({ dist: (lp.need - lp.inLv) / lp.need, ico: '⬆️', text: `再 ${lp.need - lp.inLv} XP 升上 Lv${lp.L + 1}`, pct: lp.pct });
     for (const q of quests()) {
-      if (q.claimed) continue;
-      if (q.done) cands.push({ dist: 0.01, ico: '🎁', text: `「${q.name}」完成了，回主選單領寶箱！`, pct: 100 });
-      else cands.push({ dist: (q.goal - q.cur) / q.goal, ico: q.ico, text: `每日任務「${q.name}」還差 ${q.goal - q.cur}`, pct: Math.round(q.cur / q.goal * 100) });
+      const ready = q.tiers.find(t => t.done && !t.claimed);
+      const next = q.tiers.find(t => !t.done && !t.claimed);
+      if (ready) cands.push({ dist: 0.01, ico: '🎁', text: `「${q.name}・${ready.label}」達標了，回主選單領寶箱！`, pct: 100 });
+      else if (next) cands.push({ dist: (next.goal - q.cur) / next.goal, ico: q.ico, text: `「${q.name}・${next.label}」還差 ${next.goal - q.cur} ${q.unit}`, pct: Math.round(q.cur / next.goal * 100) });
     }
     const w = weekQuest();
     if (!w.claimed) {
@@ -427,8 +445,18 @@ const VDGame = (() => {
   /* ── 首頁英雄橫幅 ── */
   function heroStrip() {
     const lp = levelProgress();
+    // 出戰詞靈小頭像（直接讀存檔，不等 VDPets init）
+    let petAv = '';
+    try {
+      const pg = JSON.parse(localStorage.getItem('vd_pets') || '{}');
+      if (pg.active && pg.owned && pg.owned[pg.active]) {
+        const lv = pg.owned[pg.active].lv || 1;
+        const st = lv >= 25 ? 3 : lv >= 10 ? 2 : 1;
+        petAv = `<img class="vg-petav" src="img/pets/${pg.active}_s${st}.png" alt="" onerror="this.remove()">`;
+      }
+    } catch { /* 無詞靈 */ }
     return `<button class="vg-strip" onclick="VDApp.go('hero')">
-      ${avHtml()}
+      ${avHtml()}${petAv}
       <span class="vg-info">
         <span class="vg-line1">${heroName()}　<b>Lv${lp.L} ${lp.title}</b></span>
         <span class="vg-xpbar"><span style="width:${lp.pct}%"></span></span>
@@ -442,7 +470,7 @@ const VDGame = (() => {
   function dailyPanel() {
     const qs = quests();
     const mw = mysteryWord();
-    const allClaimed = qs.every(q => q.claimed);
+    const allClaimed = qs.every(q => q.tiers.some(t => t.claimed));
     const cal = VDStore.dailyCalendar(7);
     const streak = VDStore.stats([]).streak;
     const W = ['日', '一', '二', '三', '四', '五', '六'];
@@ -472,16 +500,22 @@ const VDGame = (() => {
         <div class="vg-cal-strip">${calHtml}</div>
         <div class="vg-cal-note">連續 <b>${streak}</b> 天　明天再來 +30 XP 首勝獎</div>
       </div>
-      <div class="vg-daily-head">每日任務 ${allClaimed ? '<b class="ok">✓ 全清</b>' : ''}</div>
-      ${qs.map(q => `
-        <div class="vg-quest ${q.done ? 'done' : ''}">
+      <div class="vg-daily-head">每日任務 <i class="vg-daily-sub">挑難度・領積分：易→中→難可疊領</i> ${allClaimed ? '<b class="ok">✓ 全清</b>' : ''}</div>
+      ${qs.map(q => {
+      const hasReady = q.tiers.some(t => t.done && !t.claimed);
+      return `
+        <div class="vg-quest elastic ${hasReady ? 'done' : ''}">
           <span class="vg-q-ico">${q.ico}</span>
-          <span class="vg-q-body"><span class="vg-q-name">${q.name}</span>
-            <span class="vg-q-bar"><span style="width:${q.cur / q.goal * 100}%"></span></span></span>
-          ${q.claimed ? '<span class="vg-q-claimed">已領</span>'
-        : q.done ? `<button class="vg-q-claim" onclick="VDGame.claimAndRefresh(${q.i})">領 +${q.reward}</button>`
-          : `<span class="vg-q-prog">${q.cur}/${q.goal}</span>`}
-        </div>`).join('')}
+          <span class="vg-q-body">
+            <span class="vg-q-name">${q.name}<i class="vg-q-cur">${q.cur} ${q.unit}</i></span>
+            <span class="vg-q-bar"><span style="width:${Math.min(100, q.cur / q.tiers[2].goal * 100)}%"></span></span>
+            <span class="vg-q-tiers">${q.tiers.map(t =>
+        t.claimed ? `<span class="vg-tier claimed">${t.label} ✓</span>`
+          : t.done ? `<button class="vg-tier claim" onclick="VDGame.claimAndRefresh(${q.i},${t.t})">${t.label}｜領 +${t.reward}</button>`
+            : `<span class="vg-tier">${t.label} ${t.goal}${q.unit}・+${t.reward}</span>`).join('')}</span>
+          </span>
+        </div>`;
+    }).join('')}
       ${weekHtml}
       <button class="vg-mystery ${g.mystery.opened ? 'opened' : ''}" onclick="VDGame.openMysteryUI()">
         ${g.mystery.opened ? `🔓 今日神秘字：<b>${mw ? mw.word : ''}</b>（已開啟）` : '🎁 開啟今日神秘字'}
@@ -490,8 +524,8 @@ const VDGame = (() => {
     </div>`;
   }
   // 供 onclick 呼叫並重繪選單（開箱動畫由 openChest 內建，不再另吐 toast）
-  function claimAndRefresh(i) {
-    claimQuest(i);
+  function claimAndRefresh(i, t) {
+    claimQuest(i, t);
     VDApp.go('menu');
   }
   function claimWeekUI() { claimWeek(); VDApp.go('menu'); }

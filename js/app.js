@@ -118,6 +118,14 @@ const VDApp = (() => {
           </div>
         </div>
         <div class="menu-group">
+          <div class="menu-glabel">詞靈</div>
+          <div class="wc-mgrid">
+            ${card('pets', 'm_pets', '🐾', '詞靈夥伴', '20 隻字綴守護獸，學字餵養', true)}
+            ${card('graph', 'm_graph', '🌌', '詞源星圖', '172 字綴星空，越學越亮')}
+            ${card('petbattle', 'm_arena', '⚔️', '詞靈競技', '野生試煉＋影子對戰掉裝備')}
+          </div>
+        </div>
+        <div class="menu-group">
           <div class="menu-glabel">題庫工具</div>
           <div class="wc-mgrid">
             ${card('search', 'm_search', '🔍', '查單字', '打英文或中文，秒查秒收藏')}
@@ -180,6 +188,18 @@ const VDApp = (() => {
     dex() {
       $view().innerHTML = header('單字圖鑑') + '<div id="mod"></div>';
       VDDex.render(document.getElementById('mod'));
+    },
+    pets() {
+      $view().innerHTML = header('詞靈夥伴') + '<div id="mod"></div>';
+      VDPet.render(document.getElementById('mod'));
+    },
+    graph() {
+      $view().innerHTML = header('詞源星圖') + '<div id="mod"></div>';
+      VDGraph.render(document.getElementById('mod'));
+    },
+    petbattle() {
+      $view().innerHTML = header('詞靈競技') + '<div id="mod"></div>';
+      VDPetBattle.render(document.getElementById('mod'));
     },
     sprint() {
       $view().innerHTML = header('限時衝刺') + '<div id="mod"></div>';
