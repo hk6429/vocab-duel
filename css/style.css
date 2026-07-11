@@ -951,3 +951,10 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .eqdex-cell.t-rare.got { border-color: #4a7ba6; }
 .eqdex-cell.t-legendary.got { border-color: #c9a24b; background: rgba(201,162,75,.08); }
 .sp-perk { display: block; font-size: .8rem; color: #c9a24b; }
+
+/* ── 即時對戰 ── */
+.rt-code { font-size: 3rem; font-weight: 800; letter-spacing: .35em; text-align: center; color: #2b2b2b; margin: 12px 0; }
+.rt-join-in { width: 110px; padding: 10px 12px; border: 1.5px solid rgba(43,43,43,.3); border-radius: 12px; font-size: 1.05rem; text-align: center; letter-spacing: .2em; font-family: inherit; background: transparent; }
+.rt-hud { display: flex; justify-content: space-between; font-size: .9rem; color: #5a6b78; margin-bottom: 6px; }
+#rt-timer { font-weight: 700; }
+#rt-timer.danger { color: #b0413e; animation: pulse 1s infinite; }

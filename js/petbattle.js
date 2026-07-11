@@ -43,6 +43,12 @@ const VDPetBattle = (() => {
             <button class="btn ghost" id="doBoard">🏆 詞靈排行榜</button>
             <span class="pg-hint">目前積分：<b>${VDPets.rating}</b></span>
           </div>
+          <div class="pg-sub">⚡ 即時對戰（同教室兩台手機，同題對打）</div>
+          <div class="pb-shadowrow">
+            <button class="btn" id="rtCreate">⚡ 開房（拿 4 位數房號）</button>
+            <input class="rt-join-in" id="rtCode" maxlength="4" inputmode="numeric" placeholder="輸入房號">
+            <button class="btn ghost" id="rtJoin">加入</button>
+          </div>
           ${VDGame.weekVaultReady() ? `
           <div class="pb-vault">
             <span>👑 週末寶庫開啟——週任務達成的犒賞，必掉稀有以上裝備！</span>
@@ -57,6 +63,12 @@ const VDPetBattle = (() => {
     });
     el.querySelector('#doShadow').onclick = startShadow;
     el.querySelector('#doBoard').onclick = showBoard;
+    el.querySelector('#rtCreate').onclick = () => VDRT.create(el);
+    el.querySelector('#rtJoin').onclick = () => {
+      const code = el.querySelector('#rtCode').value.trim();
+      if (!/^\d{4}$/.test(code)) return VDGame.toast('房號是 4 位數字');
+      VDRT.join(el, code);
+    };
     const vault = el.querySelector('#doVault');
     if (vault) vault.onclick = () => {
       if (!VDGame.openWeekVault()) return;
