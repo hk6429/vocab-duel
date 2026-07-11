@@ -41,6 +41,7 @@ const VDPetBattle = (() => {
           <div class="pb-shadowrow">
             <button class="btn" id="doShadow">👤 尋找影子對手（勝 +20／敗 −10）</button>
             <button class="btn ghost" id="doBoard">🏆 詞靈排行榜</button>
+            <button class="btn ghost" id="doMarket">🏪 裝備市場</button>
             <span class="pg-hint">目前積分：<b>${VDPets.rating}</b></span>
           </div>
           <div class="pg-sub">⚡ 即時對戰（同教室兩台手機，同題對打）</div>
@@ -63,6 +64,7 @@ const VDPetBattle = (() => {
     });
     el.querySelector('#doShadow').onclick = startShadow;
     el.querySelector('#doBoard').onclick = showBoard;
+    el.querySelector('#doMarket').onclick = () => VDMarket.render(el);
     el.querySelector('#rtCreate').onclick = () => VDRT.create(el);
     el.querySelector('#rtJoin').onclick = () => {
       const code = el.querySelector('#rtCode').value.trim();
