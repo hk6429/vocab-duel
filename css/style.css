@@ -340,3 +340,12 @@ body {
 .spell-in.wrong { border-color: var(--red); background: rgba(255,107,107,.14); }
 .spell-go { flex: none; }
 .qz-hint { font-size: 13px; opacity: .85; }
+
+/* ── 詞彙深度：英英定義 + 搭配詞 ── */
+.en-deep { margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,.16); }
+.en-def { font-family: var(--font-en); font-size: 14px; line-height: 1.5; color: var(--text); }
+.en-collo { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.en-chip {
+  font-family: var(--font-en); font-size: 12.5px; padding: 3px 9px; border-radius: 999px;
+  background: rgba(122,162,255,.16); border: 1px solid rgba(122,162,255,.32); color: #cdd9ff;
+}

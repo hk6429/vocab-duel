@@ -90,6 +90,7 @@ const VDAffix = (() => {
         <div class="af-dzh">${w.zh}</div>
         <div class="af-dex">${w.example} ${VDSpeak.btn(w.example)}</div>
         <div class="af-dexz">${w.example_zh}</div>
+        ${VDEnrich.block(w.word)}
         <button class="btn ghost af-add1">加入閃卡</button>
       </div>`;
     box.querySelector('.af-add1').onclick = () => {

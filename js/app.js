@@ -132,6 +132,7 @@ const VDApp = (() => {
   async function init() {
     const res = await fetch('data/words.json');
     allWords = await res.json();
+    VDEnrich.ensure();  // 詞彙深度資料背景載入，供閃卡／自測／字綴顯示英英定義＋搭配詞
     go(VDStore.stage ? 'menu' : 'stage');
   }
 

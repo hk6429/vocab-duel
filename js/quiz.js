@@ -196,6 +196,7 @@ const VDQuiz = (() => {
         <div class="qz-word">${q.word} ${VDSpeak.btn(q.word)} <span class="af-pos">${m.pos.join('・')}</span></div>
         <div class="qz-zh">${m.zh}</div>
         <div class="qz-ex">${m.example} ${VDSpeak.btn(m.example)}<br><span class="ex-zh">${m.example_zh}</span></div>
+        ${VDEnrich.block(q.word)}
       </div>
       <button class="btn qz-next">下一題 →</button>`;
     fb.querySelector('.qz-next').onclick = () => { idx++; render(el); };

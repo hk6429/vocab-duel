@@ -69,6 +69,7 @@ const VDFlash = (() => {
           <div class="flash-pos">${w.pos.join(', ')}</div>
           <div class="flash-zh">${w.zh}</div>
           <div class="flash-ex">${w.example} ${VDSpeak.btn(w.example)}<br><span class="ex-zh">${w.example_zh}</span></div>
+          ${VDEnrich.block(w.word)}
         </div>
       </div>
       <div class="flash-btns hidden" id="flashBtns">
