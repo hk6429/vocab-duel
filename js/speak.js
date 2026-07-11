@@ -5,12 +5,34 @@ const VDSpeak = (() => {
   let lang = localStorage.getItem(KEY) || 'en-US';
   let voice = null;
 
+  /* 選聲：依品質排序，避免抓到系統的玩具音（Albert/Bells/Zarvox…完全聽不懂） */
+  const GOOD = ['google us english', 'google uk english female', 'google uk english male',
+    'samantha', 'ava', 'allison', 'susan', 'zoe', 'evan', 'nathan', 'joelle',
+    'daniel', 'kate', 'serena', 'stephanie', 'jamie', 'oliver',
+    'microsoft aria', 'microsoft jenny', 'microsoft guy', 'microsoft zira',
+    'microsoft sonia', 'microsoft libby', 'microsoft ryan', 'karen', 'moira', 'tessa'];
+  const BAD = ['albert', 'bad news', 'bahh', 'bells', 'boing', 'bubbles', 'cellos',
+    'deranged', 'good news', 'jester', 'organ', 'superstar', 'trinoids', 'whisper',
+    'wobble', 'zarvox', 'grandma', 'grandpa', 'junior', 'ralph', 'fred', 'kathy',
+    'eddy', 'flo', 'reed', 'rocko', 'sandy', 'shelley', 'grandpa', 'novelty'];
+  function score(v) {
+    const n = v.name.toLowerCase();
+    if (BAD.some(b => n.includes(b))) return -1;
+    let s = 0;
+    const gi = GOOD.findIndex(g => n.includes(g));
+    if (gi >= 0) s += 1000 - gi;                       // 已知好聲優先
+    if (/natural|neural|premium|enhanced/.test(n)) s += 500;
+    if (v.lang.replace('_', '-') === lang) s += 100;   // 完全符合腔調
+    if (v.default) s += 10;
+    if (v.localService) s += 5;
+    return s;
+  }
   function pick() {
     if (!ok) return;
-    const vs = speechSynthesis.getVoices();
-    voice = vs.find(v => v.lang === lang)
-      || vs.find(v => v.lang && v.lang.replace('_', '-').startsWith(lang.slice(0, 2)))
-      || null;
+    const vs = speechSynthesis.getVoices()
+      .filter(v => v.lang && v.lang.replace('_', '-').toLowerCase().startsWith('en'));
+    voice = vs.sort((a, b) => score(b) - score(a))[0] || null;
+    if (voice && score(voice) < 0) voice = null;       // 全是玩具聲就交給系統預設
   }
   if (ok) { pick(); speechSynthesis.onvoiceschanged = pick; }
 
