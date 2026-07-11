@@ -539,12 +539,12 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
   position: relative; padding: 16px 20px 20px;
   background: #fff; border-top: 1px solid var(--line);
 }
-.wc-stage-name { font-family: var(--font-serif); font-size: 26px; font-weight: 700; color: var(--ink); letter-spacing: 2px; }
+.wc-stage-name { font-family: var(--font-serif); font-size: 25px; font-weight: 700; color: var(--ink); letter-spacing: 1px; white-space: nowrap; }
 .wc-stage-amb { display: inline-block; margin-top: 4px; font-size: 13px; color: #fff; background: var(--accent2);
-  padding: 2px 10px; border-radius: 99px; letter-spacing: 1px; }
+  padding: 2px 10px; border-radius: 99px; letter-spacing: 1px; white-space: nowrap; }
 .wc-stage-sub { color: var(--muted); font-size: 14px; margin-top: 8px; }
 .wc-enter { display: inline-block; margin-top: 10px; font-weight: 800; color: var(--accent2);
-  border-bottom: 2px solid var(--accent2); padding-bottom: 1px; letter-spacing: 1px; }
+  border-bottom: 2px solid var(--accent2); padding-bottom: 1px; letter-spacing: 1px; white-space: nowrap; }
 
 /* 選單頁：頂端水彩橫幅 */
 .wc-menu-top { text-align: center; margin-bottom: 6px; }
@@ -557,6 +557,41 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .menu-group .btn.main .m-ico { font-size: 26px; }
 .btn.main.c-battle { background: linear-gradient(100deg, rgba(154,143,196,.14), #fff); font-size: 21px; }
 .menu-glabel { font-family: var(--font-serif); font-size: 13px; letter-spacing: 3px; color: var(--accent2); text-transform: uppercase; }
+
+/* 選單圖卡：上圖下字，西洋文豪水彩風，風格一致 */
+.wc-mgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 10px; }
+@media (min-width: 620px) { .wc-mgrid { grid-template-columns: repeat(3, 1fr); } }
+.wc-mcard {
+  position: relative; display: flex; flex-direction: column; padding: 0; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: #fff;
+  box-shadow: 0 8px 22px rgba(43,43,43,.07); transition: transform .14s, box-shadow .14s;
+  text-align: left; -webkit-tap-highlight-color: transparent;
+}
+.wc-mcard:hover, .wc-mcard:focus-visible { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(74,123,166,.20); outline: none; }
+.wc-mcard:active { transform: translateY(-1px) scale(.995); }
+.wc-mcard-img { display: block; width: 100%; aspect-ratio: 4/3; object-fit: cover; object-position: 50% 45%; background: var(--paper2); }
+.wc-mcard-ph { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 4/3; font-size: 46px; background: var(--paper2); }
+.wc-mcard-cap { padding: 11px 13px 13px; }
+.wc-mcard-title { font-family: var(--font-serif); font-size: 17px; font-weight: 700; color: var(--ink); letter-spacing: .5px; }
+.wc-mcard-sub { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; line-height: 1.45; }
+.wc-mcard-badge { position: absolute; top: 8px; right: 8px; background: var(--red); color: #fff; font-size: 11px; font-weight: 800; padding: 1px 9px; border-radius: 99px; box-shadow: 0 2px 8px rgba(208,90,84,.4); }
+/* 落單的最後一張卡自動變全寬，版面不留空洞 */
+.wc-mgrid .wc-mcard:last-child:nth-child(2n+1):not(.feature) { grid-column: 1 / -1; }
+.wc-mgrid .wc-mcard:last-child:nth-child(2n+1):not(.feature) .wc-mcard-img { aspect-ratio: 16/7; }
+@media (min-width: 620px) {
+  .wc-mgrid .wc-mcard:last-child:nth-child(2n+1):not(.feature) { grid-column: auto; }
+  .wc-mgrid .wc-mcard:last-child:nth-child(2n+1):not(.feature) .wc-mcard-img { aspect-ratio: 4/3; }
+  .wc-mgrid .wc-mcard:last-child:nth-child(3n+1):not(.feature) { grid-column: 1 / -1; }
+  .wc-mgrid .wc-mcard:last-child:nth-child(3n+1):not(.feature) .wc-mcard-img { aspect-ratio: 16/6; }
+}
+/* 全寬特色卡（單一項目，如文學家對戰、英雄檔案） */
+.wc-mcard.feature { grid-column: 1 / -1; }
+.wc-mcard.feature .wc-mcard-img { aspect-ratio: 16/6; object-position: 50% 42%; }
+.wc-mcard.feature .wc-mcard-title { font-size: 20px; }
+.wc-mcard.feature .wc-mcard-sub { font-size: 13px; }
+/* 底部導覽列 */
+.wc-menu-navrow { display: flex; gap: 12px; margin-top: 18px; }
+.wc-menu-navrow .btn.ghost { flex: 1; }
 
 /* 連結／可點字加強（點擊感明確）：ghost 按鈕變墨線底線字 */
 .menu-foot .btn.ghost, .topbar .back { font-weight: 700; }

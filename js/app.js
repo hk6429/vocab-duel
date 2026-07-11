@@ -80,17 +80,17 @@ const VDApp = (() => {
     menu() {
       const words = scopeWords();
       const stageName = { E: '國小 1200', J: '國中 2000', S: '高中 6000' }[VDStore.stage];
-      const MICON = {};  // 水彩重皮：模式圖示暫用 emoji（舊深藍圖與米白不搭），待水彩版圖示補上
-      const item = (view, cls, ico, title, sub) => {
-        const img = MICON[view];
-        const icoHtml = img
-          ? `<img class="m-img" src="img/ui/${img}.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${ico}',className:'m-ico'}))">`
-          : `<span class="m-ico">${ico}</span>`;
-        return `<button class="btn main ${cls}" onclick="VDApp.go('${view}')">
-          ${icoHtml}
-          <span>${title}<span class="m-sub">${sub}</span></span>
+      // 圖卡：上圖下字，水彩西洋文豪風；圖載入失敗退 emoji 佔位
+      const card = (view, key, ico, title, sub, feature, badge) => `
+        <button class="wc-mcard${feature ? ' feature' : ''}" onclick="VDApp.go('${view}')">
+          ${badge ? `<span class="wc-mcard-badge">${badge}</span>` : ''}
+          <img class="wc-mcard-img" src="img/ui/${key}.png" alt=""
+            onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${ico}'}))">
+          <div class="wc-mcard-cap">
+            <div class="wc-mcard-title">${title}</div>
+            <span class="wc-mcard-sub">${sub}</span>
+          </div>
         </button>`;
-      };
       const wrongN = VDStore.wrongWords(words).length;
       const starN = VDStore.starWords(words).length;
       $view().innerHTML = `
@@ -104,25 +104,36 @@ const VDApp = (() => {
         ${levelChips()}
         <div class="menu-group">
           <div class="menu-glabel">練習</div>
-          ${item('flash', 'c-study', '🃏', '閃卡練功', '五盒間隔複習，記得牢')}
-          ${item('quiz', 'c-study', '✍️', '單字自測', '三題型隨機，一輪十題')}
-          ${item('sprint', 'c-battle', '⏱️', '限時衝刺', '60 秒搶答，衝高分刷紀錄')}
-          ${wrongN ? item('review', 'c-wrong', '🩹', `錯題複習（${wrongN}）`, '只練你答錯過的字') : ''}
+          <div class="wc-mgrid">
+            ${card('flash', 'm_flash', '🃏', '閃卡練功', '五盒間隔複習，記得牢')}
+            ${card('quiz', 'm_quiz', '✍️', '單字自測', '三題型隨機，一輪十題')}
+            ${card('sprint', 'm_sprint', '⏱️', '限時衝刺', '60 秒搶答，衝高分')}
+            ${wrongN ? card('review', 'm_review', '🩹', '錯題複習', '只練你答錯過的字', false, wrongN) : ''}
+          </div>
         </div>
         <div class="menu-group">
           <div class="menu-glabel">對戰</div>
-          ${item('battle', 'c-battle', '🎭', '文學家對戰', '八位文豪闖關／同機雙人搶答')}
+          <div class="wc-mgrid">
+            ${card('battle', 'm_battle', '🎭', '文學家對戰', '八位文豪闖關／同機雙人搶答', true)}
+          </div>
         </div>
         <div class="menu-group">
           <div class="menu-glabel">題庫工具</div>
-          ${item('search', 'c-tool', '🔍', '查單字', '打英文或中文，秒查秒收藏')}
-          ${item('affix', 'c-tool', '🧩', '字綴心智圖', '字首字尾字根，成串記憶')}
-          ${item('exam', 'c-tool', '📝', '會考考古題', '104–115 年英語閱讀 445 題')}
-          ${item('cloud', 'c-tool', '☁️', '雲端／班級榜', '跨裝置存進度・全班拚排名')}
-          ${starN ? item('starred', 'c-wrong', '⭐', `我的收藏（${starN}）`, '只刷你加星的字') : ''}
+          <div class="wc-mgrid">
+            ${card('search', 'm_search', '🔍', '查單字', '打英文或中文，秒查秒收藏')}
+            ${card('affix', 'm_affix', '🧩', '字綴心智圖', '字首字尾字根，成串記憶')}
+            ${card('exam', 'm_exam', '📝', '會考考古題', '104–115 閱讀 445 題')}
+            ${card('cloud', 'm_cloud', '☁️', '雲端／班級榜', '跨裝置存進度・拚排名')}
+            ${starN ? card('starred', 'm_starred', '⭐', '我的收藏', '只刷你加星的字', false, starN) : ''}
+          </div>
         </div>
-        <div class="menu-foot">
-          ${item('hero', 'c-tool', '🦸', '英雄檔案', '稱號・徽章・字幣・自訂頭像')}
+        <div class="menu-group">
+          <div class="menu-glabel">英雄</div>
+          <div class="wc-mgrid">
+            ${card('hero', 'm_hero', '🦸', '英雄檔案', '稱號・徽章・字幣・自訂頭像', true)}
+          </div>
+        </div>
+        <div class="wc-menu-navrow">
           <button class="btn ghost" onclick="VDApp.go('stats')">📊 我的戰績</button>
           <button class="btn ghost" onclick="VDApp.go('stage')">切換學段</button>
         </div>`;
