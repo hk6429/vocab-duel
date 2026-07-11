@@ -18,6 +18,12 @@ const VDApp = (() => {
     return `<div class="topbar"><button class="back" onclick="VDApp.go('menu')">←</button><h2>${title}</h2></div>`;
   }
 
+  /* 星圖／單字關聯圖 頁內分頁 */
+  function graphTabs(cur) {
+    const tab = (id, label) => `<button class="wg-tab ${cur === id ? 'on' : ''}" onclick="VDApp.go('${id}')">${label}</button>`;
+    return `<div class="wg-tabs">${tab('graph', '🌌 詞源星圖')}${tab('wordgraph', '🕸️ 單字關聯圖')}</div>`;
+  }
+
   /* 首頁迷你戰況：Leitner 五盒分佈長條＋連續天數 */
   function dashboard(words, stageName) {
     const { d, unseen, total, streak } = VDStore.boxDist(words);
@@ -194,8 +200,12 @@ const VDApp = (() => {
       VDPet.render(document.getElementById('mod'));
     },
     graph() {
-      $view().innerHTML = header('詞源星圖') + '<div id="mod"></div>';
+      $view().innerHTML = header('詞源星圖') + graphTabs('graph') + '<div id="mod"></div>';
       VDGraph.render(document.getElementById('mod'));
+    },
+    wordgraph() {
+      $view().innerHTML = header('單字關聯圖') + graphTabs('wordgraph') + '<div id="mod"></div>';
+      VDWordGraph.render(document.getElementById('mod'));
     },
     petbattle() {
       $view().innerHTML = header('詞靈競技') + '<div id="mod"></div>';
