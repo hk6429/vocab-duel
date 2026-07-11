@@ -7,12 +7,13 @@ const VDStats = (() => {
 
   function render(allWords, el) {
     const eWords = allWords.filter(w => w.level === 'E');
+    const jWords = allWords.filter(w => w.level === 'E' || w.level === 'J');
     const scope = VDApp.scopeWords();
     const s = VDStore.stats(scope);
     const sE = VDStore.stats(eWords);
+    const sJ = VDStore.stats(jWords);
     const sAll = VDStore.stats(allWords);
-    const pctE = Math.round(sE.mastered / eWords.length * 100);
-    const pctAll = Math.round(sAll.mastered / allWords.length * 100);
+    const pct = (m, t) => Math.round(m / t * 100);
     el.innerHTML = `
       <div class="stat-grid">
         <div class="stat-tile"><div class="stat-num">${sAll.mastered}</div><div class="stat-cap">已掌握單字</div></div>
@@ -20,8 +21,9 @@ const VDStats = (() => {
         <div class="stat-tile"><div class="stat-num">${s.todayCount}</div><div class="stat-cap">今日複習</div></div>
         <div class="stat-tile"><div class="stat-num">${s.streak}</div><div class="stat-cap">連續天數</div></div>
       </div>
-      ${bar(pctE, `國小 1200 字（${sE.mastered}/${eWords.length}）`)}
-      ${bar(pctAll, `國中 2000 字（${sAll.mastered}/${allWords.length}）`)}
+      ${bar(pct(sE.mastered, eWords.length), `國小 1200 字（${sE.mastered}/${eWords.length}）`)}
+      ${bar(pct(sJ.mastered, jWords.length), `國中 2000 字（${sJ.mastered}/${jWords.length}）`)}
+      ${bar(pct(sAll.mastered, allWords.length), `高中 6000 字（${sAll.mastered}/${allWords.length}）`)}
       <div class="stat-note">「已掌握」= 熟悉度達第 3 盒以上；目前學段待複習 ${s.due} 字</div>
       <div class="io-box">
         <button class="btn ghost" id="btnExport">匯出進度碼</button>

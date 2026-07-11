@@ -16,11 +16,11 @@ for (const w of words) {
     if (w[k] == null || w[k].length === 0) errs.push(`${tag}: 缺 ${k}`);
   if (seen.has(w.word.toLowerCase())) errs.push(`${tag}: 重複詞條`);
   seen.add(w.word.toLowerCase());
-  if (!['E','J'].includes(w.level)) errs.push(`${tag}: level 非 E/J`);
+  if (!/^(E|J|S[1-6])$/.test(w.level)) errs.push(`${tag}: level 非 E/J/S1-6`);
   if (!Array.isArray(w.pos) || !w.pos.every(p => POS.has(p))) errs.push(`${tag}: pos 不合法 ${w.pos}`);
   if (SIMP.test(w.zh + w.example_zh)) errs.push(`${tag}: 疑似簡體 ${w.zh} / ${w.example_zh}`);
   // 例句需含該字或變化形（詞幹前段寬鬆比對；連字號忽略；不規則變化查表）
-  const IRREG = { shoot: 'shot', tooth: 'teeth', foot: 'feet', mouse: 'mice', child: 'children', man: 'men', woman: 'women', leaf: 'leaves', knife: 'knives', wolf: 'wolves', goose: 'geese', buy: 'bought', catch: 'caught', teach: 'taught', think: 'thought', bring: 'brought', fight: 'fought', seek: 'sought' };
+  const IRREG = { shoot: 'shot', tooth: 'teeth', foot: 'feet', mouse: 'mice', child: 'children', man: 'men', woman: 'women', leaf: 'leaves', knife: 'knives', wolf: 'wolves', goose: 'geese', buy: 'bought', catch: 'caught', teach: 'taught', think: 'thought', bring: 'brought', fight: 'fought', seek: 'sought', cling: 'clung', overcome: 'overcame', overtake: 'overtook', sling: 'slung', swing: 'swung', sting: 'stung' };
   const ex = w.example.toLowerCase().replace(/-/g, '');
   const stem = w.word.toLowerCase().replace(/-/g, '').split(' ')[0];
   const probe = stem.length > 4 ? stem.slice(0, Math.max(4, stem.length - 2)) : stem;
@@ -30,9 +30,13 @@ for (const w of words) {
 
 const e = words.filter(w => w.level === 'E').length;
 const j = words.filter(w => w.level === 'J').length;
-console.log(`總數 ${words.length}（E ${e} / J ${j}）`);
+const sCnt = {};
+for (let i = 1; i <= 6; i++) sCnt['S' + i] = words.filter(w => w.level === 'S' + i).length;
+const sTotal = Object.values(sCnt).reduce((a, b) => a + b, 0);
+console.log(`總數 ${words.length}（E ${e} / J ${j} / 高中 ${sTotal}）`, sTotal ? sCnt : '');
 if (e < 1100 || e > 1300) errs.push(`E 級數量異常: ${e}`);
-if (words.length < 1900 || words.length > 2100) errs.push(`總數異常: ${words.length}`);
+// 高中未併時總數約 2000；併後約 6200
+if (words.length < 1900 || words.length > 6400) errs.push(`總數異常: ${words.length}`);
 
 if (errs.length) {
   console.error('FAIL', errs.length, '個問題：');

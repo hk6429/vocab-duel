@@ -5,7 +5,10 @@ const VDApp = (() => {
   const $view = () => document.getElementById('view');
 
   function scopeWords() {
-    return VDStore.stage === 'E' ? allWords.filter(w => w.level === 'E') : allWords;
+    const s = VDStore.stage;
+    if (s === 'E') return allWords.filter(w => w.level === 'E');
+    if (s === 'J') return allWords.filter(w => w.level === 'E' || w.level === 'J');
+    return allWords; // S=高中，含全部
   }
 
   function header(title) {
@@ -19,6 +22,7 @@ const VDApp = (() => {
         <div class="stage-btns">
           <button class="btn stage" data-s="E">🏫 國小挑戰<br><span>基本 1200 字</span></button>
           <button class="btn stage" data-s="J">🎓 國中挑戰<br><span>常用 2000 字</span></button>
+          <button class="btn stage" data-s="S">🏆 高中挑戰<br><span>學測 6000 字（Level 1–6）</span></button>
         </div>`;
       document.querySelectorAll('.stage').forEach(b => {
         b.onclick = () => { VDStore.stage = b.dataset.s; go('menu'); };
@@ -26,7 +30,7 @@ const VDApp = (() => {
     },
     menu() {
       const s = VDStore.stats(scopeWords());
-      const stageName = VDStore.stage === 'E' ? '國小 1200' : '國中 2000';
+      const stageName = { E: '國小 1200', J: '國中 2000', S: '高中 6000' }[VDStore.stage];
       $view().innerHTML = `
         <div class="hero small"><h1>字鬥英雄</h1>
           <p>${stageName} 字｜已掌握 ${s.mastered} 字｜待複習 ${s.due} 字</p></div>
