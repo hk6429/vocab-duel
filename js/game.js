@@ -242,11 +242,20 @@ const VDGame = (() => {
     setTimeout(() => { if (ov.parentNode) ov.remove(); }, 4000);
   }
 
+  /* 頭像：預設 🦸 用水彩學生頭像圖；自選 emoji 化身走墨圈紙底 */
+  function avHtml(cls) {
+    if (g.avatar === '🦸') {
+      return `<img class="vg-av-img ${cls || ''}" src="img/ui/h_avatar.png" alt=""
+        onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🦸',className:'vg-av ${cls || ''}'}))">`;
+    }
+    return `<span class="vg-av paper ${cls || ''}">${g.avatar}</span>`;
+  }
+
   /* ── 首頁英雄橫幅 ── */
   function heroStrip() {
     const lp = levelProgress();
     return `<button class="vg-strip" onclick="VDApp.go('hero')">
-      <span class="vg-av">${g.avatar}</span>
+      ${avHtml()}
       <span class="vg-info">
         <span class="vg-line1">${heroName()}　<b>Lv${lp.L} ${lp.title}</b></span>
         <span class="vg-xpbar"><span style="width:${lp.pct}%"></span></span>
@@ -269,7 +278,8 @@ const VDGame = (() => {
       const isToday = c.d === VDStore.today();
       return `<span class="vg-cal-day ${c.active ? 'on' : ''} ${isToday ? 'today' : ''}"><i>${wd}</i>${c.active ? '🔥' : '·'}</span>`;
     }).join('');
-    return `<div class="vg-daily">
+    return `<div class="vg-daily wc-card">
+      <img class="wc-card-img" src="img/ui/h_daily.png" alt="" onerror="this.remove()">
       <div class="vg-cal">
         <div class="vg-cal-strip">${calHtml}</div>
         <div class="vg-cal-note">連續 <b>${streak}</b> 天　明天再來 +30 XP 首勝獎</div>
@@ -313,7 +323,7 @@ const VDGame = (() => {
     get shield() { return g.shield; }, heroName, get raw() { return g; },
     onAnswer, onFlash, onFlashDone, onQuizDone, onBattleStart, onBattleWin,
     quests, claimQuest, claimAndRefresh, openMystery, openMysteryUI, mysteryWord,
-    buyShield, tierUnlocked, tierNeed, setNick, setAvatar, AVATARS,
+    buyShield, tierUnlocked, tierNeed, setNick, setAvatar, AVATARS, avHtml,
     badges: () => BADGES.map(b => ({ ...b, got: !!g.badges[b.id], date: g.badges[b.id] })),
     badgeCount: () => ({ got: Object.keys(g.badges).length, total: BADGES.length }),
     bragText, challengeCode, decodeChallenge, setSprintBest, get sprintBest() { return g.best.sprint; },

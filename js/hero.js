@@ -7,44 +7,62 @@ const VDHero = (() => {
     const g = VDGame, lp = g.levelProgress(), bc = g.badgeCount();
     const badges = g.badges();
     el.innerHTML = `
-      <img class="hero-banner2" src="img/ui/p_hero2.png" alt="" onerror="this.remove()">
-      <div class="hero-card">
-        <button class="hero-av" id="avPick">${g.avatar}</button>
-        <div class="hero-meta">
-          <input class="hero-nick" id="nick" maxlength="12" placeholder="取個英雄名…" value="${g.heroName() === '無名字鬥者' ? '' : g.heroName()}">
-          <div class="hero-lv">Lv${lp.L}　<b>${lp.title}</b></div>
-          <div class="vg-xpbar big"><span style="width:${lp.pct}%"></span></div>
-          <div class="hero-xp">${lp.inLv} / ${lp.need} XP　到下一級</div>
+      <div class="wc-card">
+        <img class="wc-card-img tall" src="img/ui/h_hero.png" alt="" onerror="this.remove()">
+        <div class="wc-card-body">
+          <div class="hero-card">
+            <button class="hero-av" id="avPick">${g.avHtml('big')}</button>
+            <div class="hero-meta">
+              <input class="hero-nick" id="nick" maxlength="12" placeholder="取個英雄名…" value="${g.heroName() === '無名字鬥者' ? '' : g.heroName()}">
+              <div class="hero-lv">Lv${lp.L}　<b>${lp.title}</b></div>
+              <div class="vg-xpbar big"><span style="width:${lp.pct}%"></span></div>
+              <div class="hero-xp">${lp.inLv} / ${lp.need} XP　到下一級</div>
+            </div>
+          </div>
+          <div class="hero-wallet">
+            <span>🪙 ${g.coins} 字幣</span>
+            <span>🛡️ ${g.shield} 護盾</span>
+            <button class="btn ghost sm" id="buyShield">買護盾（100幣）</button>
+          </div>
+          <div class="hero-shieldhint">護盾可在連續天數即將中斷時自動頂上，別讓 🔥 歸零。</div>
         </div>
       </div>
-      <div class="hero-wallet">
-        <span>🪙 ${g.coins} 字幣</span>
-        <span>🛡️ ${g.shield} 護盾</span>
-        <button class="btn ghost sm" id="buyShield">買護盾（100幣）</button>
-      </div>
-      <div class="hero-shieldhint">護盾可在連續天數即將中斷時自動頂上，別讓 🔥 歸零。</div>
 
-      <div class="hero-sec">🏆 成就徽章　${bc.got}/${bc.total}</div>
-      <div class="badge-grid">
-        ${badges.map(b => `<div class="badge ${b.got ? 'got' : 'lock'}" title="${b.desc}">
-          <span class="badge-ico">${b.got ? b.ico : '🔒'}</span>
-          <span class="badge-name">${b.name}</span>
-          <span class="badge-desc">${b.desc}</span></div>`).join('')}
-      </div>
-
-      <div class="hero-sec">⚙️ 設定</div>
-      <div class="hero-settings">
-        <button class="set-toggle" id="sndToggle">🔊 音效：<b>${VDSound.on ? '開' : '關'}</b></button>
-        <button class="set-toggle" id="fsToggle">🔠 字級：<b>${(localStorage.getItem('vd_fontscale') || 'normal') === 'large' ? '大' : '標準'}</b></button>
+      <div class="wc-card">
+        <img class="wc-card-img" src="img/ui/h_badges.png" alt="" onerror="this.remove()">
+        <div class="wc-card-body">
+          <div class="hero-sec">成就徽章　<b>${bc.got}/${bc.total}</b></div>
+          <div class="badge-grid">
+            ${badges.map(b => `<div class="badge ${b.got ? 'got' : 'lock'}" title="${b.desc}">
+              <span class="badge-ico">${b.got ? b.ico : '🔒'}</span>
+              <span class="badge-name">${b.name}</span>
+              <span class="badge-desc">${b.desc}</span></div>`).join('')}
+          </div>
+        </div>
       </div>
 
-      <div class="hero-sec">📣 分享與挑戰</div>
-      <div class="hero-share">
-        <button class="btn" id="shareBtn">📋 複製戰績卡</button>
-        <button class="btn ghost" id="chalBtn">⚔️ 產生挑戰碼</button>
+      <div class="wc-card">
+        <div class="wc-card-body">
+          <div class="hero-sec">設定</div>
+          <div class="hero-settings">
+            <button class="set-toggle" id="sndToggle">🔊 音效：<b>${VDSound.on ? '開' : '關'}</b></button>
+            <button class="set-toggle" id="fsToggle">🔠 字級：<b>${(localStorage.getItem('vd_fontscale') || 'normal') === 'large' ? '大' : '標準'}</b></button>
+          </div>
+        </div>
       </div>
-      <textarea id="shareBox" class="share-box" placeholder="複製的戰績卡／挑戰碼會出現在這裡，貼給同學 PK！"></textarea>
-      <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>`;
+
+      <div class="wc-card">
+        <img class="wc-card-img" src="img/ui/h_share.png" alt="" onerror="this.remove()">
+        <div class="wc-card-body">
+          <div class="hero-sec">分享與挑戰</div>
+          <div class="hero-share">
+            <button class="btn" id="shareBtn">📋 複製戰績卡</button>
+            <button class="btn ghost" id="chalBtn">⚔️ 產生挑戰碼</button>
+          </div>
+          <textarea id="shareBox" class="share-box" placeholder="複製的戰績卡／挑戰碼會出現在這裡，貼給同學 PK！"></textarea>
+        </div>
+      </div>
+      <button class="btn ghost wide" onclick="VDApp.go('menu')">回主選單</button>`;
 
     // 頭像選擇
     el.querySelector('#avPick').onclick = () => pickAvatar();

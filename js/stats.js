@@ -15,20 +15,30 @@ const VDStats = (() => {
     const sAll = VDStore.stats(allWords);
     const pct = (m, t) => Math.round(m / t * 100);
     el.innerHTML = `
-      <div class="stat-grid">
-        <div class="stat-tile"><div class="stat-num">${sAll.mastered}</div><div class="stat-cap">已掌握單字</div></div>
-        <div class="stat-tile"><div class="stat-num">${sAll.seen}</div><div class="stat-cap">學過單字</div></div>
-        <div class="stat-tile"><div class="stat-num">${s.todayCount}</div><div class="stat-cap">今日複習</div></div>
-        <div class="stat-tile"><div class="stat-num">${s.streak}</div><div class="stat-cap">連續天數</div></div>
+      <div class="wc-card">
+        <img class="wc-card-img" src="img/ui/h_stats.png" alt="" onerror="this.remove()">
+        <div class="wc-card-body">
+          <div class="stat-grid">
+            <div class="stat-tile"><div class="stat-num">${sAll.mastered}</div><div class="stat-cap">已掌握單字</div></div>
+            <div class="stat-tile"><div class="stat-num">${sAll.seen}</div><div class="stat-cap">學過單字</div></div>
+            <div class="stat-tile"><div class="stat-num">${s.todayCount}</div><div class="stat-cap">今日複習</div></div>
+            <div class="stat-tile"><div class="stat-num">${s.streak}</div><div class="stat-cap">連續天數</div></div>
+          </div>
+          ${bar(pct(sE.mastered, eWords.length), `國小 1200 字（${sE.mastered}/${eWords.length}）`)}
+          ${bar(pct(sJ.mastered, jWords.length), `國中 2000 字（${sJ.mastered}/${jWords.length}）`)}
+          ${bar(pct(sAll.mastered, allWords.length), `高中 6000 字（${sAll.mastered}/${allWords.length}）`)}
+          <div class="stat-note">「已掌握」= 熟悉度達第 3 盒以上；目前學段待複習 ${s.due} 字</div>
+        </div>
       </div>
-      ${bar(pct(sE.mastered, eWords.length), `國小 1200 字（${sE.mastered}/${eWords.length}）`)}
-      ${bar(pct(sJ.mastered, jWords.length), `國中 2000 字（${sJ.mastered}/${jWords.length}）`)}
-      ${bar(pct(sAll.mastered, allWords.length), `高中 6000 字（${sAll.mastered}/${allWords.length}）`)}
-      <div class="stat-note">「已掌握」= 熟悉度達第 3 盒以上；目前學段待複習 ${s.due} 字</div>
-      <div class="io-box">
-        <button class="btn ghost" id="btnExport">匯出進度碼</button>
-        <button class="btn ghost" id="btnImport">匯入進度碼</button>
-        <textarea id="ioText" placeholder="匯出的進度碼會顯示在這裡；匯入時把進度碼貼進來再按匯入"></textarea>
+      <div class="wc-card">
+        <div class="wc-card-body">
+          <div class="hero-sec">進度備份</div>
+          <div class="io-box">
+            <button class="btn ghost" id="btnExport">匯出進度碼</button>
+            <button class="btn ghost" id="btnImport">匯入進度碼</button>
+            <textarea id="ioText" placeholder="匯出的進度碼會顯示在這裡；匯入時把進度碼貼進來再按匯入"></textarea>
+          </div>
+        </div>
       </div>`;
     el.querySelector('#btnExport').onclick = () => {
       el.querySelector('#ioText').value = VDStore.exportCode();

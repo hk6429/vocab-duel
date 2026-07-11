@@ -595,6 +595,64 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .wc-menu-navrow { display: flex; gap: 12px; margin-top: 18px; }
 .wc-menu-navrow .btn.ghost { flex: 1; }
 
+/* 通用水彩卡：上圖下文 */
+.wc-card {
+  background: #fff; border: 1px solid var(--line); border-radius: 18px; overflow: hidden;
+  box-shadow: 0 8px 22px rgba(43,43,43,.07); margin-bottom: 16px;
+}
+.wc-card-img { display: block; width: 100%; aspect-ratio: 16/6; object-fit: cover; object-position: 50% 42%; }
+.wc-card-img.tall { aspect-ratio: 16/9; }
+.wc-card-body { padding: 14px 16px 16px; }
+.hero-sec { font-family: var(--font-serif); font-size: 16px; font-weight: 700; color: var(--ink);
+  letter-spacing: 2px; margin: 2px 0 10px; padding-bottom: 6px; border-bottom: 2px solid rgba(111,159,201,.35); }
+.hero-sec b { color: var(--accent2); }
+
+/* 首頁英雄橫幅頭像（水彩圖/emoji 紙底圈） */
+.vg-av-img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex: none;
+  border: 2px solid rgba(111,159,201,.35); background: #fff; }
+.vg-av-img.big { width: 84px; height: 84px; }
+.vg-av.paper { display: inline-flex; align-items: center; justify-content: center;
+  width: 46px; height: 46px; border-radius: 50%; font-size: 26px;
+  background: var(--paper2); border: 2px solid rgba(111,159,201,.35); }
+.vg-av.paper.big { width: 84px; height: 84px; font-size: 44px; }
+
+/* 每日面板卡內圖不留邊距 */
+.vg-daily.wc-card { padding: 0; }
+.vg-daily.wc-card > .vg-cal, .vg-daily.wc-card > .vg-daily-head,
+.vg-daily.wc-card > .vg-quest, .vg-daily.wc-card > .vg-mystery { margin-left: 16px; margin-right: 16px; }
+.vg-daily.wc-card > .vg-cal { margin-top: 14px; }
+.vg-daily.wc-card > .vg-mystery { margin-bottom: 16px; width: calc(100% - 32px); }
+.vg-daily-head { font-family: var(--font-serif); letter-spacing: 2px; }
+.vg-cal-day { background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.vg-cal-day.on { background: rgba(111,159,201,.14); border-color: rgba(111,159,201,.4); }
+.vg-cal-day.today { outline: 2px solid var(--accent2); }
+.vg-mystery { background: var(--paper2); border: 1px solid rgba(111,159,201,.3); border-radius: 12px;
+  color: var(--accent2); font-weight: 700; padding: 12px; cursor: pointer; font-size: 14px; }
+.vg-mystery.opened { background: #fff; color: var(--text); }
+
+/* 徽章牆：白紙卡＋水彩淡染 */
+.badge { background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+.badge.got { background: rgba(111,159,201,.10); border-color: rgba(111,159,201,.45); }
+.badge.lock { background: var(--bg); opacity: .75; }
+.badge-name { font-family: var(--font-serif); font-weight: 700; letter-spacing: 1px; }
+
+/* 設定／分享：白紙卡按鈕 */
+.set-toggle { background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(43,43,43,.05); color: var(--text); }
+.set-toggle b { color: var(--accent2); }
+.share-box, .io-box textarea { background: #fbfaf7; border: 1px solid var(--line); color: var(--text); }
+
+/* 戰績頁：serif 大數字白紙磚 */
+.stat-tile { background: #fff; border: 1px solid var(--line); box-shadow: 0 4px 14px rgba(43,43,43,.05); }
+.stat-num { font-family: var(--font-serif); color: var(--accent2); }
+.stat-bar { background: var(--paper2); border: 1px solid var(--line); }
+.stat-bar-fill { background: linear-gradient(90deg, #8fb8dd, var(--accent2)); }
+
+/* ghost 導覽鈕：白紙卡感 */
+.btn.ghost { background: #fff; border: 1px solid var(--line); color: var(--accent2);
+  box-shadow: 0 3px 10px rgba(43,43,43,.05); }
+.btn.ghost.wide { display: block; width: 100%; text-align: center; }
+
 /* 連結／可點字加強（點擊感明確）：ghost 按鈕變墨線底線字 */
 .menu-foot .btn.ghost, .topbar .back { font-weight: 700; }
 .btn.ghost { border-color: var(--line); color: var(--accent2); }
