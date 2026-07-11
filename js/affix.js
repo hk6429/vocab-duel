@@ -52,19 +52,41 @@ const VDAffix = (() => {
       const x = cx + Math.cos(ang) * R, y = cy + Math.sin(ang) * R;
       return { w, x, y };
     });
-    const lines = spokes.map(s => `<line x1="${cx}" y1="${cy}" x2="${s.x}" y2="${s.y}" class="af-edge"/>`).join('');
+    /* 水彩墨風：弧形墨線輻條、手感微傾紙卡、暈染中心、水彩點綴 */
+    const lines = spokes.map((s, i) => {
+      const mx = (cx + s.x) / 2, my = (cy + s.y) / 2;
+      const dx = s.y - cy, dy = cx - s.x, len = Math.hypot(dx, dy) || 1;
+      const bend = (i % 2 ? 9 : -9);
+      return `<path d="M${cx},${cy} Q${mx + dx / len * bend},${my + dy / len * bend} ${s.x},${s.y}" class="af-edge"/>`;
+    }).join('');
+    const dots = spokes.map((s, i) => `
+      <circle class="af-dot d${i % 3}" cx="${(cx + s.x * 2) / 3 + (i % 2 ? 8 : -8)}" cy="${(cy + s.y * 2) / 3 + (i % 3 - 1) * 7}" r="${2 + i % 3}"/>`).join('');
     const leaves = spokes.map((s, i) => `
-      <g class="af-node" data-w="${s.w.word}" transform="translate(${s.x},${s.y})">
-        <rect x="-34" y="-15" width="68" height="30" rx="8"/>
+      <g class="af-node" data-w="${s.w.word}" transform="translate(${s.x},${s.y}) rotate(${(i % 3 - 1) * 3})">
+        <rect x="-36" y="-16" width="72" height="32" rx="10"/>
         <text y="1">${s.w.word.length > 9 ? s.w.word.slice(0, 8) + '…' : s.w.word}</text>
       </g>`).join('');
     el.innerHTML = `
       <button class="btn ghost af-back">← 回字綴清單</button>
       <div class="af-maphead"><span class="af-form big">${affix.form}</span><span class="af-mean">${affix.meaning}</span></div>
       <svg class="af-svg" viewBox="0 0 ${W} ${H}">
+        <defs>
+          <radialGradient id="afWash" cx="42%" cy="38%">
+            <stop offset="0%" stop-color="#cfe0ee"/>
+            <stop offset="62%" stop-color="#9dbcd9"/>
+            <stop offset="100%" stop-color="#6f9fc9"/>
+          </radialGradient>
+          <filter id="afRough" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="2" seed="7" result="n"/>
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="7"/>
+          </filter>
+        </defs>
         ${lines}
+        ${dots}
         <g class="af-center" transform="translate(${cx},${cy})">
-          <circle r="40"/><text class="af-ctext" y="1">${affix.form}</text>
+          <circle r="46" filter="url(#afRough)"/>
+          <circle r="40" class="af-cinner" filter="url(#afRough)"/>
+          <text class="af-ctext" y="1">${affix.form}</text>
         </g>
         ${leaves}
       </svg>

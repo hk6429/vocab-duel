@@ -284,7 +284,7 @@ const VDGame = (() => {
         <div class="vg-cal-strip">${calHtml}</div>
         <div class="vg-cal-note">連續 <b>${streak}</b> 天　明天再來 +30 XP 首勝獎</div>
       </div>
-      <div class="vg-daily-head">📅 每日任務 ${allClaimed ? '✅ 全清' : ''}</div>
+      <div class="vg-daily-head">每日任務 ${allClaimed ? '<b class="ok">✓ 全清</b>' : ''}</div>
       ${qs.map(q => `
         <div class="vg-quest ${q.done ? 'done' : ''}">
           <span class="vg-q-ico">${q.ico}</span>
