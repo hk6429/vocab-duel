@@ -48,6 +48,13 @@ const VDStore = (() => {
       saveProg();
       bumpDaily();
     },
+    /* 加入閃卡：把字放進待複習（box0、今天到期）；已有進度則不動，回傳是否為新加入 */
+    enroll(word) {
+      if (prog[word]) return false;
+      prog[word] = { b: 0, d: today(), s: 0 };
+      saveProg();
+      return true;
+    },
     isDue: w => prog[w] && prog[w].d <= today(),
     isSeen: w => !!prog[w],
     box: w => (prog[w] ? prog[w].b : -1), // -1 = 未學

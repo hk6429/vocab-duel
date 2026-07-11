@@ -142,3 +142,45 @@ body {
 .bt-portrait.big { width: 104px; height: 104px; border-radius: 18px; }
 .bt-face-emoji { font-size: 40px; }
 .bt-face-emoji.big { font-size: 54px; }
+
+/* ── 字綴心智圖 ── */
+.af-tabs { display: flex; gap: 8px; margin: 6px 0 12px; }
+.af-tab {
+  flex: 1; padding: 10px; border-radius: 12px; border: 1px solid #2e4380;
+  background: var(--panel); color: var(--muted); font-family: inherit; font-size: 15px; cursor: pointer;
+}
+.af-tab.on { background: var(--accent); color: #333; font-weight: 700; border-color: var(--accent); }
+.af-tab span { display: inline-block; margin-left: 4px; font-size: 12px; opacity: .8; }
+.af-hint { text-align: center; color: var(--muted); font-size: 13px; margin: 8px 0; }
+.af-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.af-card {
+  display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+  background: var(--panel); border: 1px solid #2e4380; border-radius: 12px;
+  padding: 12px; cursor: pointer; color: var(--text); text-align: left;
+}
+.af-card:active { transform: scale(.97); }
+.af-form { font-size: 20px; font-weight: 700; color: var(--accent2); }
+.af-form.big { font-size: 26px; }
+.af-mean { font-size: 13px; color: var(--text); }
+.af-count { font-size: 11px; color: var(--muted); }
+.af-maphead { text-align: center; margin: 4px 0 2px; }
+.af-maphead .af-mean { display: block; color: var(--muted); margin-top: 2px; }
+.af-back { margin-bottom: 6px; }
+.af-svg { width: 100%; height: auto; display: block; }
+.af-edge { stroke: #2e4380; stroke-width: 1.5; }
+.af-center circle { fill: var(--accent); }
+.af-ctext { text-anchor: middle; dominant-baseline: middle; fill: #333; font-weight: 700; font-size: 15px; }
+.af-node { cursor: pointer; }
+.af-node rect { fill: var(--panel); stroke: var(--accent2); stroke-width: 1.5; }
+.af-node:active rect { fill: var(--accent2); }
+.af-node text { text-anchor: middle; dominant-baseline: middle; fill: var(--text); font-size: 12px; }
+.af-addall { display: block; width: 100%; margin: 12px 0; }
+.af-detail {
+  background: var(--panel); border: 1px solid #2e4380; border-radius: 12px; padding: 14px; margin-top: 4px;
+}
+.af-dword { font-size: 20px; font-weight: 700; }
+.af-pos { font-size: 12px; color: var(--accent2); font-weight: 400; }
+.af-dzh { color: var(--accent); margin: 4px 0; }
+.af-dex { font-size: 14px; margin-top: 6px; }
+.af-dexz { font-size: 13px; color: var(--muted); }
+.af-detail .af-add1 { margin-top: 10px; }

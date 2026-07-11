@@ -1,0 +1,2428 @@
+{
+ "prefixes": [
+  {
+   "form": "un-",
+   "meaning": "不、否定、相反",
+   "members": [
+    "unhappy",
+    "unlock",
+    "uncover",
+    "undo",
+    "unfold",
+    "unveil",
+    "unconditional",
+    "unemployment",
+    "undoubtedly"
+   ]
+  },
+  {
+   "form": "re-",
+   "meaning": "再、重新、回",
+   "members": [
+    "recall",
+    "recycle",
+    "refresh",
+    "reunion",
+    "replace",
+    "repay",
+    "return",
+    "reform",
+    "reproduce",
+    "renew",
+    "recover",
+    "reflect"
+   ]
+  },
+  {
+   "form": "pre-",
+   "meaning": "前、預先",
+   "members": [
+    "preview",
+    "predict",
+    "prehistoric",
+    "precaution",
+    "premature",
+    "prejudice"
+   ]
+  },
+  {
+   "form": "dis-",
+   "meaning": "不、否定、相反",
+   "members": [
+    "disagree",
+    "disappear",
+    "dishonest",
+    "dislike",
+    "disable",
+    "disadvantage",
+    "disappoint",
+    "disapprove",
+    "discomfort",
+    "disconnect",
+    "disorder",
+    "disbelief"
+   ]
+  },
+  {
+   "form": "mis-",
+   "meaning": "錯誤、壞",
+   "members": [
+    "mislead",
+    "mistake",
+    "misunderstand",
+    "misfortune"
+   ]
+  },
+  {
+   "form": "ex-",
+   "meaning": "向外、往外",
+   "members": [
+    "exit",
+    "export",
+    "exclude",
+    "extract",
+    "external",
+    "exterior",
+    "expand"
+   ]
+  },
+  {
+   "form": "sub-",
+   "meaning": "下、下方、次要",
+   "members": [
+    "submarine",
+    "subway",
+    "suburb",
+    "suburban",
+    "subordinate",
+    "subtract",
+    "subscribe"
+   ]
+  },
+  {
+   "form": "inter-",
+   "meaning": "在…之間、相互",
+   "members": [
+    "interact",
+    "interaction",
+    "international",
+    "Internet",
+    "intersection",
+    "interrupt",
+    "intervene",
+    "interview"
+   ]
+  },
+  {
+   "form": "trans-",
+   "meaning": "橫越、轉換、傳送",
+   "members": [
+    "transfer",
+    "transform",
+    "translate",
+    "transport",
+    "transplant",
+    "transmit",
+    "transaction",
+    "transition",
+    "transparent"
+   ]
+  },
+  {
+   "form": "auto-",
+   "meaning": "自己、自動",
+   "members": [
+    "autobiography",
+    "autograph",
+    "automatic",
+    "automobile",
+    "autonomy"
+   ]
+  },
+  {
+   "form": "co-",
+   "meaning": "共同、一起",
+   "members": [
+    "cooperate",
+    "cooperation",
+    "cooperative",
+    "coordinate"
+   ]
+  },
+  {
+   "form": "con-",
+   "meaning": "一起、共同",
+   "members": [
+    "connect",
+    "contact",
+    "construct",
+    "conference"
+   ]
+  },
+  {
+   "form": "com-",
+   "meaning": "一起、共同",
+   "members": [
+    "combine",
+    "companion",
+    "compose",
+    "community",
+    "compile"
+   ]
+  },
+  {
+   "form": "de-",
+   "meaning": "向下、除去、相反",
+   "members": [
+    "decrease",
+    "decline",
+    "descend",
+    "deduct",
+    "depart",
+    "detach"
+   ]
+  },
+  {
+   "form": "en-",
+   "meaning": "使…、使成為",
+   "members": [
+    "enable",
+    "enlarge",
+    "enrich",
+    "endanger",
+    "enforce",
+    "enlighten",
+    "enclose",
+    "encourage",
+    "ensure"
+   ]
+  },
+  {
+   "form": "in-",
+   "meaning": "不、否定",
+   "members": [
+    "incredible",
+    "independent",
+    "independence",
+    "injustice",
+    "indifferent",
+    "infinite"
+   ]
+  },
+  {
+   "form": "in-",
+   "meaning": "向內、進入",
+   "members": [
+    "include",
+    "income",
+    "input",
+    "inside",
+    "indoor",
+    "insert",
+    "inject",
+    "inland"
+   ]
+  },
+  {
+   "form": "im-",
+   "meaning": "向內、進入（in- 的變體）",
+   "members": [
+    "import",
+    "immigrant",
+    "immigrate",
+    "imprison"
+   ]
+  },
+  {
+   "form": "over-",
+   "meaning": "過度、上方、越過",
+   "members": [
+    "overcome",
+    "overflow",
+    "overhear",
+    "overlook",
+    "overnight",
+    "overseas",
+    "overtake",
+    "overthrow",
+    "overwork",
+    "overpass",
+    "overturn",
+    "overhead"
+   ]
+  },
+  {
+   "form": "super-",
+   "meaning": "超、上、超越",
+   "members": [
+    "supermarket",
+    "superior",
+    "supervise",
+    "supervisor",
+    "supervision",
+    "superficial"
+   ]
+  },
+  {
+   "form": "tele-",
+   "meaning": "遠、遠距離",
+   "members": [
+    "telephone",
+    "telescope",
+    "television",
+    "telegraph",
+    "telecommunications"
+   ]
+  },
+  {
+   "form": "under-",
+   "meaning": "在…之下、不足",
+   "members": [
+    "underline",
+    "underwear",
+    "underpass",
+    "undergraduate",
+    "underestimate",
+    "undergo",
+    "undertake",
+    "underneath"
+   ]
+  },
+  {
+   "form": "uni-",
+   "meaning": "單一、一",
+   "members": [
+    "uniform",
+    "unify",
+    "union",
+    "unite",
+    "unity",
+    "unique",
+    "unit",
+    "universal",
+    "universe"
+   ]
+  },
+  {
+   "form": "out-",
+   "meaning": "向外、超過、勝過",
+   "members": [
+    "outdoor",
+    "outside",
+    "output",
+    "outline",
+    "outlook",
+    "outcome",
+    "outbreak",
+    "outgoing",
+    "outnumber",
+    "outward",
+    "outdoors"
+   ]
+  },
+  {
+   "form": "up-",
+   "meaning": "向上、提升",
+   "members": [
+    "update",
+    "upgrade",
+    "upload",
+    "upright",
+    "upstairs",
+    "upward"
+   ]
+  },
+  {
+   "form": "pro-",
+   "meaning": "向前、往前",
+   "members": [
+    "proceed",
+    "progress",
+    "project",
+    "promote",
+    "produce",
+    "propel",
+    "prolong"
+   ]
+  },
+  {
+   "form": "sur-",
+   "meaning": "超過、在上、額外",
+   "members": [
+    "surface",
+    "surpass",
+    "surplus",
+    "surround",
+    "survive",
+    "surname",
+    "surrender"
+   ]
+  },
+  {
+   "form": "be-",
+   "meaning": "在…（方位）、環繞",
+   "members": [
+    "below",
+    "beside",
+    "behind",
+    "before",
+    "beneath",
+    "between",
+    "beyond"
+   ]
+  },
+  {
+   "form": "a-",
+   "meaning": "在…、處於…狀態",
+   "members": [
+    "alive",
+    "asleep",
+    "awake",
+    "aloud",
+    "ashamed",
+    "aboard",
+    "ahead",
+    "apart",
+    "aside",
+    "around"
+   ]
+  }
+ ],
+ "suffixes": [
+  {
+   "form": "-ful",
+   "meaning": "充滿…的、有…的（形容詞）",
+   "members": [
+    "beautiful",
+    "careful",
+    "cheerful",
+    "colorful",
+    "helpful",
+    "hopeful",
+    "joyful",
+    "painful",
+    "peaceful",
+    "playful",
+    "powerful",
+    "thankful",
+    "thoughtful",
+    "useful",
+    "wonderful",
+    "harmful"
+   ]
+  },
+  {
+   "form": "-less",
+   "meaning": "沒有…的、缺乏…的（形容詞）",
+   "members": [
+    "careless",
+    "priceless",
+    "reckless",
+    "relentless"
+   ]
+  },
+  {
+   "form": "-able",
+   "meaning": "可以被…的、能…的（形容詞）",
+   "members": [
+    "acceptable",
+    "enjoyable",
+    "reliable",
+    "valuable",
+    "reasonable",
+    "portable",
+    "suitable",
+    "profitable",
+    "remarkable",
+    "countable",
+    "noticeable",
+    "respectable",
+    "agreeable"
+   ]
+  },
+  {
+   "form": "-ible",
+   "meaning": "可以被…的、能…的（形容詞）",
+   "members": [
+    "accessible",
+    "sensible",
+    "responsible",
+    "flexible",
+    "edible",
+    "possible"
+   ]
+  },
+  {
+   "form": "-ous",
+   "meaning": "充滿…的、有…性質的（形容詞）",
+   "members": [
+    "dangerous",
+    "famous",
+    "nervous",
+    "generous",
+    "humorous",
+    "jealous",
+    "poisonous",
+    "courageous",
+    "marvelous",
+    "numerous",
+    "gorgeous",
+    "enormous"
+   ]
+  },
+  {
+   "form": "-ious",
+   "meaning": "有…的、充滿…的（形容詞）",
+   "members": [
+    "curious",
+    "serious",
+    "delicious",
+    "ambitious",
+    "religious",
+    "mysterious",
+    "precious",
+    "obvious",
+    "previous",
+    "various",
+    "conscious",
+    "anxious"
+   ]
+  },
+  {
+   "form": "-ive",
+   "meaning": "有…傾向的、具…性質的（形容詞）",
+   "members": [
+    "active",
+    "effective",
+    "expensive",
+    "attractive",
+    "positive",
+    "negative",
+    "sensitive",
+    "productive",
+    "protective",
+    "impressive",
+    "aggressive",
+    "massive"
+   ]
+  },
+  {
+   "form": "-ative",
+   "meaning": "有…傾向的（形容詞）",
+   "members": [
+    "creative",
+    "alternative",
+    "comparative",
+    "relative",
+    "representative",
+    "talkative",
+    "informative",
+    "imaginative",
+    "narrative",
+    "competitive",
+    "cooperative"
+   ]
+  },
+  {
+   "form": "-al",
+   "meaning": "與…有關的、…的（形容詞）",
+   "members": [
+    "national",
+    "natural",
+    "personal",
+    "central",
+    "final",
+    "formal",
+    "global",
+    "local",
+    "legal",
+    "normal",
+    "several",
+    "total",
+    "equal",
+    "moral",
+    "cultural"
+   ]
+  },
+  {
+   "form": "-ial",
+   "meaning": "與…有關的、…的（形容詞）",
+   "members": [
+    "social",
+    "special",
+    "material",
+    "official",
+    "commercial",
+    "financial",
+    "essential",
+    "initial",
+    "artificial",
+    "facial",
+    "racial",
+    "partial"
+   ]
+  },
+  {
+   "form": "-ual",
+   "meaning": "與…有關的、…的（形容詞）",
+   "members": [
+    "actual",
+    "casual",
+    "gradual",
+    "individual",
+    "mutual",
+    "annual",
+    "manual",
+    "visual",
+    "usual",
+    "spiritual",
+    "sexual",
+    "intellectual",
+    "ritual"
+   ]
+  },
+  {
+   "form": "-ical",
+   "meaning": "與…有關的、…的（形容詞）",
+   "members": [
+    "medical",
+    "magical",
+    "musical",
+    "physical",
+    "chemical",
+    "critical",
+    "logical",
+    "practical",
+    "technical",
+    "typical",
+    "historical",
+    "political"
+   ]
+  },
+  {
+   "form": "-ic",
+   "meaning": "與…有關的、…的（形容詞）",
+   "members": [
+    "basic",
+    "classic",
+    "historic",
+    "dramatic",
+    "economic",
+    "electric",
+    "energetic",
+    "fantastic",
+    "heroic",
+    "romantic",
+    "scientific",
+    "specific",
+    "tragic",
+    "artistic"
+   ]
+  },
+  {
+   "form": "-ish",
+   "meaning": "帶點…的、有…性質的（形容詞）",
+   "members": [
+    "childish",
+    "foolish",
+    "selfish",
+    "stylish"
+   ]
+  },
+  {
+   "form": "-some",
+   "meaning": "令人…的、易於…的（形容詞）",
+   "members": [
+    "awesome",
+    "tiresome",
+    "troublesome",
+    "wholesome",
+    "lonesome",
+    "handsome"
+   ]
+  },
+  {
+   "form": "-y",
+   "meaning": "充滿…的、多…的（形容詞）",
+   "members": [
+    "rainy",
+    "sunny",
+    "windy",
+    "cloudy",
+    "foggy",
+    "snowy",
+    "stormy",
+    "healthy",
+    "wealthy",
+    "dirty",
+    "dusty",
+    "spicy",
+    "juicy",
+    "salty",
+    "sleepy",
+    "noisy",
+    "greedy",
+    "lucky",
+    "hungry",
+    "thirsty",
+    "tasty",
+    "shiny",
+    "lazy"
+   ]
+  },
+  {
+   "form": "-ary",
+   "meaning": "與…有關的（形容詞）或表場所/事物（名詞）",
+   "members": [
+    "library",
+    "dictionary",
+    "secretary",
+    "ordinary",
+    "necessary",
+    "primary",
+    "military",
+    "imaginary",
+    "voluntary",
+    "summary",
+    "diary",
+    "anniversary"
+   ]
+  },
+  {
+   "form": "-ward",
+   "meaning": "朝…方向的、向…（形容詞/副詞）",
+   "members": [
+    "backward",
+    "forward",
+    "upward",
+    "downward",
+    "outward"
+   ]
+  },
+  {
+   "form": "-ment",
+   "meaning": "表動作或結果（名詞）",
+   "members": [
+    "advertisement",
+    "commitment",
+    "government",
+    "movement",
+    "placement",
+    "refreshment",
+    "unemployment",
+    "endowment",
+    "judgment"
+   ]
+  },
+  {
+   "form": "-tion",
+   "meaning": "表動作、狀態或結果（名詞）",
+   "members": [
+    "action",
+    "collection",
+    "connection",
+    "direction",
+    "election",
+    "invention",
+    "protection",
+    "production",
+    "attention",
+    "reaction",
+    "pollution",
+    "solution",
+    "revolution",
+    "selection"
+   ]
+  },
+  {
+   "form": "-ation",
+   "meaning": "表動作、狀態或結果（名詞，常由 -ate 動詞變來）",
+   "members": [
+    "examination",
+    "celebration",
+    "education",
+    "information",
+    "imagination",
+    "invitation",
+    "organization",
+    "population",
+    "operation",
+    "situation",
+    "generation",
+    "application",
+    "communication",
+    "preparation",
+    "translation"
+   ]
+  },
+  {
+   "form": "-ition",
+   "meaning": "表動作、狀態或結果（名詞）",
+   "members": [
+    "competition",
+    "condition",
+    "tradition",
+    "addition",
+    "position",
+    "definition",
+    "repetition",
+    "recognition",
+    "opposition",
+    "exhibition",
+    "nutrition",
+    "ambition"
+   ]
+  },
+  {
+   "form": "-sion",
+   "meaning": "表動作、狀態或結果（名詞）",
+   "members": [
+    "decision",
+    "discussion",
+    "division",
+    "expansion",
+    "explosion",
+    "expression",
+    "impression",
+    "permission",
+    "confusion",
+    "conclusion",
+    "extension",
+    "television",
+    "invasion"
+   ]
+  },
+  {
+   "form": "-ity",
+   "meaning": "表性質或狀態（名詞）",
+   "members": [
+    "ability",
+    "activity",
+    "community",
+    "security",
+    "quality",
+    "quantity",
+    "reality",
+    "majority",
+    "minority",
+    "popularity",
+    "possibility",
+    "responsibility",
+    "creativity",
+    "curiosity",
+    "equality",
+    "identity"
+   ]
+  },
+  {
+   "form": "-ance",
+   "meaning": "表動作、狀態或性質（名詞）",
+   "members": [
+    "appearance",
+    "assistance",
+    "importance",
+    "performance",
+    "acceptance",
+    "attendance",
+    "resistance",
+    "guidance",
+    "allowance",
+    "insurance",
+    "disturbance"
+   ]
+  },
+  {
+   "form": "-ence",
+   "meaning": "表動作、狀態或性質（名詞）",
+   "members": [
+    "difference",
+    "confidence",
+    "independence",
+    "patience",
+    "silence",
+    "presence",
+    "absence",
+    "existence",
+    "preference",
+    "reference",
+    "violence"
+   ]
+  },
+  {
+   "form": "-ship",
+   "meaning": "表身分、關係或狀態（名詞）",
+   "members": [
+    "friendship",
+    "relationship",
+    "membership",
+    "leadership",
+    "partnership",
+    "ownership",
+    "championship",
+    "citizenship",
+    "scholarship",
+    "hardship"
+   ]
+  },
+  {
+   "form": "-hood",
+   "meaning": "表身分或時期（名詞）",
+   "members": [
+    "childhood",
+    "brotherhood",
+    "motherhood",
+    "neighborhood"
+   ]
+  },
+  {
+   "form": "-dom",
+   "meaning": "表狀態或領域（名詞）",
+   "members": [
+    "freedom",
+    "kingdom",
+    "wisdom",
+    "boredom"
+   ]
+  },
+  {
+   "form": "-age",
+   "meaning": "表動作、結果或集合（名詞）",
+   "members": [
+    "package",
+    "storage",
+    "marriage",
+    "usage",
+    "shortage",
+    "postage",
+    "percentage",
+    "coverage"
+   ]
+  },
+  {
+   "form": "-ism",
+   "meaning": "表主義、思想或制度（名詞）",
+   "members": [
+    "communism",
+    "criticism",
+    "journalism",
+    "nationalism",
+    "optimism",
+    "pessimism",
+    "racism",
+    "realism",
+    "socialism",
+    "terrorism",
+    "tourism"
+   ]
+  },
+  {
+   "form": "-ure",
+   "meaning": "表動作或結果（名詞）",
+   "members": [
+    "failure",
+    "departure",
+    "exposure",
+    "closure",
+    "disclosure",
+    "pressure",
+    "mixture",
+    "signature"
+   ]
+  },
+  {
+   "form": "-cy",
+   "meaning": "表性質、狀態或職位（名詞）",
+   "members": [
+    "accuracy",
+    "literacy",
+    "privacy",
+    "democracy",
+    "intimacy",
+    "diplomacy",
+    "legacy",
+    "conspiracy"
+   ]
+  },
+  {
+   "form": "-ency",
+   "meaning": "表性質或狀態（名詞）",
+   "members": [
+    "efficiency",
+    "emergency",
+    "fluency",
+    "frequency",
+    "tendency",
+    "urgency",
+    "agency",
+    "currency"
+   ]
+  },
+  {
+   "form": "-ery",
+   "meaning": "表場所、行為或性質（名詞）",
+   "members": [
+    "bakery",
+    "robbery",
+    "bravery",
+    "delivery",
+    "recovery",
+    "discovery",
+    "nursery",
+    "slavery",
+    "surgery"
+   ]
+  },
+  {
+   "form": "-ory",
+   "meaning": "表場所（名詞）或…的（形容詞）",
+   "members": [
+    "factory",
+    "directory",
+    "laboratory",
+    "dormitory",
+    "category",
+    "territory",
+    "inventory",
+    "history"
+   ]
+  },
+  {
+   "form": "-ology",
+   "meaning": "表…學、…研究（學科名詞）",
+   "members": [
+    "biology",
+    "ecology",
+    "psychology",
+    "sociology",
+    "technology",
+    "archaeology",
+    "theology"
+   ]
+  },
+  {
+   "form": "-graphy",
+   "meaning": "表…寫、…記錄、…術（名詞）",
+   "members": [
+    "biography",
+    "autobiography",
+    "photography",
+    "geography",
+    "calligraphy"
+   ]
+  },
+  {
+   "form": "-meter",
+   "meaning": "表測量儀器或公尺（名詞）",
+   "members": [
+    "thermometer",
+    "kilometer",
+    "centimeter",
+    "diameter"
+   ]
+  },
+  {
+   "form": "-th",
+   "meaning": "表性質或狀態的抽象名詞",
+   "members": [
+    "warmth",
+    "width",
+    "depth",
+    "length",
+    "strength",
+    "growth",
+    "health",
+    "truth",
+    "youth",
+    "breadth"
+   ]
+  },
+  {
+   "form": "-teen",
+   "meaning": "表十幾（十三到十九，數字）",
+   "members": [
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen"
+   ]
+  },
+  {
+   "form": "-ty",
+   "meaning": "表整十數（數字）",
+   "members": [
+    "twenty",
+    "thirty",
+    "forty",
+    "fifty",
+    "sixty",
+    "seventy",
+    "eighty",
+    "ninety"
+   ]
+  },
+  {
+   "form": "-ee",
+   "meaning": "被…的人、受…者（名詞）",
+   "members": [
+    "employee",
+    "examinee",
+    "nominee",
+    "refugee",
+    "trustee",
+    "referee",
+    "guarantee"
+   ]
+  },
+  {
+   "form": "-ant",
+   "meaning": "做…的人（名詞）或…的（形容詞）",
+   "members": [
+    "assistant",
+    "applicant",
+    "accountant",
+    "participant",
+    "servant",
+    "attendant",
+    "consultant",
+    "contestant",
+    "immigrant",
+    "inhabitant"
+   ]
+  },
+  {
+   "form": "-ent",
+   "meaning": "…者（名詞）或…的（形容詞）",
+   "members": [
+    "student",
+    "president",
+    "resident",
+    "opponent",
+    "dependent",
+    "correspondent",
+    "different",
+    "confident",
+    "silent",
+    "patient"
+   ]
+  },
+  {
+   "form": "-er",
+   "meaning": "做…的人或東西（名詞）",
+   "members": [
+    "teacher",
+    "worker",
+    "writer",
+    "singer",
+    "dancer",
+    "player",
+    "driver",
+    "farmer",
+    "painter",
+    "reporter",
+    "employer",
+    "manager",
+    "owner",
+    "speaker",
+    "leader",
+    "runner",
+    "winner"
+   ]
+  },
+  {
+   "form": "-or",
+   "meaning": "做…的人或東西（名詞）",
+   "members": [
+    "actor",
+    "director",
+    "editor",
+    "visitor",
+    "inventor",
+    "sailor",
+    "translator",
+    "operator",
+    "instructor",
+    "creator",
+    "collector",
+    "supervisor",
+    "professor",
+    "governor"
+   ]
+  },
+  {
+   "form": "-ist",
+   "meaning": "從事…的人、…主義者（名詞）",
+   "members": [
+    "artist",
+    "scientist",
+    "dentist",
+    "journalist",
+    "novelist",
+    "pianist",
+    "tourist",
+    "specialist",
+    "capitalist",
+    "columnist",
+    "violinist",
+    "economist"
+   ]
+  },
+  {
+   "form": "-ian",
+   "meaning": "從事…的人、…專家（名詞）",
+   "members": [
+    "musician",
+    "magician",
+    "historian",
+    "librarian",
+    "politician",
+    "technician",
+    "physician",
+    "comedian",
+    "electrician",
+    "vegetarian",
+    "civilian",
+    "guardian"
+   ]
+  },
+  {
+   "form": "-en",
+   "meaning": "使變…、變得…（動詞）",
+   "members": [
+    "broaden",
+    "deepen",
+    "widen",
+    "shorten",
+    "lengthen",
+    "strengthen",
+    "weaken",
+    "sharpen",
+    "soften",
+    "harden",
+    "tighten",
+    "loosen",
+    "lighten",
+    "straighten"
+   ]
+  },
+  {
+   "form": "-ize",
+   "meaning": "使…化、使成為…（動詞）",
+   "members": [
+    "apologize",
+    "memorize",
+    "organize",
+    "realize",
+    "recognize",
+    "criticize",
+    "emphasize",
+    "minimize",
+    "symbolize",
+    "summarize",
+    "modernize",
+    "characterize",
+    "specialize",
+    "socialize",
+    "utilize"
+   ]
+  },
+  {
+   "form": "-ify",
+   "meaning": "使…、變成…（動詞）",
+   "members": [
+    "simplify",
+    "clarify",
+    "identify",
+    "justify",
+    "magnify",
+    "purify",
+    "notify",
+    "qualify",
+    "classify",
+    "beautify",
+    "terrify",
+    "unify",
+    "modify",
+    "intensify",
+    "specify"
+   ]
+  },
+  {
+   "form": "-ate",
+   "meaning": "使…、做…（動詞）",
+   "members": [
+    "create",
+    "celebrate",
+    "educate",
+    "communicate",
+    "operate",
+    "decorate",
+    "generate",
+    "calculate",
+    "demonstrate",
+    "cooperate",
+    "indicate",
+    "participate",
+    "separate",
+    "translate",
+    "illustrate"
+   ]
+  },
+  {
+   "form": "-ly",
+   "meaning": "以…方式（副詞）",
+   "members": [
+    "actually",
+    "badly",
+    "finally",
+    "hardly",
+    "highly",
+    "nearly",
+    "really",
+    "usually",
+    "especially",
+    "mostly",
+    "partly",
+    "lately",
+    "shortly",
+    "roughly"
+   ]
+  }
+ ],
+ "roots": [
+  {
+   "form": "spect/spic",
+   "meaning": "看",
+   "members": [
+    "inspect",
+    "respect",
+    "spectator",
+    "suspect",
+    "expect",
+    "aspect",
+    "prospect",
+    "perspective",
+    "spectacle",
+    "despise",
+    "specimen",
+    "specify",
+    "special",
+    "especially"
+   ]
+  },
+  {
+   "form": "port",
+   "meaning": "搬運；港口",
+   "members": [
+    "import",
+    "export",
+    "transport",
+    "portable",
+    "report",
+    "support",
+    "airport",
+    "porter",
+    "opportunity",
+    "important"
+   ]
+  },
+  {
+   "form": "dict",
+   "meaning": "說",
+   "members": [
+    "dictate",
+    "dictator",
+    "dictionary",
+    "predict",
+    "contradict",
+    "verdict",
+    "indicate",
+    "dedicate",
+    "addict"
+   ]
+  },
+  {
+   "form": "duc/duct",
+   "meaning": "引導",
+   "members": [
+    "produce",
+    "reduce",
+    "introduce",
+    "conduct",
+    "educate",
+    "deduct",
+    "product",
+    "production",
+    "conductor",
+    "introduction",
+    "reduction"
+   ]
+  },
+  {
+   "form": "ject",
+   "meaning": "投擲",
+   "members": [
+    "reject",
+    "inject",
+    "project",
+    "object",
+    "subject",
+    "injection",
+    "projection"
+   ]
+  },
+  {
+   "form": "struct",
+   "meaning": "建造",
+   "members": [
+    "construct",
+    "structure",
+    "instruct",
+    "construction",
+    "destruction",
+    "instruction"
+   ]
+  },
+  {
+   "form": "scrib/script",
+   "meaning": "寫",
+   "members": [
+    "describe",
+    "subscribe",
+    "prescribe",
+    "script",
+    "manuscript",
+    "description",
+    "transcript"
+   ]
+  },
+  {
+   "form": "vis/vid",
+   "meaning": "看",
+   "members": [
+    "visible",
+    "vision",
+    "visit",
+    "visual",
+    "television",
+    "supervise",
+    "video",
+    "evidence",
+    "provide",
+    "review",
+    "revise",
+    "advise"
+   ]
+  },
+  {
+   "form": "aud",
+   "meaning": "聽",
+   "members": [
+    "audience",
+    "audio",
+    "auditorium",
+    "audit"
+   ]
+  },
+  {
+   "form": "mit/miss",
+   "meaning": "送；投",
+   "members": [
+    "admit",
+    "permit",
+    "submit",
+    "transmit",
+    "commit",
+    "mission",
+    "permission",
+    "admission",
+    "dismiss",
+    "omit",
+    "promise"
+   ]
+  },
+  {
+   "form": "pos/pon",
+   "meaning": "放置",
+   "members": [
+    "position",
+    "compose",
+    "expose",
+    "propose",
+    "suppose",
+    "deposit",
+    "impose",
+    "oppose",
+    "opponent",
+    "postpone",
+    "component",
+    "dispose",
+    "purpose",
+    "opposite"
+   ]
+  },
+  {
+   "form": "tract",
+   "meaning": "拉",
+   "members": [
+    "attract",
+    "extract",
+    "subtract",
+    "contract",
+    "distract",
+    "abstract",
+    "attraction"
+   ]
+  },
+  {
+   "form": "form",
+   "meaning": "形狀；形成",
+   "members": [
+    "form",
+    "reform",
+    "inform",
+    "perform",
+    "transform",
+    "uniform",
+    "format",
+    "formula",
+    "formation",
+    "conform",
+    "platform"
+   ]
+  },
+  {
+   "form": "graph/gram",
+   "meaning": "寫；圖",
+   "members": [
+    "photograph",
+    "paragraph",
+    "autograph",
+    "biography",
+    "geography",
+    "diagram",
+    "program",
+    "grammar",
+    "graph",
+    "calligraphy"
+   ]
+  },
+  {
+   "form": "phon",
+   "meaning": "聲音",
+   "members": [
+    "telephone",
+    "microphone",
+    "symphony",
+    "earphone",
+    "cellphone",
+    "headphone"
+   ]
+  },
+  {
+   "form": "photo",
+   "meaning": "光",
+   "members": [
+    "photograph",
+    "photo",
+    "photography",
+    "photographer"
+   ]
+  },
+  {
+   "form": "bio",
+   "meaning": "生命",
+   "members": [
+    "biology",
+    "biography",
+    "biological",
+    "antibiotic"
+   ]
+  },
+  {
+   "form": "man/manu",
+   "meaning": "手",
+   "members": [
+    "manual",
+    "manufacture",
+    "manuscript",
+    "manage",
+    "manipulate",
+    "manager"
+   ]
+  },
+  {
+   "form": "ped",
+   "meaning": "腳",
+   "members": [
+    "pedal",
+    "pedestrian",
+    "expedition"
+   ]
+  },
+  {
+   "form": "cap/cept/ceive",
+   "meaning": "拿；抓",
+   "members": [
+    "capture",
+    "captive",
+    "capable",
+    "capacity",
+    "accept",
+    "except",
+    "receive",
+    "concept",
+    "deceive",
+    "conceive",
+    "perceive",
+    "reception",
+    "exception",
+    "receipt",
+    "caption"
+   ]
+  },
+  {
+   "form": "cred",
+   "meaning": "相信",
+   "members": [
+    "credit",
+    "credible",
+    "incredible",
+    "credibility"
+   ]
+  },
+  {
+   "form": "nov",
+   "meaning": "新",
+   "members": [
+    "novel",
+    "innovation",
+    "innovative",
+    "novice"
+   ]
+  },
+  {
+   "form": "sens/sent",
+   "meaning": "感覺",
+   "members": [
+    "sense",
+    "sensible",
+    "sensitive",
+    "sensation",
+    "sentiment",
+    "consent",
+    "resent",
+    "nonsense",
+    "sensor"
+   ]
+  },
+  {
+   "form": "voc/vok",
+   "meaning": "聲音；呼喊",
+   "members": [
+    "vocal",
+    "vocabulary",
+    "voice",
+    "advocate",
+    "provoke",
+    "evoke",
+    "vocation"
+   ]
+  },
+  {
+   "form": "ven/vent",
+   "meaning": "來",
+   "members": [
+    "prevent",
+    "invent",
+    "event",
+    "adventure",
+    "convention",
+    "avenue",
+    "revenue",
+    "convenient",
+    "venue",
+    "intervene",
+    "invention"
+   ]
+  },
+  {
+   "form": "flu",
+   "meaning": "流動",
+   "members": [
+    "fluent",
+    "fluid",
+    "influence",
+    "flu",
+    "fluency"
+   ]
+  },
+  {
+   "form": "rupt",
+   "meaning": "破",
+   "members": [
+    "interrupt",
+    "corrupt",
+    "bankrupt",
+    "erupt",
+    "disrupt",
+    "abrupt",
+    "corruption"
+   ]
+  },
+  {
+   "form": "cede/ceed/cess",
+   "meaning": "行走；讓步",
+   "members": [
+    "proceed",
+    "exceed",
+    "succeed",
+    "precede",
+    "access",
+    "process",
+    "success",
+    "procedure",
+    "excess",
+    "recession",
+    "concede"
+   ]
+  },
+  {
+   "form": "fer",
+   "meaning": "帶；拿",
+   "members": [
+    "transfer",
+    "prefer",
+    "refer",
+    "offer",
+    "suffer",
+    "differ",
+    "conference",
+    "reference",
+    "fertile"
+   ]
+  },
+  {
+   "form": "gen",
+   "meaning": "產生；種類",
+   "members": [
+    "generate",
+    "generation",
+    "gene",
+    "genius",
+    "gender",
+    "genuine",
+    "general",
+    "generous",
+    "genetic",
+    "hydrogen",
+    "oxygen"
+   ]
+  },
+  {
+   "form": "log/logue",
+   "meaning": "言語；學問",
+   "members": [
+    "dialogue",
+    "logic",
+    "apology",
+    "biology",
+    "catalogue",
+    "analogy"
+   ]
+  },
+  {
+   "form": "nat",
+   "meaning": "出生",
+   "members": [
+    "nation",
+    "native",
+    "nature",
+    "natural",
+    "international",
+    "nationality"
+   ]
+  },
+  {
+   "form": "pel/puls",
+   "meaning": "推；驅使",
+   "members": [
+    "compel",
+    "propel",
+    "pulse",
+    "impulse",
+    "compulsory"
+   ]
+  },
+  {
+   "form": "pend/pens",
+   "meaning": "懸掛；花費",
+   "members": [
+    "depend",
+    "suspend",
+    "expense",
+    "pension",
+    "pending",
+    "spend",
+    "dependent",
+    "independent",
+    "suspense",
+    "compensate",
+    "expensive",
+    "dispense"
+   ]
+  },
+  {
+   "form": "plic/ple",
+   "meaning": "摺疊",
+   "members": [
+    "complicate",
+    "multiply",
+    "apply",
+    "reply",
+    "imply",
+    "complex",
+    "complexity"
+   ]
+  },
+  {
+   "form": "sol",
+   "meaning": "獨自；太陽",
+   "members": [
+    "solo",
+    "solar",
+    "isolate",
+    "solitary",
+    "sole"
+   ]
+  },
+  {
+   "form": "spir",
+   "meaning": "呼吸",
+   "members": [
+    "inspire",
+    "spirit",
+    "aspire",
+    "inspiration",
+    "conspiracy"
+   ]
+  },
+  {
+   "form": "sta/sti",
+   "meaning": "站立",
+   "members": [
+    "stable",
+    "station",
+    "statue",
+    "status",
+    "stationary",
+    "establish",
+    "stationery",
+    "estate",
+    "circumstance"
+   ]
+  },
+  {
+   "form": "vert/vers",
+   "meaning": "轉",
+   "members": [
+    "convert",
+    "reverse",
+    "divert",
+    "universe",
+    "version",
+    "versus",
+    "anniversary",
+    "controversy",
+    "diverse",
+    "university",
+    "conversion"
+   ]
+  },
+  {
+   "form": "viv/vit",
+   "meaning": "生命",
+   "members": [
+    "survive",
+    "vivid",
+    "revive",
+    "vital",
+    "vitamin",
+    "survival",
+    "vitality"
+   ]
+  },
+  {
+   "form": "cent",
+   "meaning": "百",
+   "members": [
+    "century",
+    "cent",
+    "centimeter",
+    "percent"
+   ]
+  },
+  {
+   "form": "dem",
+   "meaning": "人民",
+   "members": [
+    "democracy",
+    "democratic",
+    "epidemic",
+    "democrat"
+   ]
+  },
+  {
+   "form": "micro",
+   "meaning": "小",
+   "members": [
+    "microphone",
+    "microscope",
+    "microwave"
+   ]
+  },
+  {
+   "form": "tele",
+   "meaning": "遠",
+   "members": [
+    "telephone",
+    "television",
+    "telescope",
+    "telegraph"
+   ]
+  },
+  {
+   "form": "uni",
+   "meaning": "一",
+   "members": [
+    "unite",
+    "union",
+    "unique",
+    "universe",
+    "uniform",
+    "unit",
+    "unity",
+    "university",
+    "unify"
+   ]
+  },
+  {
+   "form": "mid/medi",
+   "meaning": "中間",
+   "members": [
+    "middle",
+    "medium",
+    "media",
+    "medieval",
+    "mediate",
+    "intermediate"
+   ]
+  },
+  {
+   "form": "fin",
+   "meaning": "結束；界限",
+   "members": [
+    "final",
+    "finish",
+    "finance",
+    "define",
+    "infinite",
+    "confine",
+    "definite",
+    "finite"
+   ]
+  },
+  {
+   "form": "liber",
+   "meaning": "自由",
+   "members": [
+    "liberty",
+    "liberal",
+    "liberate",
+    "liberation"
+   ]
+  },
+  {
+   "form": "cid/cide",
+   "meaning": "殺；切",
+   "members": [
+    "suicide",
+    "decide",
+    "precise",
+    "scissors"
+   ]
+  },
+  {
+   "form": "cir/circ",
+   "meaning": "圓；環繞",
+   "members": [
+    "circle",
+    "circus",
+    "circuit",
+    "circulate",
+    "circular",
+    "circumstance",
+    "circulation"
+   ]
+  },
+  {
+   "form": "clud/clos",
+   "meaning": "關閉",
+   "members": [
+    "include",
+    "exclude",
+    "conclude",
+    "enclose",
+    "close",
+    "closet",
+    "closure",
+    "disclose",
+    "conclusion",
+    "exclusive"
+   ]
+  },
+  {
+   "form": "cor/card",
+   "meaning": "心",
+   "members": [
+    "courage",
+    "encourage",
+    "record",
+    "accord"
+   ]
+  },
+  {
+   "form": "cur/cours",
+   "meaning": "跑；流動",
+   "members": [
+    "current",
+    "occur",
+    "curriculum",
+    "currency",
+    "course"
+   ]
+  },
+  {
+   "form": "equ",
+   "meaning": "相等；平",
+   "members": [
+    "equal",
+    "equip",
+    "equivalent",
+    "equality",
+    "adequate",
+    "equation"
+   ]
+  },
+  {
+   "form": "fac/fact/fect",
+   "meaning": "做；製造",
+   "members": [
+    "factory",
+    "factor",
+    "manufacture",
+    "fact",
+    "affect",
+    "effect",
+    "perfect",
+    "defect",
+    "infect",
+    "facility",
+    "faculty",
+    "satisfaction",
+    "efficient"
+   ]
+  },
+  {
+   "form": "grad/gress",
+   "meaning": "步；階",
+   "members": [
+    "grade",
+    "gradual",
+    "graduate",
+    "progress",
+    "aggressive",
+    "congress",
+    "degree",
+    "ingredient"
+   ]
+  },
+  {
+   "form": "junct/join",
+   "meaning": "連接",
+   "members": [
+    "join",
+    "joint",
+    "junction"
+   ]
+  },
+  {
+   "form": "liter",
+   "meaning": "文字",
+   "members": [
+    "literature",
+    "literary",
+    "literal",
+    "literacy"
+   ]
+  },
+  {
+   "form": "loc",
+   "meaning": "地方",
+   "members": [
+    "local",
+    "locate",
+    "location",
+    "allocate"
+   ]
+  },
+  {
+   "form": "mem",
+   "meaning": "記憶",
+   "members": [
+    "memory",
+    "memorize",
+    "remember",
+    "memorial"
+   ]
+  },
+  {
+   "form": "migr",
+   "meaning": "遷移",
+   "members": [
+    "immigrant",
+    "emigrate",
+    "migration",
+    "immigration"
+   ]
+  },
+  {
+   "form": "mob/mot/mov",
+   "meaning": "移動",
+   "members": [
+    "mobile",
+    "motion",
+    "motor",
+    "promote",
+    "remove",
+    "move",
+    "motive",
+    "emotion",
+    "remote",
+    "automobile",
+    "movement"
+   ]
+  },
+  {
+   "form": "pop/publ",
+   "meaning": "人民；公眾",
+   "members": [
+    "population",
+    "popular",
+    "public",
+    "publish",
+    "republic",
+    "publicity"
+   ]
+  },
+  {
+   "form": "rect/reg",
+   "meaning": "直；統治",
+   "members": [
+    "correct",
+    "direct",
+    "erect",
+    "regular",
+    "region",
+    "regulate",
+    "rectangle",
+    "reign"
+   ]
+  },
+  {
+   "form": "scop",
+   "meaning": "觀察",
+   "members": [
+    "microscope",
+    "telescope",
+    "scope"
+   ]
+  },
+  {
+   "form": "sect/sec",
+   "meaning": "切",
+   "members": [
+    "section",
+    "insect",
+    "segment",
+    "intersection"
+   ]
+  },
+  {
+   "form": "serv",
+   "meaning": "服務；保存",
+   "members": [
+    "serve",
+    "service",
+    "preserve",
+    "conserve",
+    "reserve",
+    "observe",
+    "deserve",
+    "servant"
+   ]
+  },
+  {
+   "form": "sign",
+   "meaning": "記號",
+   "members": [
+    "sign",
+    "signal",
+    "signature",
+    "significant",
+    "design",
+    "assign",
+    "resign"
+   ]
+  },
+  {
+   "form": "solv/solu",
+   "meaning": "解開",
+   "members": [
+    "solve",
+    "solution",
+    "dissolve",
+    "resolve",
+    "resolution"
+   ]
+  },
+  {
+   "form": "tang/tact",
+   "meaning": "觸碰",
+   "members": [
+    "contact",
+    "intact",
+    "contagious"
+   ]
+  },
+  {
+   "form": "techn",
+   "meaning": "技術",
+   "members": [
+    "technology",
+    "technique",
+    "technical",
+    "technician"
+   ]
+  },
+  {
+   "form": "tend/tens",
+   "meaning": "伸展；拉緊",
+   "members": [
+    "tend",
+    "tension",
+    "extend",
+    "intend",
+    "attend",
+    "pretend",
+    "tense",
+    "intense",
+    "extensive",
+    "tendency",
+    "extension"
+   ]
+  },
+  {
+   "form": "test",
+   "meaning": "見證",
+   "members": [
+    "testify",
+    "protest",
+    "contest"
+   ]
+  },
+  {
+   "form": "urb",
+   "meaning": "城市",
+   "members": [
+    "urban",
+    "suburb",
+    "suburban"
+   ]
+  },
+  {
+   "form": "vac/void",
+   "meaning": "空",
+   "members": [
+    "vacation",
+    "vacant",
+    "vacuum",
+    "evacuate",
+    "vacancy"
+   ]
+  },
+  {
+   "form": "val/vail",
+   "meaning": "價值；強壯",
+   "members": [
+    "value",
+    "valuable",
+    "valid",
+    "available",
+    "prevail",
+    "evaluate",
+    "invaluable"
+   ]
+  },
+  {
+   "form": "var",
+   "meaning": "變化",
+   "members": [
+    "vary",
+    "various",
+    "variety",
+    "variable",
+    "variation"
+   ]
+  },
+  {
+   "form": "astro/aster",
+   "meaning": "星",
+   "members": [
+    "astronaut",
+    "astronomy",
+    "astronomer",
+    "disaster"
+   ]
+  },
+  {
+   "form": "cycl",
+   "meaning": "圓；輪",
+   "members": [
+    "bicycle",
+    "cycle",
+    "recycle",
+    "motorcycle"
+   ]
+  },
+  {
+   "form": "part",
+   "meaning": "部分；分開",
+   "members": [
+    "part",
+    "apart",
+    "partial",
+    "particle",
+    "participate",
+    "partner",
+    "department",
+    "apartment",
+    "participant",
+    "partly",
+    "particular",
+    "depart",
+    "counterpart"
+   ]
+  },
+  {
+   "form": "spond/spons",
+   "meaning": "回應；承諾",
+   "members": [
+    "respond",
+    "response",
+    "responsible",
+    "sponsor",
+    "correspond",
+    "respondent",
+    "responsibility"
+   ]
+  },
+  {
+   "form": "flect/flex",
+   "meaning": "彎曲",
+   "members": [
+    "reflect",
+    "flexible",
+    "flexibility",
+    "reflection"
+   ]
+  },
+  {
+   "form": "press",
+   "meaning": "壓",
+   "members": [
+    "press",
+    "pressure",
+    "express",
+    "impress",
+    "depress",
+    "oppress",
+    "expression",
+    "impression",
+    "depression",
+    "suppress"
+   ]
+  },
+  {
+   "form": "grat/grac",
+   "meaning": "感謝；悅",
+   "members": [
+    "grateful",
+    "gratitude",
+    "congratulate",
+    "grace",
+    "graceful",
+    "gracious"
+   ]
+  },
+  {
+   "form": "corp/corpor",
+   "meaning": "身體",
+   "members": [
+    "corporate",
+    "corporation",
+    "corpse"
+   ]
+  },
+  {
+   "form": "path",
+   "meaning": "感覺；疾病",
+   "members": [
+    "sympathy",
+    "pathetic",
+    "sympathize",
+    "sympathetic"
+   ]
+  },
+  {
+   "form": "gard/guard",
+   "meaning": "看守；注視",
+   "members": [
+    "regard",
+    "guard",
+    "guardian",
+    "regardless"
+   ]
+  },
+  {
+   "form": "firm",
+   "meaning": "堅固",
+   "members": [
+    "confirm",
+    "firm",
+    "affirm"
+   ]
+  },
+  {
+   "form": "prehend/prehens",
+   "meaning": "抓住；理解",
+   "members": [
+    "comprehend",
+    "comprehension",
+    "comprehensive"
+   ]
+  }
+ ]
+}
