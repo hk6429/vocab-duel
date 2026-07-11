@@ -62,7 +62,7 @@ const VDFlash = (() => {
         <button class="chip" id="dirBtn">${dir === 'e2z' ? '英→中' : '中→英'} 🔄</button>
         ${acc ? `<button class="chip" id="accBtn">${acc}腔</button>` : ''}
       </div>
-      <div class="flash-card" id="flashCard">
+      <div class="flash-card" id="flashCard" role="button" tabindex="0" aria-label="翻卡（Enter 或空白鍵）">
         <div class="flash-front">${front}</div>
         <div class="flash-back hidden">
           <div class="flash-word small">${w.word} ${VDSpeak.btn(w.word)}</div>
@@ -79,13 +79,15 @@ const VDFlash = (() => {
     const accBtn = el.querySelector('#accBtn');
     if (accBtn) accBtn.onclick = toggleAccent;
     const card = el.querySelector('#flashCard');
-    card.onclick = () => {
+    const flip = () => {
       if (flipped) return;
       flipped = true;
       card.querySelector('.flash-front').classList.add('hidden');
       card.querySelector('.flash-back').classList.remove('hidden');
       el.querySelector('#flashBtns').classList.remove('hidden');
     };
+    card.onclick = flip;
+    card.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
     el.querySelector('#btnYes').onclick = () => answer(true, el, w);
     el.querySelector('#btnNo').onclick = () => answer(false, el, w);
   }

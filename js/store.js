@@ -2,7 +2,7 @@
 const VDStore = (() => {
   const PROG_KEY = 'vd_progress'; // { word: { b:盒0-4, d:'YYYY-MM-DD'到期日, s:看過次數 } }
   const META_KEY = 'vd_meta';     // { stage:'E'|'J', daily:{date:count}, lastDay, streak }
-  const INTERVALS = [0, 1, 2, 4, 7]; // 各盒複習間隔（天）
+  const INTERVALS = [0, 1, 3, 8, 21]; // 各盒複習間隔（天）；擴張式間隔提升長期保留
 
   const today = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD 本地時區
 

@@ -90,7 +90,7 @@ const VDExam = (() => {
           <div class="ex-stem">${q.stem} ${VDSpeak.btn(q.stem)}</div>
           <div class="ex-opts">${['A', 'B', 'C', 'D'].filter(k => q.options[k] != null).map(k =>
             `<button class="btn opt ex-opt" data-k="${k}"><span class="opt-key">${k}</span><span class="opt-text">${q.options[k]}</span></button>`).join('')}</div>
-          <div id="exFb"></div>
+          <div id="exFb" aria-live="polite"></div>
         </div>
       </div>`;
     el.querySelector('.ex-back').onclick = () => VDApp.go('exam');

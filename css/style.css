@@ -6,7 +6,7 @@
   --accent2: #4ac2ff;
   --purple: #b47bff;
   --text: #f2f5ff;
-  --muted: #9db0d8;
+  --muted: #b8c6e8;
   --green: #3ddc84;
   --red: #ff6b6b;
   --cjk: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
@@ -131,6 +131,9 @@ body {
 .btn.opt.right .opt-key { background: rgba(0,0,0,.18); color: #0b3320; }
 .btn.opt.wrong { background: var(--red); color: #fff; }
 .btn.opt.wrong .opt-key { background: rgba(0,0,0,.2); color: #fff; }
+/* 無障礙：對錯不只靠顏色，加符號（色盲友善） */
+.btn.opt.right::after { content: '✓'; margin-left: auto; font-weight: 900; font-size: 18px; }
+.btn.opt.wrong::after { content: '✗'; margin-left: auto; font-weight: 900; font-size: 18px; }
 
 .card-done { text-align: center; padding: 60px 0; display: flex; flex-direction: column; gap: 16px; align-items: center; }
 .card-done .big { font-size: 64px; }
@@ -322,3 +325,18 @@ body {
 .ex-explain { font-size: 14px; line-height: 1.6; margin-top: 8px; color: var(--text); }
 .ex-addkw { margin-top: 10px; }
 .ex-next { display: block; width: 100%; }
+
+/* ── 無障礙：鍵盤焦點可見 + 拼寫題輸入框 ── */
+:focus-visible { outline: 3px solid #ffd76a; outline-offset: 2px; border-radius: 6px; }
+.spk:focus-visible, .btn:focus-visible { outline-offset: 3px; }
+.spell-row { display: flex; gap: 10px; margin-top: 6px; }
+.spell-in {
+  flex: 1; padding: 14px 16px; font-size: 20px; letter-spacing: 1px;
+  font-family: var(--font-en); border-radius: 12px;
+  border: 2px solid rgba(255,255,255,.18); background: #223668; color: var(--text);
+}
+.spell-in::placeholder { color: var(--muted); font-size: 14px; letter-spacing: 0; }
+.spell-in.right { border-color: var(--green); background: rgba(93,224,160,.14); }
+.spell-in.wrong { border-color: var(--red); background: rgba(255,107,107,.14); }
+.spell-go { flex: none; }
+.qz-hint { font-size: 13px; opacity: .85; }

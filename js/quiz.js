@@ -20,37 +20,72 @@ const VDQuiz = (() => {
     return w.example.replace(m[1], '＿'.repeat(Math.max(3, Math.min(6, stem.length))));
   }
 
-  function pickDistractors(word, pool, n, keyFn) {
-    const cands = pool.filter(x => x.word !== word.word && keyFn(x) !== keyFn(word));
-    shuffle(cands);
+  /* 編輯距離（Levenshtein），量拼字相近程度 */
+  function editDistance(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++)
+      for (let j = 1; j <= n; j++)
+        dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return dp[m][n];
+  }
+
+  /* 誘答相似度：同詞性最關鍵（同類才構成有效干擾），英文選項再看拼字型近（首字母/字長/編輯距離） */
+  function simScore(cand, word, formal) {
+    let s = 0;
+    const pw = word.pos || [], pc = cand.pos || [];
+    if (pw.some(p => pc.includes(p))) s += 3;
+    if (formal) {
+      const a = word.word.toLowerCase(), b = cand.word.toLowerCase();
+      if (a[0] === b[0]) s += 1;
+      if (Math.abs(a.length - b.length) <= 1) s += 1;
+      const ed = editDistance(a, b);
+      if (ed <= 3) s += (4 - ed);
+    }
+    return s + Math.random() * 0.9; // 微擾：避免每次固定同幾個誘答
+  }
+
+  /* 挑 n 個誘答：依相似度排序取高分者（比隨機更能鑑別），去重同義／同字 */
+  function pickDistractors(word, pool, n, keyFn, formal) {
+    const scored = pool
+      .filter(x => x.word !== word.word && keyFn(x) !== keyFn(word))
+      .map(x => ({ x, s: simScore(x, word, formal) }))
+      .sort((p, q) => q.s - p.s);
     const out = [], seen = new Set([keyFn(word)]);
-    for (const c of cands) {
-      const k = keyFn(c);
+    for (const { x } of scored) {
+      const k = keyFn(x);
       if (seen.has(k)) continue;
       seen.add(k);
-      out.push(c);
+      out.push(x);
       if (out.length === n) break;
     }
     return out;
   }
 
-  /* 為單一字建一題（隨機題型），pool 供同 level 誘答 */
-  function makeQuestionFor(w, pool) {
+  /* 為單一字建一題（隨機題型），pool 供同 level 誘答；allowSpell 開啟產出型拼寫題（僅自測用，對戰不出） */
+  function makeQuestionFor(w, pool, allowSpell) {
     const sameLevel = pool.filter(x => x.level === w.level);
     const types = ['e2z', 'z2e'];
     const clz = cloze(w);
     if (clz) types.push('cloze');
+    // 拼寫題只給單一純字母、長度 3–12 的字（片語／連字號不出）
+    if (allowSpell && /^[a-z]{3,12}$/i.test(w.word)) types.push('spell');
     const type = types[Math.floor(Math.random() * types.length)];
     let q;
     if (type === 'e2z') {
-      const ds = pickDistractors(w, sameLevel, 3, x => x.zh);
-      q = { prompt: w.word, sub: '這個字是什麼意思？', options: shuffle([w.zh, ...ds.map(d => d.zh)]), ans: w.zh };
+      const ds = pickDistractors(w, sameLevel, 3, x => x.zh, false);
+      q = { type, prompt: w.word, sub: '這個字是什麼意思？', options: shuffle([w.zh, ...ds.map(d => d.zh)]), ans: w.zh };
     } else if (type === 'z2e') {
-      const ds = pickDistractors(w, sameLevel, 3, x => x.word);
-      q = { prompt: w.zh, sub: '哪個英文字對應這個意思？', options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
+      const ds = pickDistractors(w, sameLevel, 3, x => x.word, true);
+      q = { type, prompt: w.zh, sub: '哪個英文字對應這個意思？', options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
+    } else if (type === 'cloze') {
+      const ds = pickDistractors(w, sameLevel, 3, x => x.word, true);
+      q = { type, prompt: clz, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
     } else {
-      const ds = pickDistractors(w, sameLevel, 3, x => x.word);
-      q = { prompt: clz, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
+      q = { type: 'spell', prompt: w.zh, sub: `拼出這個英文字（${w.pos.join('・')}）`, hint: clz, ans: w.word, first: w.word[0] };
     }
     q.word = w.word;
     q.meaning = { zh: w.zh, pos: w.pos, example: w.example, example_zh: w.example_zh };
@@ -71,7 +106,7 @@ const VDQuiz = (() => {
       const ba = VDStore.box(a.word), bb = VDStore.box(b.word);
       return (ba === -1 ? 2.5 : ba) - (bb === -1 ? 2.5 : bb) + (Math.random() - 0.5);
     }).slice(0, ROUND);
-    return targets.map(w => makeQuestionFor(w, pool));
+    return targets.map(w => makeQuestionFor(w, pool, true));
   }
 
   function start(words, el) {
@@ -89,6 +124,8 @@ const VDQuiz = (() => {
       return;
     }
     const q = questions[idx];
+    // 拼寫產出題：不給選項，讓學生自己打出英文（產出型記憶，比辨識強）
+    if (q.type === 'spell') return renderSpell(el, q);
     // 題幹是英文時（看英想中、例句挖空）給發音鈕；看中選英的題幹是中文不給
     const promptSpk = q.type !== 'z2e' ? VDSpeak.btn(q.word) : '';
     el.innerHTML = `
@@ -96,7 +133,7 @@ const VDQuiz = (() => {
       <div class="quiz-prompt">${q.prompt} ${promptSpk}</div>
       <div class="quiz-sub">${q.sub}</div>
       <div class="quiz-opts">${q.options.map((o, i) => `<button class="btn opt" data-v="${encodeURIComponent(o)}"><span class="opt-key">${'ABCD'[i]}</span><span class="opt-text">${o}</span></button>`).join('')}</div>
-      <div id="quizFb"></div>`;
+      <div id="quizFb" aria-live="polite"></div>`;
     let locked = false;
     el.querySelectorAll('.opt').forEach(btn => {
       btn.onclick = () => {
@@ -115,6 +152,38 @@ const VDQuiz = (() => {
         showFeedback(el, q, correct);
       };
     });
+  }
+
+  /* 拼寫產出題：只給中文＋例句提示，學生打出英文，比選項辨識更能測真實掌握 */
+  function renderSpell(el, q) {
+    el.innerHTML = `
+      <div class="flash-progress">第 ${idx + 1} / ${questions.length} 題　得分 ${score}</div>
+      <div class="quiz-prompt">${q.prompt}</div>
+      <div class="quiz-sub">${q.sub}</div>
+      ${q.hint ? `<div class="quiz-sub qz-hint">例句：${q.hint}</div>` : ''}
+      <div class="spell-row">
+        <input id="spellIn" class="spell-in" type="text" autocomplete="off" autocapitalize="off"
+          autocorrect="off" spellcheck="false" aria-label="拼出這個英文單字"
+          placeholder="輸入英文，首字母 ${q.first.toUpperCase()}…">
+        <button class="btn spell-go">送出</button>
+      </div>
+      <div id="quizFb" aria-live="polite"></div>`;
+    const input = el.querySelector('#spellIn');
+    input.focus();
+    let locked = false;
+    const submit = () => {
+      if (locked || !input.value.trim()) return;
+      locked = true;
+      const correct = input.value.trim().toLowerCase() === q.ans.toLowerCase();
+      VDStore.record(q.word, correct);
+      if (correct) score++;
+      input.disabled = true;
+      input.classList.add(correct ? 'right' : 'wrong');
+      el.querySelector('.spell-go').disabled = true;
+      showFeedback(el, q, correct);
+    };
+    el.querySelector('.spell-go').onclick = submit;
+    input.onkeydown = e => { if (e.key === 'Enter') submit(); };
   }
 
   /* 答完顯示這個字的完整字義＋例句＋發音，讓答錯也學得到，手動按下一題 */
