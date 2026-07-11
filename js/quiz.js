@@ -53,6 +53,7 @@ const VDQuiz = (() => {
       q = { prompt: clz, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
     }
     q.word = w.word;
+    q.meaning = { zh: w.zh, pos: w.pos, example: w.example, example_zh: w.example_zh };
     return q;
   }
 
@@ -88,13 +89,19 @@ const VDQuiz = (() => {
       return;
     }
     const q = questions[idx];
+    // 題幹是英文時（看英想中、例句挖空）給發音鈕；看中選英的題幹是中文不給
+    const promptSpk = q.type !== 'z2e' ? VDSpeak.btn(q.word) : '';
     el.innerHTML = `
       <div class="flash-progress">第 ${idx + 1} / ${questions.length} 題　得分 ${score}</div>
-      <div class="quiz-prompt">${q.prompt}</div>
+      <div class="quiz-prompt">${q.prompt} ${promptSpk}</div>
       <div class="quiz-sub">${q.sub}</div>
-      <div class="quiz-opts">${q.options.map((o, i) => `<button class="btn opt" data-v="${encodeURIComponent(o)}"><span class="opt-key">${'ABCD'[i]}</span><span class="opt-text">${o}</span></button>`).join('')}</div>`;
+      <div class="quiz-opts">${q.options.map((o, i) => `<button class="btn opt" data-v="${encodeURIComponent(o)}"><span class="opt-key">${'ABCD'[i]}</span><span class="opt-text">${o}</span></button>`).join('')}</div>
+      <div id="quizFb"></div>`;
+    let locked = false;
     el.querySelectorAll('.opt').forEach(btn => {
       btn.onclick = () => {
+        if (locked) return;
+        locked = true;
         const v = decodeURIComponent(btn.dataset.v);
         const correct = v === q.ans;
         VDStore.record(q.word, correct);
@@ -105,9 +112,24 @@ const VDQuiz = (() => {
           if (bv === q.ans) b.classList.add('right');
           else if (b === btn) b.classList.add('wrong');
         });
-        setTimeout(() => { idx++; render(el); }, correct ? 600 : 1400);
+        showFeedback(el, q, correct);
       };
     });
+  }
+
+  /* 答完顯示這個字的完整字義＋例句＋發音，讓答錯也學得到，手動按下一題 */
+  function showFeedback(el, q, correct) {
+    const m = q.meaning;
+    const fb = el.querySelector('#quizFb');
+    fb.innerHTML = `
+      <div class="ex-fb ${correct ? 'ok' : 'no'}">
+        <div class="ex-verdict">${correct ? '✅ 答對了！' : `❌ 答錯了，正解是 ${q.ans}`}</div>
+        <div class="qz-word">${q.word} ${VDSpeak.btn(q.word)} <span class="af-pos">${m.pos.join('・')}</span></div>
+        <div class="qz-zh">${m.zh}</div>
+        <div class="qz-ex">${m.example} ${VDSpeak.btn(m.example)}<br><span class="ex-zh">${m.example_zh}</span></div>
+      </div>
+      <button class="btn qz-next">下一題 →</button>`;
+    fb.querySelector('.qz-next').onclick = () => { idx++; render(el); };
   }
 
   return { start, randomQuestion };

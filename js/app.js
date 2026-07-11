@@ -8,7 +8,10 @@ const VDApp = (() => {
     const s = VDStore.stage;
     if (s === 'E') return allWords.filter(w => w.level === 'E');
     if (s === 'J') return allWords.filter(w => w.level === 'E' || w.level === 'J');
-    return allWords; // S=高中，含全部
+    // S=高中：可再依大考中心 Level（S1–S6）篩選
+    const sub = VDStore.sub;
+    if (sub && sub !== 'all') return allWords.filter(w => w.level === sub);
+    return allWords;
   }
 
   function header(title) {
@@ -39,6 +42,14 @@ const VDApp = (() => {
     </div>`;
   }
 
+  /* 高中分級篩選晶片（只在高中學段顯示） */
+  function levelChips() {
+    if (VDStore.stage !== 'S') return '';
+    const cur = VDStore.sub;
+    const chip = (v, label) => `<button class="lvl-chip ${cur === v ? 'on' : ''}" onclick="VDApp.setSub('${v}')">${label}</button>`;
+    return `<div class="lvl-row"><span class="lvl-lab">範圍</span>${chip('all', '全部')}${['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].map((s, i) => chip(s, 'L' + (i + 1))).join('')}</div>`;
+  }
+
   const views = {
     stage() {
       $view().innerHTML = `
@@ -60,13 +71,16 @@ const VDApp = (() => {
           <span class="m-ico">${ico}</span>
           <span>${title}<span class="m-sub">${sub}</span></span>
         </button>`;
+      const wrongN = VDStore.wrongWords(words).length;
       $view().innerHTML = `
         <div class="hero small"><h1>字鬥英雄</h1></div>
         ${dashboard(words, stageName)}
+        ${levelChips()}
         <div class="menu-group">
           <div class="menu-glabel">練習</div>
           ${item('flash', 'c-study', '🃏', '閃卡練功', '五盒間隔複習，記得牢')}
           ${item('quiz', 'c-study', '✍️', '單字自測', '三題型隨機，一輪十題')}
+          ${wrongN ? item('review', 'c-wrong', '🩹', `錯題複習（${wrongN}）`, '只練你答錯過的字') : ''}
         </div>
         <div class="menu-group">
           <div class="menu-glabel">對戰</div>
@@ -98,6 +112,11 @@ const VDApp = (() => {
       $view().innerHTML = header('閃卡練功') + '<div id="mod"></div>';
       VDFlash.start(scopeWords(), document.getElementById('mod'));
     },
+    review() {
+      const wrong = VDStore.wrongWords(scopeWords());
+      $view().innerHTML = header('錯題複習') + '<div id="mod"></div>';
+      VDFlash.start(wrong, document.getElementById('mod'), { raw: true });
+    },
     quiz() {
       $view().innerHTML = header('單字自測') + '<div id="mod"></div>';
       VDQuiz.start(scopeWords(), document.getElementById('mod'));
@@ -116,7 +135,9 @@ const VDApp = (() => {
     go(VDStore.stage ? 'menu' : 'stage');
   }
 
-  return { init, go, scopeWords, words: () => allWords };
+  function setSub(v) { VDStore.sub = v; go('menu'); }
+
+  return { init, go, setSub, scopeWords, words: () => allWords };
 })();
 
 document.addEventListener('DOMContentLoaded', VDApp.init);

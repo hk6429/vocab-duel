@@ -12,6 +12,8 @@ const VDStore = (() => {
   }
   let prog = load(PROG_KEY, {});
   let meta = load(META_KEY, { stage: null, daily: {}, lastDay: null, streak: 0 });
+  if (!meta.wrong) meta.wrong = {};   // 錯題本：word → 最後答錯日期
+  if (!meta.sub) meta.sub = 'all';    // 高中分級篩選：'all' 或 'S1'..'S6'
 
   const saveProg = () => localStorage.setItem(PROG_KEY, JSON.stringify(prog));
   const saveMeta = () => localStorage.setItem(META_KEY, JSON.stringify(meta));
@@ -45,9 +47,17 @@ const VDStore = (() => {
       rec.d = addDays(today(), INTERVALS[rec.b]);
       rec.s += 1;
       prog[word] = rec;
+      // 錯題本：答錯記入；答對且已達熟練（盒 ≥3）才畢業移除
+      if (!correct) meta.wrong[word] = today();
+      else if (rec.b >= 3 && meta.wrong[word]) delete meta.wrong[word];
       saveProg();
       bumpDaily();
     },
+    isWrong: w => !!meta.wrong[w],
+    /* 錯題清單：回傳仍在錯題本裡的字物件（限定 scope 範圍） */
+    wrongWords(words) { return words.filter(w => meta.wrong[w.word]); },
+    get sub() { return meta.sub; },
+    set sub(v) { meta.sub = v; saveMeta(); },
     /* 加入閃卡：把字放進待複習（box0、今天到期）；已有進度則不動，回傳是否為新加入 */
     enroll(word) {
       if (prog[word]) return false;

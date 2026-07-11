@@ -239,7 +239,44 @@ body {
 .af-dexz { font-size: 13px; color: var(--muted); }
 .af-detail .af-add1 { margin-top: 10px; }
 
+/* ── 發音鈕 ── */
+.spk {
+  border: none; background: rgba(74,194,255,.16); color: var(--accent2);
+  border-radius: 8px; padding: 2px 7px; font-size: 15px; cursor: pointer;
+  vertical-align: middle; line-height: 1.4; transition: transform .08s, background .12s;
+}
+.spk:hover { background: rgba(74,194,255,.3); }
+.spk:active { transform: scale(.88); }
+
+/* ── 小晶片按鈕（翻卡方向／腔調／分級） ── */
+.chip {
+  border: 1px solid #2e4380; background: var(--panel); color: var(--text);
+  border-radius: 999px; padding: 6px 14px; font-size: 13px; font-family: inherit; cursor: pointer;
+}
+.chip:active { transform: scale(.96); }
+.flash-ctrl { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+.flash-zh.big { font-size: 32px; font-weight: 800; color: var(--accent); }
+
+/* ── 高中分級篩選列 ── */
+.lvl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 2px 2px; }
+.lvl-lab { font-size: 12px; letter-spacing: 2px; color: var(--muted); margin-right: 2px; }
+.lvl-chip {
+  border: 1px solid #2e4380; background: var(--panel); color: var(--muted);
+  border-radius: 999px; padding: 5px 12px; font-size: 13px; font-family: inherit; cursor: pointer;
+}
+.lvl-chip.on { background: var(--accent2); color: #06283a; font-weight: 700; border-color: var(--accent2); }
+
+/* ── 錯題複習選單卡 ── */
+.btn.main.c-wrong { --c: var(--red); }
+
+/* ── 自測答完回饋 ── */
+.qz-word { font-size: 20px; font-weight: 700; margin-top: 8px; font-family: var(--font-en); }
+.qz-zh { color: var(--accent); margin: 2px 0 6px; }
+.qz-ex { font-size: 15px; line-height: 1.7; font-family: var(--font-en); }
+.qz-next { display: block; width: 100%; margin-top: 12px; }
+
 /* ── 會考考古題 ── */
+.ex-passage-bar { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-family: var(--cjk); }
 .ex-empty { text-align: center; padding: 40px 12px; }
 .ex-empty .big { font-size: 54px; }
 .ex-empty p { margin-top: 10px; }
