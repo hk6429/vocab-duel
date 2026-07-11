@@ -95,3 +95,43 @@ body {
   width: 100%; min-height: 80px; border-radius: 10px; border: 1px solid #2e4380;
   background: #101c3e; color: var(--text); padding: 10px; font-size: 12px; font-family: monospace;
 }
+
+/* ── 文學家對戰 ── */
+.bt-pick { display: grid; gap: 14px; margin-top: 20px; }
+.bt-oppgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+.bt-oppcard {
+  background: var(--panel); border: 1px solid #2e4380; border-radius: 16px;
+  padding: 16px 10px; text-align: center; cursor: pointer; color: var(--text);
+  transition: transform .08s, border-color .15s;
+}
+.bt-oppcard:active { transform: scale(.96); }
+.bt-oppcard:hover { border-color: var(--accent); }
+.bt-face { font-size: 40px; }
+.bt-face.big { font-size: 54px; }
+.bt-name { font-weight: 700; margin-top: 4px; }
+.bt-tier { font-size: 11px; padding: 1px 8px; border-radius: 8px; margin-left: 6px; }
+.t-入門 { background: #1f5c3a; color: #b7f5cf; }
+.t-進階 { background: #4a4416; color: var(--accent); }
+.t-高手 { background: #5a2a14; color: #ffb98a; }
+.t-宗師 { background: #4a1f5c; color: #e5b7f5; }
+
+.bt-arena { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 16px; }
+.bt-arena .bt-side { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.bt-arena .foe { order: 0; }
+.bt-arena .me { order: 2; }
+.bt-arena .bt-log { order: 1; }
+.bt-hp {
+  width: 100%; height: 20px; border-radius: 10px; background: #101c3e;
+  border: 1px solid #2e4380; position: relative; overflow: hidden;
+}
+.bt-hp-fill { height: 100%; background: linear-gradient(90deg, var(--green), #7bffb0); transition: width .4s; }
+.bt-hp.low .bt-hp-fill { background: linear-gradient(90deg, var(--red), #ff9c8a); }
+.bt-hp span { position: absolute; right: 8px; top: 1px; font-size: 12px; font-weight: 700; }
+.bt-hp.active { box-shadow: 0 0 0 2px var(--accent); }
+.bt-log {
+  text-align: center; font-size: 14px; color: var(--accent); min-height: 20px;
+  padding: 6px 4px; font-weight: 600;
+}
+.bt-turn { text-align: center; font-weight: 700; color: var(--accent2); margin-bottom: 10px; }
+.bt-q .quiz-prompt { margin-top: 4px; }
+.bt-quote { color: var(--muted); font-style: italic; margin: 12px 0; padding: 0 12px; }

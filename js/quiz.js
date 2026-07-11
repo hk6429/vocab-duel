@@ -34,6 +34,35 @@ const VDQuiz = (() => {
     return out;
   }
 
+  /* 為單一字建一題（隨機題型），pool 供同 level 誘答 */
+  function makeQuestionFor(w, pool) {
+    const sameLevel = pool.filter(x => x.level === w.level);
+    const types = ['e2z', 'z2e'];
+    const clz = cloze(w);
+    if (clz) types.push('cloze');
+    const type = types[Math.floor(Math.random() * types.length)];
+    let q;
+    if (type === 'e2z') {
+      const ds = pickDistractors(w, sameLevel, 3, x => x.zh);
+      q = { prompt: w.word, sub: '這個字是什麼意思？', options: shuffle([w.zh, ...ds.map(d => d.zh)]), ans: w.zh };
+    } else if (type === 'z2e') {
+      const ds = pickDistractors(w, sameLevel, 3, x => x.word);
+      q = { prompt: w.zh, sub: '哪個英文字對應這個意思？', options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
+    } else {
+      const ds = pickDistractors(w, sameLevel, 3, x => x.word);
+      q = { prompt: clz, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
+    }
+    q.word = w.word;
+    return q;
+  }
+
+  /* 從字表隨機抽一字出一題（供對戰模式連續出題） */
+  function randomQuestion(words) {
+    const pool = words.slice();
+    const w = pool[Math.floor(Math.random() * pool.length)];
+    return makeQuestionFor(w, pool);
+  }
+
   function buildQuestions(words) {
     /* 出題對象：低盒優先（不熟的先考），混一些沒看過的 */
     const pool = words.slice();
@@ -41,28 +70,7 @@ const VDQuiz = (() => {
       const ba = VDStore.box(a.word), bb = VDStore.box(b.word);
       return (ba === -1 ? 2.5 : ba) - (bb === -1 ? 2.5 : bb) + (Math.random() - 0.5);
     }).slice(0, ROUND);
-
-    return targets.map(w => {
-      /* 同 level 誘答 */
-      const sameLevel = pool.filter(x => x.level === w.level);
-      const types = ['e2z', 'z2e'];
-      const clz = cloze(w);
-      if (clz) types.push('cloze');
-      const type = types[Math.floor(Math.random() * types.length)];
-      let q;
-      if (type === 'e2z') {
-        const ds = pickDistractors(w, sameLevel, 3, x => x.zh);
-        q = { prompt: w.word, sub: '這個字是什麼意思？', options: shuffle([w.zh, ...ds.map(d => d.zh)]), ans: w.zh };
-      } else if (type === 'z2e') {
-        const ds = pickDistractors(w, sameLevel, 3, x => x.word);
-        q = { prompt: w.zh, sub: '哪個英文字對應這個意思？', options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
-      } else {
-        const ds = pickDistractors(w, sameLevel, 3, x => x.word);
-        q = { prompt: clz, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
-      }
-      q.word = w.word;
-      return q;
-    });
+    return targets.map(w => makeQuestionFor(w, pool));
   }
 
   function start(words, el) {
@@ -102,5 +110,5 @@ const VDQuiz = (() => {
     });
   }
 
-  return { start };
+  return { start, randomQuestion };
 })();

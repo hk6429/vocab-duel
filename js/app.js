@@ -37,9 +37,14 @@ const VDApp = (() => {
         <div class="menu-btns">
           <button class="btn main" onclick="VDApp.go('flash')">🃏 閃卡練功</button>
           <button class="btn main" onclick="VDApp.go('quiz')">⚔️ 單字自測</button>
+          <button class="btn main" onclick="VDApp.go('battle')">🎭 文學家對戰</button>
           <button class="btn main" onclick="VDApp.go('stats')">📊 我的戰績</button>
           <button class="btn ghost" onclick="VDApp.go('stage')">切換學段</button>
         </div>`;
+    },
+    battle() {
+      $view().innerHTML = header('文學家對戰') + '<div id="mod"></div>';
+      VDBattle.chooseMode(document.getElementById('mod'));
     },
     flash() {
       $view().innerHTML = header('閃卡練功') + '<div id="mod"></div>';
@@ -63,7 +68,7 @@ const VDApp = (() => {
     go(VDStore.stage ? 'menu' : 'stage');
   }
 
-  return { init, go, scopeWords };
+  return { init, go, scopeWords, words: () => allWords };
 })();
 
 document.addEventListener('DOMContentLoaded', VDApp.init);
