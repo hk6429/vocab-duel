@@ -83,12 +83,16 @@ const VDExam = (() => {
         <button class="btn ghost ex-back">← 篩選</button>
         <span class="ex-meta">${q.year} 年・${TYPES[q.type] || q.type}・${idx + 1}/${filtered.length}</span>
       </div>
-      ${q.passage ? `<div class="ex-passage">${q.passage}</div>` : ''}
-      ${q.image ? `<img class="ex-img" src="${q.image}" alt="題目圖片">` : ''}
-      <div class="ex-stem">${q.stem}</div>
-      <div class="ex-opts">${['A', 'B', 'C', 'D'].filter(k => q.options[k] != null).map(k =>
-        `<button class="btn opt ex-opt" data-k="${k}">(${k}) ${q.options[k]}</button>`).join('')}</div>
-      <div id="exFb"></div>`;
+      <div class="ex-qwrap ${q.passage ? 'has-passage' : ''}">
+        ${q.passage ? `<div class="ex-passage">${q.passage}</div>` : ''}
+        <div class="ex-qcol">
+          ${q.image ? `<img class="ex-img" src="${q.image}" alt="題目圖片">` : ''}
+          <div class="ex-stem">${q.stem}</div>
+          <div class="ex-opts">${['A', 'B', 'C', 'D'].filter(k => q.options[k] != null).map(k =>
+            `<button class="btn opt ex-opt" data-k="${k}"><span class="opt-key">${k}</span><span class="opt-text">${q.options[k]}</span></button>`).join('')}</div>
+          <div id="exFb"></div>
+        </div>
+      </div>`;
     el.querySelector('.ex-back').onclick = () => VDApp.go('exam');
     el.querySelectorAll('.ex-opt').forEach(b => b.onclick = () => choose(q, b.dataset.k));
   }

@@ -123,6 +123,12 @@ const VDBattle = (() => {
     }, correct ? 800 : 1300);
   }
 
+  /* 選項按鈕：字母徽章＋內文，與自測／會考統一 */
+  function optBtn(o, i, extra, disabled) {
+    const attr = disabled ? 'disabled' : `data-v="${encodeURIComponent(o)}"`;
+    return `<button class="btn opt ${extra}" ${attr}><span class="opt-key">${'ABCD'[i]}</span><span class="opt-text">${o}</span></button>`;
+  }
+
   function hpBar(hp, cls) {
     return `<div class="bt-hp ${hp <= 30 ? 'low' : ''} ${cls}">
       <div class="bt-hp-fill" style="width:${hp}%"></div><span>${hp}</span></div>`;
@@ -130,12 +136,7 @@ const VDBattle = (() => {
 
   function renderCpu(midTurn) {
     const q = state.q;
-    const opts = midTurn
-      ? q.options.map(o => {
-          const cls = o === q.ans ? 'right' : '';
-          return `<button class="btn opt ${cls}" disabled>${o}</button>`;
-        }).join('')
-      : q.options.map(o => `<button class="btn opt" data-v="${encodeURIComponent(o)}">${o}</button>`).join('');
+    const opts = q.options.map((o, i) => optBtn(o, i, midTurn && o === q.ans ? 'right' : '', midTurn)).join('');
     el.innerHTML = `
       <div class="bt-arena">
         <div class="bt-side foe">
@@ -214,9 +215,7 @@ const VDBattle = (() => {
 
   function renderPvp(midTurn) {
     const q = state.q, t = state.turn;
-    const opts = midTurn
-      ? q.options.map(o => `<button class="btn opt ${o === q.ans ? 'right' : ''}" disabled>${o}</button>`).join('')
-      : q.options.map(o => `<button class="btn opt" data-v="${encodeURIComponent(o)}">${o}</button>`).join('');
+    const opts = q.options.map((o, i) => optBtn(o, i, midTurn && o === q.ans ? 'right' : '', midTurn)).join('');
     el.innerHTML = `
       <div class="bt-arena pvp">
         <div class="bt-side foe">

@@ -15,6 +15,30 @@ const VDApp = (() => {
     return `<div class="topbar"><button class="back" onclick="VDApp.go('menu')">←</button><h2>${title}</h2></div>`;
   }
 
+  /* 首頁迷你戰況：Leitner 五盒分佈長條＋連續天數 */
+  function dashboard(words, stageName) {
+    const { d, unseen, total, streak } = VDStore.boxDist(words);
+    const seen = total - unseen;
+    if (seen === 0) {
+      return `<div class="dash"><div class="dash-top"><span class="d-stage">${stageName}</span>
+        ${streak > 0 ? `<span class="d-streak">🔥 連續 ${streak} 天</span>` : ''}</div>
+        <div class="dash-empty">還沒開始練功 — 挑一個模式，踏出第一步！</div></div>`;
+    }
+    const mastered = d[3] + d[4];
+    const segs = d.map((n, b) => n === 0 ? '' :
+      `<div class="dash-seg b${b}" style="width:${(n / seen * 100).toFixed(1)}%" title="第${b}盒 ${n} 字"></div>`).join('');
+    return `<div class="dash">
+      <div class="dash-top"><span class="d-stage">${stageName}</span>
+        ${streak > 0 ? `<span class="d-streak">🔥 連續 ${streak} 天</span>` : ''}</div>
+      <div class="dash-bar">${segs}</div>
+      <div class="dash-legend">
+        <span>已學 <b>${seen}</b>/${total}</span>
+        <span>已掌握 <b>${mastered}</b></span>
+        <span>複習中 <b>${d[0] + d[1] + d[2]}</b></span>
+      </div>
+    </div>`;
+  }
+
   const views = {
     stage() {
       $view().innerHTML = `
@@ -29,18 +53,32 @@ const VDApp = (() => {
       });
     },
     menu() {
-      const s = VDStore.stats(scopeWords());
+      const words = scopeWords();
       const stageName = { E: '國小 1200', J: '國中 2000', S: '高中 6000' }[VDStore.stage];
+      const item = (view, cls, ico, title, sub) =>
+        `<button class="btn main ${cls}" onclick="VDApp.go('${view}')">
+          <span class="m-ico">${ico}</span>
+          <span>${title}<span class="m-sub">${sub}</span></span>
+        </button>`;
       $view().innerHTML = `
-        <div class="hero small"><h1>字鬥英雄</h1>
-          <p>${stageName} 字｜已掌握 ${s.mastered} 字｜待複習 ${s.due} 字</p></div>
-        <div class="menu-btns">
-          <button class="btn main" onclick="VDApp.go('flash')">🃏 閃卡練功</button>
-          <button class="btn main" onclick="VDApp.go('quiz')">⚔️ 單字自測</button>
-          <button class="btn main" onclick="VDApp.go('battle')">🎭 文學家對戰</button>
-          <button class="btn main" onclick="VDApp.go('affix')">🧩 字綴心智圖</button>
-          <button class="btn main" onclick="VDApp.go('exam')">📝 會考考古題</button>
-          <button class="btn main" onclick="VDApp.go('stats')">📊 我的戰績</button>
+        <div class="hero small"><h1>字鬥英雄</h1></div>
+        ${dashboard(words, stageName)}
+        <div class="menu-group">
+          <div class="menu-glabel">練習</div>
+          ${item('flash', 'c-study', '🃏', '閃卡練功', '五盒間隔複習，記得牢')}
+          ${item('quiz', 'c-study', '✍️', '單字自測', '三題型隨機，一輪十題')}
+        </div>
+        <div class="menu-group">
+          <div class="menu-glabel">對戰</div>
+          ${item('battle', 'c-battle', '🎭', '文學家對戰', '八位文豪闖關／同機雙人搶答')}
+        </div>
+        <div class="menu-group">
+          <div class="menu-glabel">題庫工具</div>
+          ${item('affix', 'c-tool', '🧩', '字綴心智圖', '字首字尾字根，成串記憶')}
+          ${item('exam', 'c-tool', '📝', '會考考古題', '104–115 年英語閱讀 445 題')}
+        </div>
+        <div class="menu-foot">
+          <button class="btn ghost" onclick="VDApp.go('stats')">📊 我的戰績</button>
           <button class="btn ghost" onclick="VDApp.go('stage')">切換學段</button>
         </div>`;
     },
@@ -70,7 +108,7 @@ const VDApp = (() => {
     }
   };
 
-  function go(name) { views[name](); }
+  function go(name) { document.body.dataset.view = name; views[name](); }
 
   async function init() {
     const res = await fetch('data/words.json');

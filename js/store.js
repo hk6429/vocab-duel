@@ -70,6 +70,17 @@ const VDStore = (() => {
       }
       return { mastered, seen, due, todayCount: meta.daily[t] || 0, streak: meta.streak };
     },
+    /* Leitner 五盒分佈：回傳各盒字數＋未學數，供首頁迷你進度條 */
+    boxDist(words) {
+      const d = [0, 0, 0, 0, 0];
+      let unseen = 0;
+      for (const w of words) {
+        const r = prog[w.word];
+        if (!r) { unseen++; continue; }
+        d[Math.max(0, Math.min(4, r.b))]++;
+      }
+      return { d, unseen, total: words.length, streak: meta.streak };
+    },
     exportCode() {
       return btoa(unescape(encodeURIComponent(JSON.stringify({ p: prog, m: meta }))));
     },

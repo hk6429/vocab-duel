@@ -92,7 +92,7 @@ const VDQuiz = (() => {
       <div class="flash-progress">第 ${idx + 1} / ${questions.length} 題　得分 ${score}</div>
       <div class="quiz-prompt">${q.prompt}</div>
       <div class="quiz-sub">${q.sub}</div>
-      <div class="quiz-opts">${q.options.map(o => `<button class="btn opt" data-v="${encodeURIComponent(o)}">${o}</button>`).join('')}</div>`;
+      <div class="quiz-opts">${q.options.map((o, i) => `<button class="btn opt" data-v="${encodeURIComponent(o)}"><span class="opt-key">${'ABCD'[i]}</span><span class="opt-text">${o}</span></button>`).join('')}</div>`;
     el.querySelectorAll('.opt').forEach(btn => {
       btn.onclick = () => {
         const v = decodeURIComponent(btn.dataset.v);
