@@ -14,7 +14,7 @@ const VDShop = (() => {
       else if (owned) action = `<button class="btn ghost sm" data-equip="${it.id}">裝備</button>`;
       else action = `<button class="btn sm" data-buy="${it.id}">🪙 ${it.price}</button>`;
       return `<div class="shop-item ${owned ? 'owned' : ''}">
-        <span class="shop-ico ${it.kind === 'frame' ? 'fr-' + it.id : ''}">${it.ico}</span>
+        <span class="shop-ico ${it.kind === 'frame' ? 'fr-' + it.id : ''}"><img class="shop-ico-img" src="img/ui/shop_${it.id}.png" alt="" onerror="this.replaceWith(document.createTextNode('${it.ico}'))"></span>
         <span class="shop-body">
           <span class="shop-name">${it.name}${count ? `　<b class="shop-count">×${count}</b>` : ''}</span>
           <span class="shop-desc">${it.desc}</span>

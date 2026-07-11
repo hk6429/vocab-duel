@@ -929,3 +929,6 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .vg-tier.claim { background: linear-gradient(135deg, #e4c26e, #c99a35); color: #fff; border: none;
   font-weight: 700; cursor: pointer; box-shadow: 0 1px 5px rgba(201,154,53,.4); animation: tierPulse 1.6s ease-in-out infinite; }
 @keyframes tierPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+
+/* 商店水彩圖示 */
+.shop-ico-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
