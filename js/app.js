@@ -52,25 +52,35 @@ const VDApp = (() => {
 
   const views = {
     stage() {
-      const simg = (s, ico) => `<img class="stage-img" src="img/ui/${s}.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${ico}',className:'stage-emoji'}))">`;
+      const card = (s, img, name, amb, sub) => `
+        <button class="wc-stage" data-s="${s}">
+          <img class="wc-stage-img" src="img/wc/${img}.png" alt="${name}" onerror="this.style.display='none'">
+          <div class="wc-stage-cap">
+            <div class="wc-stage-name">${name}</div>
+            <span class="wc-stage-amb">${amb} 領路</span>
+            <div class="wc-stage-sub">${sub}</div>
+            <span class="wc-enter">進入練功坊 ＞</span>
+          </div>
+        </button>`;
       $view().innerHTML = `
-        <div class="hero">
-          <img class="hero-banner" src="img/ui/banner.png" alt="字鬥英雄" onerror="this.remove()">
-          <h1>字鬥英雄</h1><p>從 1200 到 6000，一字一戰！</p>
+        <div class="wc-hero">
+          <img class="wc-banner" src="img/wc/banner.png" alt="" onerror="this.remove()">
+          <h1 class="wc-title">字鬥英雄</h1>
+          <p class="wc-tagline">跟著西洋文豪，一字一戰 — 從 1200 到 6000</p>
         </div>
-        <div class="stage-btns">
-          <button class="btn stage" data-s="E">${simg('s_elem', '🏫')}<span class="stage-t">國小挑戰</span><span>基本 1200 字</span></button>
-          <button class="btn stage" data-s="J">${simg('s_jhs', '🎓')}<span class="stage-t">國中挑戰</span><span>常用 2000 字</span></button>
-          <button class="btn stage" data-s="S">${simg('s_shs', '🏆')}<span class="stage-t">高中挑戰</span><span>學測 6000 字（Level 1–6）</span></button>
+        <div class="wc-stage-grid">
+          ${card('E', 'andersen', '國小挑戰', '安徒生', '童話般的 1200 基本字')}
+          ${card('J', 'twain', '國中挑戰', '馬克吐溫', '冒險的 2000 常用字')}
+          ${card('S', 'shakespeare', '高中挑戰', '莎士比亞', '經典殿堂 6000 學測字')}
         </div>`;
-      document.querySelectorAll('.stage').forEach(b => {
+      document.querySelectorAll('.wc-stage').forEach(b => {
         b.onclick = () => { VDStore.stage = b.dataset.s; go('menu'); };
       });
     },
     menu() {
       const words = scopeWords();
       const stageName = { E: '國小 1200', J: '國中 2000', S: '高中 6000' }[VDStore.stage];
-      const MICON = { flash: 'm_flash', quiz: 'm_quiz', battle: 'm_battle', affix: 'm_affix', exam: 'm_exam' };
+      const MICON = {};  // 水彩重皮：模式圖示暫用 emoji（舊深藍圖與米白不搭），待水彩版圖示補上
       const item = (view, cls, ico, title, sub) => {
         const img = MICON[view];
         const icoHtml = img
@@ -84,8 +94,8 @@ const VDApp = (() => {
       const wrongN = VDStore.wrongWords(words).length;
       const starN = VDStore.starWords(words).length;
       $view().innerHTML = `
-        <div class="hero small mascot">
-          <img class="menu-mascot" src="img/ui/p_hero1.png" alt="" onerror="this.remove()">
+        <div class="wc-menu-top">
+          <img class="wc-menu-banner" src="img/wc/banner.png" alt="" onerror="this.remove()">
           <h1>字鬥英雄</h1>
         </div>
         ${VDGame.heroStrip()}
