@@ -108,6 +108,7 @@ const VDApp = (() => {
           ${item('search', 'c-tool', '🔍', '查單字', '打英文或中文，秒查秒收藏')}
           ${item('affix', 'c-tool', '🧩', '字綴心智圖', '字首字尾字根，成串記憶')}
           ${item('exam', 'c-tool', '📝', '會考考古題', '104–115 年英語閱讀 445 題')}
+          ${item('cloud', 'c-tool', '☁️', '雲端／班級榜', '跨裝置存進度・全班拚排名')}
           ${starN ? item('starred', 'c-wrong', '⭐', `我的收藏（${starN}）`, '只刷你加星的字') : ''}
         </div>
         <div class="menu-foot">
@@ -156,6 +157,10 @@ const VDApp = (() => {
     search() {
       $view().innerHTML = header('查單字') + '<div id="mod"></div>';
       VDSearch.start(document.getElementById('mod'));
+    },
+    cloud() {
+      $view().innerHTML = header('雲端／班級榜') + '<div id="mod"></div>';
+      VDCloud.start(document.getElementById('mod'));
     },
     starred() {
       const stars = VDStore.starWords(scopeWords());

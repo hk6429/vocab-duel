@@ -486,3 +486,20 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .stage-emoji { font-size: 46px; display: block; margin-bottom: 6px; }
 .btn.stage .stage-t { display: block; font-size: 17px; font-weight: 800; }
 .hero-banner2 { display: block; width: 100%; max-width: 360px; margin: 0 auto 12px; border-radius: 16px; }
+
+/* 雲端存檔／班級榜 */
+.cloud-sec { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.cloud-h { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+.cloud-tip { font-size: 13px; color: var(--muted); margin: 0 0 10px; line-height: 1.5; }
+.cloud-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.cloud-row .btn { flex: 1; min-width: 130px; }
+.cloud-input { flex: 1; min-width: 120px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.15); background: rgba(0,0,0,.25); color: #fff; font-size: 15px; }
+.cloud-input:focus-visible { outline: 2px solid #ffd24a; outline-offset: 1px; }
+.cloud-msg { font-size: 13px; margin-top: 4px; min-height: 18px; }
+.cloud-msg.ok { color: #4ac2ff; }
+.cloud-msg.err { color: #ff8a8a; }
+.board-tbl { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+.board-tbl th, .board-tbl td { padding: 7px 6px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.08); }
+.board-tbl th { color: var(--muted); font-weight: 700; font-size: 12px; }
+.board-tbl td:nth-child(2) { text-align: left; }
+.board-tbl tr.me { background: rgba(255,210,74,.14); font-weight: 800; }
