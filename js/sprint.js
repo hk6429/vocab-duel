@@ -76,6 +76,7 @@ const VDSprint = (() => {
       <div class="big">${isBest ? '🏅' : '⏱️'}</div>
       <p>時間到！答對 <b>${score}</b> 題${isBest ? '　🎉 新紀錄！' : ''}</p>
       ${target ? `<div class="bt-quote">${beat ? `擊敗 ${target.n}（${target.s} 分）！` : `${target.n} 是 ${target.s} 分，再拚一次！`}</div>` : ''}
+      ${VDGame.milestoneHtml()}
       <button class="btn" onclick="VDApp.go('sprint')">再衝一次</button>
       <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>
     </div>`;

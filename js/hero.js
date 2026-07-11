@@ -19,10 +19,12 @@ const VDHero = (() => {
               <div class="hero-xp">${lp.inLv} / ${lp.need} XP　到下一級</div>
             </div>
           </div>
+          <div class="hero-rank">${(r => `${r.ico} 對戰段位：<b>${r.name}</b>　${r.pts} 分${r.next ? `（再 ${r.next.at - r.pts} 分晉升）` : ''}`)(g.rankInfo())}</div>
           <div class="hero-wallet">
             <span>🪙 ${g.coins} 字幣</span>
             <span>🛡️ ${g.shield} 護盾</span>
-            <button class="btn ghost sm" id="buyShield">買護盾（100幣）</button>
+            <span>🪶 ${g.revive} 羽毛</span>
+            <button class="btn ghost sm" onclick="VDApp.go('shop')">🏪 去商店</button>
           </div>
           <div class="hero-shieldhint">護盾可在連續天數即將中斷時自動頂上，別讓 🔥 歸零。</div>
         </div>
@@ -68,8 +70,6 @@ const VDHero = (() => {
     el.querySelector('#avPick').onclick = () => pickAvatar();
     // 暱稱即時存
     el.querySelector('#nick').onchange = e => VDGame.setNick(e.target.value);
-    // 護盾
-    el.querySelector('#buyShield').onclick = () => { if (VDGame.buyShield()) render(el); else VDGame.toast('字幣不足，先去答題賺幣吧！'); };
     // 設定
     el.querySelector('#sndToggle').onclick = () => { VDSound.setOn(!VDSound.on); render(el); };
     el.querySelector('#fsToggle').onclick = () => { VDApp.toggleFontScale(); render(el); };

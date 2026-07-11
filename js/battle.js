@@ -20,6 +20,18 @@ const VDBattle = (() => {
       taunt: '幸福的答題者都相似，你是哪一種？', win: '戰爭與和平，你輸在戰爭。', lose: '安娜卡列尼娜也會為你這場勝利落淚。' }
   ];
 
+  /* 文豪名言卡：擊敗該作家解鎖收藏（皆為公版經典名句） */
+  const QUOTES = {
+    andersen: { q: '人生本身，就是最美妙的童話。', story: '丹麥鞋匠之子，窮到只能想像。\n他把想像寫成《醜小鴨》《小美人魚》，\n160 多篇童話讓全世界的孩子睡前有了光。' },
+    aesop: { q: '善行再小，也不會白費。', story: '兩千六百年前的古希臘奴隸，\n靠著會說故事替自己贏得自由。\n龜兔賽跑、狼來了——都是他留下的智慧。' },
+    twain: { q: '勇氣不是沒有恐懼，而是戰勝恐懼。', story: '密西西比河上的領航員，筆名意思是「水深兩噚」。\n他寫《湯姆歷險記》，把頑童變成英雄，\n也把美式幽默寫進了世界文學。' },
+    austen: { q: '沒有什麼魅力，比得上一顆溫柔的心。', story: '一生未婚的英國牧師之女，\n在客廳小圓桌上偷偷寫作。\n《傲慢與偏見》兩百年來仍是愛情小說的天花板。' },
+    hemingway: { q: '人可以被毀滅，但不能被打敗。', story: '記者、拳擊手、戰地司機、諾貝爾獎得主。\n他用最短的句子寫最硬的故事，\n《老人與海》裡那條大魚就是人生。' },
+    dickens: { q: '這是最好的時代，也是最壞的時代。', story: '12 歲就進鞋油工廠做工的倫敦少年，\n長大後把貧民窟寫進小說，逼整個英國正視窮人。\n《孤雛淚》《雙城記》至今無人不曉。' },
+    shakespeare: { q: '凡是過去，皆為序章。', story: '手套匠之子，只上過文法學校，\n卻發明了 1700 多個英文單字。\n四大悲劇加喜劇 38 部，人類劇場的半壁江山。' },
+    tolstoy: { q: '幸福的家庭都是相似的。', story: '俄國伯爵，卻穿農夫衣下田耕作。\n《戰爭與和平》寫了 559 個人物，\n晚年散盡家產，只留下信念與文字。' }
+  };
+
   const MAX_HP = 100;
   let mode = 'cpu';           // 'cpu' | 'pvp'
   let opp = null;             // 當前對手
@@ -52,8 +64,55 @@ const VDBattle = (() => {
     el.querySelector('#mPvp').onclick = () => { mode = 'pvp'; startPvp(); };
   }
 
+  /* 段位條：對戰首頁常駐，勝敗積分＋下一段位進度 */
+  function rankStrip() {
+    const r = VDGame.rankInfo();
+    return `<div class="bt-rank">
+      <span class="bt-rank-ico">${r.ico}</span>
+      <span class="bt-rank-body">
+        <span class="bt-rank-name">${r.name}　<b>${r.pts} 分</b></span>
+        <span class="vg-q-bar"><span style="width:${r.pct}%"></span></span>
+        <span class="bt-rank-next">${r.next ? `再 ${r.next.at - r.pts} 分晉升 ${r.next.ico} ${r.next.name}` : '已達最高段位！'}</span>
+      </span>
+      <span class="bt-rank-rule">勝 +20／敗 −10</span>
+    </div>`;
+  }
+
+  /* 名言卡集：打敗文豪解鎖他的名言與小傳，8 張收好收滿 */
+  function quotesGallery() {
+    const got = OPPONENTS.filter(o => VDGame.isBeaten(o.id)).length;
+    return `<div class="wc-card bt-quotes">
+      <div class="wc-card-body">
+        <div class="hero-sec">文豪名言卡　<b>${got}/8</b></div>
+        <div class="qt-grid">${OPPONENTS.map(o => {
+          const open = VDGame.isBeaten(o.id);
+          return `<button class="qt-mini ${open ? '' : 'lock'}" data-q="${o.id}">
+            ${open ? face(o) : '<span class="qt-lock">🔒</span>'}
+            <span class="qt-name">${open ? o.name : '？？？'}</span>
+          </button>`;
+        }).join('')}</div>
+        <div class="hero-shieldhint">擊敗一位文豪，收藏他的名言卡。</div>
+      </div>
+    </div>`;
+  }
+
+  function showQuote(id) {
+    const o = OPPONENTS.find(x => x.id === id), qd = QUOTES[id];
+    if (!o || !qd) return;
+    const box = document.createElement('div');
+    box.className = 'av-modal';
+    box.innerHTML = `<div class="av-panel qt-card">
+      ${face(o, true)}
+      <div class="qt-quote">「${qd.q}」</div>
+      <div class="qt-author">—— ${o.name}</div>
+      <div class="qt-story">${qd.story.replace(/\n/g, '<br>')}</div>
+    </div>`;
+    box.onclick = e => { if (e.target === box) box.remove(); };
+    document.body.appendChild(box);
+  }
+
   function chooseOpponent() {
-    el.innerHTML = `<div class="bt-oppgrid">${OPPONENTS.map(o => {
+    el.innerHTML = `${rankStrip()}<div class="bt-oppgrid">${OPPONENTS.map(o => {
       const open = VDGame.tierUnlocked(o.tier);
       return `<button class="bt-oppcard ${open ? '' : 'locked'}" data-id="${o.id}" data-open="${open ? 1 : 0}">
         <div class="bt-face">${open ? face(o) : '<span class="bt-face-emoji">🔒</span>'}</div>
@@ -62,11 +121,18 @@ const VDBattle = (() => {
         ${open ? '' : `<div class="bt-locknote">Lv${VDGame.tierNeed(o.tier)} 解鎖</div>`}
       </button>`;
     }).join('')}</div>
-    <div class="bt-lockhint">升等（練習／對戰賺 XP）就能解鎖更強的文學家。</div>`;
+    <div class="bt-lockhint">升等（練習／對戰賺 XP）就能解鎖更強的文學家。</div>
+    ${quotesGallery()}`;
     el.querySelectorAll('.bt-oppcard').forEach(b => {
       b.onclick = () => {
         if (b.dataset.open === '0') { VDGame.toast(`這位文學家要 Lv${VDGame.tierNeed(OPPONENTS.find(o => o.id === b.dataset.id).tier)} 才能挑戰`); return; }
         startCpu(OPPONENTS.find(o => o.id === b.dataset.id));
+      };
+    });
+    el.querySelectorAll('.qt-mini').forEach(b => {
+      b.onclick = () => {
+        if (b.classList.contains('lock')) { VDGame.toast('先擊敗這位文豪，才能收藏他的名言卡'); return; }
+        showQuote(b.dataset.q);
       };
     });
   }
@@ -173,11 +239,38 @@ const VDBattle = (() => {
   }
 
   function finish(win) {
+    // 復活羽毛：倒下時可原地復活（回 40 血），字幣消耗品的高光時刻
+    if (!win && VDGame.revive > 0) {
+      el.innerHTML = `<div class="card-done">
+        <div class="big">🪶</div>
+        <p>你倒下了……但羽毛還在燃燒。</p>
+        <button class="btn" id="doRevive">🪶 使用復活羽毛（剩 ${VDGame.revive}）— 回 40 血再戰</button>
+        <button class="btn ghost" id="giveUp">接受敗北</button>
+      </div>`;
+      el.querySelector('#doRevive').onclick = () => {
+        if (!VDGame.useRevive()) return finish(false);
+        state.pHp = 40; state.combo = 0;
+        state.log = '🪶 浴火重生！背水一戰加成已就位';
+        nextRound();
+      };
+      el.querySelector('#giveUp').onclick = () => reallyFinish(false);
+      return;
+    }
+    reallyFinish(win);
+  }
+
+  function reallyFinish(win) {
+    const firstBeat = win && !VDGame.isBeaten(opp.id);
     if (win) VDGame.onBattleWin(opp.id, state.comeback);
+    const rk = win ? VDGame.rankWin() : VDGame.rankLose();
+    const qd = QUOTES[opp.id];
     el.innerHTML = `<div class="card-done">
       <div class="big">${win ? '🏆' : '💀'}</div>
       <p>${win ? `擊敗 ${opp.name}！` : `不敵 ${opp.name}……`}</p>
       <div class="bt-quote">「${win ? opp.lose : opp.win}」</div>
+      ${firstBeat && qd ? `<div class="qt-unlock">📜 解鎖名言卡：「${qd.q}」—— ${opp.name}</div>` : ''}
+      <div class="bt-rankdelta ${win ? 'up' : 'down'}">${rk.ico} ${rk.name}　${rk.delta > 0 ? '+' : ''}${rk.delta} 分（${rk.pts}）</div>
+      ${VDGame.milestoneHtml()}
       <button class="btn" onclick="VDApp.go('battle')">再戰</button>
       <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>
     </div>`;

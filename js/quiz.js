@@ -120,6 +120,7 @@ const VDQuiz = (() => {
       if (!render._awarded) { VDGame.onQuizDone(score); render._awarded = true; }
       el.innerHTML = `<div class="card-done"><div class="big">${score >= 8 ? '🏆' : score >= 5 ? '💪' : '📖'}</div>
         <p>答對 ${score} / ${questions.length} 題！</p>
+        ${VDGame.milestoneHtml()}
         <button class="btn" onclick="VDApp.go('quiz')">再測一輪</button>
         <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button></div>`;
       return;

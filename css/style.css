@@ -682,3 +682,133 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 /* 主 CTA 按鈕：藍墨底白字 */
 .btn { color: #fff; }
 .btn.ghost { color: var(--accent2); }
+
+/* ══ 留存層（玩家視角五大建議）：商店/圖鑑/段位/名言卡/開箱/墨潑/里程碑/FOMO ══ */
+
+/* FOMO 警示：連續天數快斷 */
+.vg-fomo { margin: 12px 14px 0; padding: 10px 14px; border-radius: 12px; background: rgba(196,90,60,.10);
+  border: 1px solid rgba(196,90,60,.28); color: #a4482c; font-size: 14px; font-weight: 700; }
+
+/* 週任務列：金冠色微染，與每日任務區隔 */
+.vg-quest.week { background: rgba(214,166,66,.07); border: 1px solid rgba(214,166,66,.25); border-radius: 12px; }
+.vg-quest.week .vg-q-bar span { background: linear-gradient(90deg, #e4c26e, #c99a35); }
+
+/* 里程碑鉤子：結算畫面「就差一點」 */
+.vg-milestone { display: flex; align-items: center; gap: 10px; margin: 14px; padding: 12px 14px;
+  background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 12px; text-align: left; }
+.card-done .vg-milestone { margin: 14px auto; max-width: 420px; }
+.vg-ms-ico { font-size: 22px; }
+.vg-ms-body { flex: 1; min-width: 0; }
+.vg-ms-text { display: block; font-size: 14px; font-weight: 700; color: var(--ink); }
+
+/* 開箱動畫：稀有度分色全螢幕卡 */
+.vg-chest { position: fixed; inset: 0; z-index: 72; display: flex; align-items: center; justify-content: center;
+  background: rgba(6,12,30,.72); cursor: pointer; animation: chestIn .25s ease; }
+@keyframes chestIn { from { opacity: 0; } to { opacity: 1; } }
+.vg-chest-card { background: #fff; border-radius: 20px; padding: 28px 34px; text-align: center; max-width: 320px;
+  border: 2px solid var(--accent); box-shadow: 0 18px 50px rgba(0,0,0,.35); animation: chestPop .4s cubic-bezier(.2,1.6,.4,1); }
+@keyframes chestPop { from { transform: scale(.6); } to { transform: scale(1); } }
+.vg-chest-ico { font-size: 52px; }
+.vg-chest-r { font-family: var(--font-serif); font-size: 22px; font-weight: 800; margin-top: 6px; }
+.vg-chest-loot { font-size: 16px; font-weight: 700; margin-top: 8px; color: var(--accent2); }
+.vg-chest-extra { font-size: 13px; color: rgba(43,43,43,.65); margin-top: 4px; }
+.vg-chest.rare .vg-chest-card { border-color: #7ea4d8; box-shadow: 0 0 0 6px rgba(126,164,216,.25), 0 18px 50px rgba(0,0,0,.35); }
+.vg-chest.rare .vg-chest-r { color: #4a7ba6; }
+.vg-chest.legendary .vg-chest-card { border-color: #c99a35; box-shadow: 0 0 0 8px rgba(214,166,66,.3), 0 18px 60px rgba(0,0,0,.4); }
+.vg-chest.legendary .vg-chest-r { color: #a67c1e; }
+
+/* 連擊大場面：全螢幕墨潑 */
+.vg-combosplash { position: fixed; inset: 0; z-index: 71; pointer-events: none;
+  display: flex; align-items: center; justify-content: center; animation: csFade 1.4s ease forwards; }
+@keyframes csFade { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+.vg-cs-ink { position: absolute; width: 70vmin; height: 70vmin; border-radius: 50%;
+  background: radial-gradient(circle at 45% 40%, rgba(111,159,201,.5), rgba(74,123,166,.35) 55%, transparent 72%);
+  filter: blur(2px); animation: csInk .5s cubic-bezier(.2,1.5,.4,1); }
+@keyframes csInk { from { transform: scale(.2); } to { transform: scale(1); } }
+.vg-cs-text { position: relative; font-family: var(--font-serif); font-size: clamp(38px, 9vw, 72px); font-weight: 900;
+  color: #fff; text-shadow: 0 2px 4px rgba(43,43,43,.5), 0 0 24px rgba(74,123,166,.8);
+  animation: csText .5s cubic-bezier(.2,1.6,.4,1); }
+@keyframes csText { from { transform: scale(.4) rotate(-6deg); } to { transform: scale(1) rotate(-2deg); } }
+
+/* 對戰段位條 */
+.bt-rank { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 16px;
+  background: #fff; border: 1px solid var(--line); border-left: 5px solid #c99a35; border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(43,43,43,.06); }
+.bt-rank-ico { font-size: 26px; }
+.bt-rank-body { flex: 1; min-width: 0; }
+.bt-rank-name { display: block; font-family: var(--font-serif); font-size: 15px; }
+.bt-rank-next { display: block; font-size: 12px; color: rgba(43,43,43,.55); margin-top: 3px; }
+.bt-rank-rule { font-size: 12px; color: rgba(43,43,43,.45); white-space: nowrap; }
+.bt-rankdelta { margin: 10px auto 0; padding: 8px 16px; border-radius: 99px; display: inline-block; font-weight: 800; font-size: 14px; }
+.bt-rankdelta.up { background: rgba(96,142,90,.12); color: #4c7a46; }
+.bt-rankdelta.down { background: rgba(196,90,60,.10); color: #a4482c; }
+
+/* 文豪名言卡集 */
+.bt-quotes { margin-top: 18px; }
+.qt-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.qt-mini { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.qt-mini .bt-portrait { width: 52px; height: 52px; }
+.qt-mini:hover { border-color: var(--accent2); }
+.qt-mini.lock { opacity: .55; background: var(--paper2); }
+.qt-lock { font-size: 30px; line-height: 52px; }
+.qt-name { font-size: 12px; color: var(--ink); }
+.qt-card { text-align: center; }
+.qt-card .bt-portrait.big { margin: 0 auto 10px; }
+.qt-quote { font-family: var(--font-serif); font-size: 19px; font-weight: 800; line-height: 1.6; color: var(--ink); }
+.qt-author { margin-top: 8px; font-size: 14px; color: var(--accent2); font-weight: 700; }
+.qt-story { margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(43,43,43,.2);
+  font-size: 13.5px; line-height: 1.9; color: rgba(43,43,43,.72); }
+.qt-unlock { margin: 10px auto 0; padding: 10px 16px; max-width: 420px; border-radius: 12px;
+  background: rgba(214,166,66,.1); border: 1px solid rgba(214,166,66,.3); color: #8a6a1c; font-size: 14px; }
+
+/* 字幣商店 */
+.shop-wallet { color: #a67c1e; }
+.shop-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.shop-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 2px 8px rgba(43,43,43,.05); }
+.shop-item.owned { background: rgba(111,159,201,.05); }
+.shop-ico { width: 46px; height: 46px; border-radius: 50%; background: var(--paper2);
+  border: 1.5px solid rgba(43,43,43,.25); display: flex; align-items: center; justify-content: center; font-size: 22px; flex: none; }
+.shop-body { flex: 1; min-width: 0; }
+.shop-name { display: block; font-weight: 800; font-size: 15px; color: var(--ink); }
+.shop-count { color: var(--accent2); }
+.shop-desc { display: block; font-size: 12.5px; color: rgba(43,43,43,.55); margin-top: 2px; }
+.shop-tag.on { font-size: 12px; font-weight: 800; color: #4c7a46; background: rgba(96,142,90,.12);
+  padding: 5px 10px; border-radius: 99px; white-space: nowrap; }
+
+/* 頭像框（商店永久裝飾）：預覽圈與實際頭像共用 */
+.fr-frame_ink { box-shadow: 0 0 0 3px #fff, 0 0 0 5.5px rgba(43,43,43,.75) !important; }
+.fr-frame_gold { box-shadow: 0 0 0 3px #fff, 0 0 0 6px #c99a35, 0 0 12px rgba(214,166,66,.55) !important; }
+.fr-frame_laurel { box-shadow: 0 0 0 3px #fff, 0 0 0 6px #6d8f5e, 0 0 12px rgba(109,143,94,.5) !important; }
+
+/* 單字圖鑑 */
+.dex-legend { display: flex; gap: 16px; font-size: 12.5px; color: rgba(43,43,43,.6); margin: 8px 0 14px; }
+.dex-legend span { display: flex; align-items: center; gap: 5px; }
+.dex-dot { width: 10px; height: 10px; border-radius: 3px; background: rgba(43,43,43,.1); display: inline-block; }
+.dex-dot.seen { background: rgba(111,159,201,.5); }
+.dex-dot.gold { background: #c99a35; }
+.dex-sec { margin-bottom: 10px; }
+.dex-head { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: 't s a' 'b b a';
+  gap: 4px 12px; align-items: center; width: 100%; text-align: left; padding: 12px 14px;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.dex-head:hover { border-color: var(--accent2); }
+.dex-title { grid-area: t; font-family: var(--font-serif); font-weight: 800; font-size: 15px; color: var(--ink); }
+.dex-stat { grid-area: s; font-size: 12.5px; color: rgba(43,43,43,.6); justify-self: end; }
+.dex-gold { color: #a67c1e; }
+.dex-arrow { grid-area: a; color: rgba(43,43,43,.4); }
+.dex-bar { grid-area: b; position: relative; height: 6px; border-radius: 99px; background: var(--paper2);
+  border: 1px solid var(--line); overflow: hidden; }
+.dex-bar .seen { position: absolute; inset: 0 auto 0 0; background: rgba(111,159,201,.45); }
+.dex-bar .gold { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #e4c26e, #c99a35); }
+.dex-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(14px, 1fr)); gap: 3px;
+  padding: 12px; background: var(--paper2); border: 1px solid var(--line); border-radius: 0 0 12px 12px; margin-top: -4px; }
+.dex-cell { aspect-ratio: 1; border-radius: 3px; background: rgba(43,43,43,.08); cursor: pointer; }
+.dex-cell.seen { background: rgba(111,159,201,.5); }
+.dex-cell.gold { background: #c99a35; box-shadow: 0 0 4px rgba(214,166,66,.6); }
+.dex-cell:hover { outline: 1.5px solid var(--accent2); }
+
+/* 英雄檔案段位列 */
+.hero-rank { margin: 10px 0 4px; padding: 9px 14px; border-radius: 12px; font-size: 14px;
+  background: rgba(214,166,66,.08); border: 1px solid rgba(214,166,66,.25); color: var(--ink); }
+.dex-wall[hidden] { display: none; }

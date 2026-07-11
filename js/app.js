@@ -131,6 +131,8 @@ const VDApp = (() => {
           <div class="menu-glabel">英雄</div>
           <div class="wc-mgrid">
             ${card('hero', 'm_hero', '🦸', '英雄檔案', '稱號・徽章・字幣・自訂頭像', true)}
+            ${card('shop', 'm_shop', '🏪', '字幣商店', '頭像框・護盾・復活羽毛')}
+            ${card('dex', 'm_dex', '🖼️', '單字圖鑑', `把 ${allWords.length} 個字一格一格點亮`)}
           </div>
         </div>
         <div class="wc-menu-navrow">
@@ -170,6 +172,14 @@ const VDApp = (() => {
     hero() {
       $view().innerHTML = header('英雄檔案') + '<div id="mod"></div>';
       VDHero.render(document.getElementById('mod'));
+    },
+    shop() {
+      $view().innerHTML = header('字幣商店') + '<div id="mod"></div>';
+      VDShop.render(document.getElementById('mod'));
+    },
+    dex() {
+      $view().innerHTML = header('單字圖鑑') + '<div id="mod"></div>';
+      VDDex.render(document.getElementById('mod'));
     },
     sprint() {
       $view().innerHTML = header('限時衝刺') + '<div id="mod"></div>';
