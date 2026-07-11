@@ -16,6 +16,8 @@ globalThis.VDGame = { raw: { coins: 1000, xp: 0, quests: { date: '', prog: { cor
 globalThis.VDStore = { today: () => TODAY };
 globalThis.VDPets = { rating: 0 };
 let TODAY = '2026-07-12';
+Math.random = () => 0.5; // 固定亂數：不出稀有居民、不觸發奇遇
+store.vd_game = JSON.stringify({ coins: 1000, quests: { date: TODAY, prog: { correct: 10 } } }); // 今日已練功，收成不打折
 const townJson = JSON.parse(readFileSync(join(root, 'data/town.json'), 'utf8'));
 globalThis.fetch = async () => ({ json: async () => townJson });
 
@@ -35,7 +37,7 @@ ok(T.raw.pop.length === 2 && T.idle().length === 2, '送 2 位閒置村民');
 ok(!T.build('house', 3, 3).ok, '同格不能疊');
 ok(T.build('house', 2, 2).ok, '蓋民房');
 ok(T.raw.res.wood === 10, '扣 10 木');
-ok(!T.build('farm', 2, 3).ok, '沒農夫不能開田');
+ok(T.canBuild('farm').ok, '開田不需農夫（死鎖已修，農夫只管產出）');
 ok(!T.build('hospital', 2, 4).ok, '沒醫護不能開醫院');
 ok(T.popCap() === 4, '一棟民房住 4 人');
 
@@ -55,6 +57,7 @@ ok(out.wood === 3 && out.stone === 3, '樵夫 3 木、石匠 3 石');
 T.build('quarry', 2, 4);
 out = T.dailyOutput();
 ok(out.stone === 5, '採石場讓石匠 +2');
+store.vd_game = JSON.stringify({ coins: 1000, quests: { date: TODAY, prog: { correct: 10 } } }); // 今日已練功
 const w0 = T.raw.res.wood;
 ok(T.harvest().ok && T.raw.res.wood === w0 + 3, '收成入庫');
 ok(!T.harvest().ok, '一天只能收一次');
@@ -140,4 +143,29 @@ ok(T.importState(snap), '狀態可匯出匯入');
 ok(!T.importState({}), '壞資料擋下');
 
 if (fail) { console.error(`\n${fail} 個問題`); process.exit(1); }
+/* 14. 新機制：拆除／搬移／答題加速／城名／快精熟 */
+ok(!T.demolish('3,3').ok, '市政廳不能拆');
+{
+  const before = T.raw.res.wood;
+  ok(T.build('farm', 5, 5).ok, '開田（不需農夫）');
+  ok(T.move('5,5', 5, 6).ok && T.raw.grid['5,6'] && !T.raw.grid['5,5'], '搬移到空地');
+  ok(!T.move('5,6', 3, 3).ok, '不能搬到有建築的格');
+  ok(T.demolish('5,6').ok && T.raw.res.wood === before - 10 + 5, '拆除退一半建材');
+}
+{
+  T.raw.res.wood = 200; T.raw.res.stone = 200;
+  const hk = '1,1';
+  T.build('house', 1, 1);
+  T.upgrade(hk);
+  ok(T.raw.grid[hk].up && !T.quizRush(hk, false).ok, '沒過測驗不能加速');
+  ok(T.quizRush(hk, true).ok && T.raw.grid[hk].lv === 2 && !T.raw.grid[hk].up, '答題加速完工');
+}
+ok(!T.setName('').ok && T.setName('學霸之城').ok && T.raw.name === '學霸之城', '城名 1–12 字');
+{
+  store.vd_progress = JSON.stringify({ apple: { b: 2 }, dog: { b: 1 }, cat: { b: 3 }, sun: { b: 0 } });
+  const nm = T.nearMastered();
+  ok(nm.length === 2 && nm[0] === 'apple', '快精熟＝盒1–2、盒高在前');
+}
+ok(Array.isArray(T.raw.log) && T.raw.log.length > 0, '城史紀年有記錄');
+
 console.log('\nALL PASS — townstore 純邏輯 13 組驗證通過');

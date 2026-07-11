@@ -18,9 +18,11 @@ const VDTown = (() => {
   const now = () => Date.now();
 
   const DEFAULT = () => ({
+    name: '',
     grid: { '3,3': { b: 'townhall', lv: 1 } },
     res: { wood: 20, stone: 10, ore: 0, rice: 5 },
     tokens: 0, redeemedRating: 0,
+    log: [],
     pop: [],
     movein: { date: '', count: 0 },
     harvest: { date: '' },
@@ -37,6 +39,18 @@ const VDTown = (() => {
   }
   const save = () => localStorage.setItem(KEY, JSON.stringify(g));
   load(); // 同步先載：徵戰掉落 battleLoot 不必等 init
+
+  /* 城史紀年：大事記，最多留 40 條 */
+  function logEvt(t) {
+    (g.log = g.log || []).push({ d: today(), t });
+    if (g.log.length > 40) g.log = g.log.slice(-40);
+  }
+  function setName(n) {
+    n = String(n || '').trim();
+    if (!n || n.length > 12) return { ok: false, msg: '城名 1–12 個字' };
+    g.name = n; logEvt(`📜 城名定為「${n}」`); save();
+    return { ok: true };
+  }
 
   async function init() {
     if (data) return;
@@ -58,6 +72,13 @@ const VDTown = (() => {
     const prog = JSON.parse(localStorage.getItem('vd_progress') || '{}');
     for (const w in prog) if ((prog[w].b || 0) >= 3) m++;
     return m;
+  };
+  /* 快精熟的字（盒 1–2，再對幾次就精熟）——市政廳「去練」入口用 */
+  const nearMastered = () => {
+    const prog = JSON.parse(localStorage.getItem('vd_progress') || '{}');
+    return Object.keys(prog)
+      .filter(w => (prog[w].b || 0) === 1 || (prog[w].b || 0) === 2)
+      .sort((a, b) => (prog[b].b || 0) - (prog[a].b || 0));
   };
 
   function needProfOk(need) {
@@ -93,6 +114,31 @@ const VDTown = (() => {
     if (!chk.ok) return chk;
     payCost(data.buildings[b].cost);
     g.grid[key] = { b, lv: 1 };
+    logEvt(`🏗️ ${data.buildings[b].name} 落成`);
+    save();
+    return { ok: true };
+  }
+  /* 拆除：退一半建材；搬移：搬到空地不花錢 */
+  function demolish(key) {
+    const cell = g.grid[key];
+    if (!cell) return { ok: false, msg: '沒有建築' };
+    if (cell.b === 'townhall') return { ok: false, msg: '市政廳不能拆' };
+    const base = data.buildings[cell.b].cost || {};
+    const back = {};
+    for (const r in base) back[r] = Math.floor(base[r] / 2);
+    gainRes(back);
+    logEvt(`🧨 拆除 ${data.buildings[cell.b].name}`);
+    delete g.grid[key];
+    save();
+    return { ok: true, back };
+  }
+  function move(key, r, c) {
+    const to = `${r},${c}`;
+    if (r < 0 || c < 0 || r >= GRID || c >= GRID) return { ok: false, msg: '出了城界' };
+    if (!g.grid[key]) return { ok: false, msg: '沒有建築' };
+    if (g.grid[to]) return { ok: false, msg: '那格已有建築' };
+    g.grid[to] = g.grid[key];
+    delete g.grid[key];
     save();
     return { ok: true };
   }
@@ -132,11 +178,16 @@ const VDTown = (() => {
     save();
     return { ok: true, minutes: req.next * UPGRADE_MIN };
   }
+  function finishUp(key) {
+    const c = g.grid[key];
+    c.lv = c.up.to; delete c.up;
+    logEvt(`🔨 ${data ? data.buildings[c.b].name : c.b} 升到 Lv${c.lv}`);
+  }
   function tickUpgrades() {
     let changed = false;
     for (const key in g.grid) {
       const c = g.grid[key];
-      if (c.up && now() >= c.up.done) { c.lv = c.up.to; delete c.up; changed = true; }
+      if (c.up && now() >= c.up.done) { finishUp(key); changed = true; }
     }
     if (changed) save();
     return changed;
@@ -145,14 +196,24 @@ const VDTown = (() => {
     const c = g.grid[key];
     if (!c || !c.up) return { ok: false, msg: '沒有進行中的升級' };
     if (g.tokens < 1) return { ok: false, msg: '需要 1 枚城邦代幣' };
-    g.tokens -= 1; c.lv = c.up.to; delete c.up; save();
+    g.tokens -= 1; finishUp(key); save();
+    return { ok: true };
+  }
+  /* 答題加速：UI 跑完 5 題對 4 才呼叫（勤學＝最快的工程隊） */
+  function quizRush(key, passed) {
+    const c = g.grid[key];
+    if (!c || !c.up) return { ok: false, msg: '沒有進行中的升級' };
+    if (!passed) return { ok: false, msg: '要先通過加速測驗' };
+    finishUp(key); save();
     return { ok: true };
   }
 
   /* ── 人口 ── */
   function addResident() {
     const name = data.names[(g.seq - 1) % data.names.length];
-    g.pop.push({ id: g.seq++, name, job: '' });
+    const rare = Math.random() < 0.08;   // ✨ 稀有居民：產量 ×2
+    g.pop.push({ id: g.seq++, name, job: '', rare });
+    if (rare) logEvt(`✨ 稀有居民 ${name} 入住（產量加倍）`);
   }
   function moveinInfo() {
     if (g.movein.date !== today()) { g.movein = { date: today(), count: 0 }; save(); }
@@ -170,8 +231,10 @@ const VDTown = (() => {
     g.res.rice -= 1;
     g.movein.count++;
     addResident();
+    const np = g.pop[g.pop.length - 1];
+    logEvt(`🏠 ${np.name} 搬進城`);
     save();
-    return { ok: true, name: g.pop[g.pop.length - 1].name };
+    return { ok: true, name: np.name, rare: np.rare };
   }
 
   /* ── 職業 ── */
@@ -197,11 +260,13 @@ const VDTown = (() => {
     if (VDGame.raw.coins < def.tuition) return { ok: false, msg: `學費不足，需要 ${def.tuition} 字幣` };
     VDGame.raw.coins -= def.tuition;
     localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
-    p.job = job; save();
+    p.job = job;
+    logEvt(`🎓 ${p.name} 結業成為${def.name}`);
+    save();
     return { ok: true };
   }
 
-  /* ── 每日產出（工人＝自動化倍率；親自學習永遠更快） ── */
+  /* ── 每日產出（工人＝自動化倍率；親自學習永遠更快；稀有居民 ×2） ── */
   function dailyOutput() {
     const out = { wood: 0, stone: 0, ore: 0, rice: 0 };
     for (const p of g.pop) {
@@ -211,28 +276,47 @@ const VDTown = (() => {
       for (const r in def.out) {
         let v = def.out[r];
         if (def.boostBy && countOf(def.boostBy)) v += 2;
+        if (p.rare) v *= 2;
         out[r] += v;
       }
     }
     if (countOf('hospital')) for (const r of RES) if (out[r]) out[r] += 1;
     return out;
   }
+  const todayCorrect = () => {
+    const vg = JSON.parse(localStorage.getItem('vd_game') || '{}');
+    return ((vg.quests || {}).date === today() ? (vg.quests.prog || {}).correct : 0) || 0;
+  };
   function harvestReady() { return g.harvest.date !== today() && Object.values(dailyOutput()).some(v => v); }
   function harvest() {
     if (g.harvest.date === today()) return { ok: false, msg: '今天收過了——明天再來' };
     const out = dailyOutput();
     if (!Object.values(out).some(v => v)) return { ok: false, msg: '沒有工人在工作' };
+    const lazy = todayCorrect() === 0;   // 城主今天沒練功 → 居民只交一半（想看你讀書）
+    if (lazy) for (const r of RES) out[r] = Math.floor(out[r] / 2);
     gainRes(out);
     g.harvest.date = today();
+    /* 奇遇：25% 收成時發生一件好事 */
+    let event = null;
+    if (Math.random() < 0.25) {
+      const evs = [
+        { t: '🐫 商隊路過，留下謝禮', en: 'A caravan passed by!', gain: { wood: 6 } },
+        { t: '🎣 河裡撈到沉木與奇石', en: 'Treasure from the river!', gain: { wood: 4, stone: 4 } },
+        { t: '⛏️ 礦脈露頭，撿到礦石', en: 'We found a shiny vein!', gain: { ore: 3 } },
+        { t: '🌾 夜雨滋潤，稻子多熟一片', en: 'Night rain blessed the fields!', gain: { rice: 3 } }
+      ];
+      event = evs[Math.floor(Math.random() * evs.length)];
+      gainRes(event.gain);
+      logEvt(`${event.t}`);
+    }
     save();
-    return { ok: true, out };
+    return { ok: true, out, lazy, event };
   }
 
   /* ── 學習換資源：今日答對題數 → 資源包（燈塔 +2 包上限） ── */
   function packInfo() {
     if (g.packs.date !== today()) { g.packs = { date: today(), claimed: 0 }; save(); }
-    const vg = JSON.parse(localStorage.getItem('vd_game') || '{}');
-    const correct = ((vg.quests || {}).date === today() ? (vg.quests.prog || {}).correct : 0) || 0;
+    const correct = todayCorrect();
     const cap = 6 + (countOf('lighthouse') ? 2 : 0);
     const earned = Math.min(cap, Math.floor(correct / PACK_PER));
     return { correct, earned, claimed: g.packs.claimed, avail: Math.max(0, earned - g.packs.claimed), cap };
@@ -300,6 +384,7 @@ const VDTown = (() => {
     g.res[q.res] -= q.n;
     g.tokens += q.rewardTokens;
     q.done = true;
+    logEvt(`✅ 完成 ${q.giver} 的委託`);
     save();
     return { ok: true, tokens: q.rewardTokens };
   }
@@ -325,8 +410,9 @@ const VDTown = (() => {
   return {
     init, GRID, RES, RES_META, MAX_LV,
     get raw() { return g; },
-    cells, countOf, thLevel, resCap, popCap, profCount, idle, mastered,
-    canBuild, build, upgradeReq, upgrade, tickUpgrades, rushUpgrade,
+    cells, countOf, thLevel, resCap, popCap, profCount, idle, mastered, nearMastered,
+    canBuild, build, demolish, move, upgradeReq, upgrade, tickUpgrades, rushUpgrade, quizRush,
+    setName,
     moveinInfo, tryMovein, assignJob, train,
     dailyOutput, harvestReady, harvest,
     packInfo, claimPacks, battleLoot,

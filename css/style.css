@@ -997,3 +997,39 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .tw-quest.done { opacity: .65; border-style: solid; }
 .tw-quest i { font-style: normal; color: #5a6b78; font-size: .8rem; }
 .tw-sel { font-family: inherit; font-size: .92rem; padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(43,43,43,.25); background: rgba(255,255,255,.7); }
+
+/* ── 單字之城 2.5D 等角紙劇場 ── */
+.tw-iso { overflow: visible; margin: -13% 0 -15%; }
+.tw-grid { transform: perspective(1300px) rotateX(52deg) rotateZ(45deg) scale(.92); transform-style: preserve-3d; }
+.tw-cell { transform-style: preserve-3d; overflow: visible; }
+.tw-cell.has { background: rgba(255,255,255,.18); }
+.tw-cell.has > img { display: none; }
+.tw-b3d { position: absolute; left: 50%; bottom: 4%; width: 132%; aspect-ratio: 1; transform: translateX(-50%) rotateZ(-45deg) rotateX(-52deg); transform-origin: 50% 100%; pointer-events: none; }
+.tw-b3d img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; border: 2px solid rgba(255,255,255,.85); box-shadow: 0 12px 16px rgba(43,43,43,.3); display: block; }
+.tw-b3d .tw-emoji { font-size: 2rem; display: flex; align-items: flex-end; justify-content: center; height: 100%; }
+.tw-b3d .tw-lv { left: 4px; bottom: 4px; }
+.tw-b3d .tw-up { right: 4px; top: 4px; }
+.tw-cell.mv .tw-b3d img { outline: 3px solid #c9a24b; animation: pulse 1s infinite; }
+.tw-cell.mvtarget { border-color: #c9a24b; background: rgba(201,162,75,.12); }
+
+/* 建城史詩慶典 */
+.tw-epic { position: fixed; inset: 0; z-index: 90; background: rgba(43,43,43,.5); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.tw-epic-card { background: #fdfcf8; border: 2px solid #c9a24b; border-radius: 18px; padding: 26px 30px; text-align: center; max-width: 340px; box-shadow: 0 18px 50px rgba(43,43,43,.35); }
+.tw-epic-card .big { font-size: 3rem; }
+.tw-epic-card h3 { margin: 8px 0; font-family: serif; }
+.tw-epic-card p { color: #5a6b78; font-size: .92rem; }
+.tw-epic-card .btn { margin: 6px 4px 0; }
+
+/* 稀有居民・城史・參觀 */
+.tw-npc.rare { border: 2px solid #c9a24b; box-shadow: 0 0 10px rgba(201,162,75,.45); }
+.tw-log { font-size: .86rem; line-height: 1.9; }
+.tw-log i { font-style: normal; color: #9aa7b0; margin-right: 6px; font-size: .76rem; }
+.tw-vgrid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin: 8px 0; max-width: 300px; }
+.tw-vcell { aspect-ratio: 1; border: 1px dashed rgba(43,43,43,.12); border-radius: 4px; background: rgba(255,255,255,.35); overflow: hidden; }
+.tw-vcell img { width: 100%; height: 100%; object-fit: cover; }
+
+/* 裝飾水彩小圖（emoji 僅 fallback） */
+.pet-deco-img { position: absolute; top: 8px; right: 12px; width: 44px; height: 44px; object-fit: cover; border-radius: 50%; border: 2px solid rgba(255,255,255,.9); box-shadow: 0 3px 8px rgba(43,43,43,.25); }
+.pet-deco-img.big { width: 64px; height: 64px; top: 4px; right: 8px; }
+.pet-deco-img.mini { position: static; width: 20px; height: 20px; vertical-align: -4px; margin-right: 4px; border-width: 1px; box-shadow: none; }
+.pet-deco-img.btn { position: static; width: 34px; height: 34px; border-width: 1px; box-shadow: none; display: block; margin: 0 auto; }

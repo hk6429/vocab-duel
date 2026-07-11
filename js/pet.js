@@ -5,6 +5,11 @@ const VDPet = (() => {
   const imgOf = (id, stage) => `img/pets/${id}_s${stage}.png`;
   const KNAME = { p: '字首', s: '字尾', r: '字根' };
 
+  /* 裝飾：水彩小圖優先，emoji 只做載入失敗的 fallback（美術規範） */
+  const DECO_IMG = { '🎀': 'deco_bow', '👑': 'deco_crown', '🧣': 'deco_scarf', '👓': 'deco_glasses', '🌸': 'deco_flower', '⭐': 'deco_star' };
+  const decoHtml = (d, cls) => d ? `<img class="pet-deco-img ${cls || ''}" src="img/pets/${DECO_IMG[d]}.png" alt=""
+    onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${d}',className:'pet-deco ${cls || ''}'}))">` : '';
+
   /* 幼靈圖＝雙親水彩圖 CSS 疊合＋色相偏移（第一版不生新圖） */
   const petImg = (p, stage, cls) => p.parents
     ? `<span class="fu-imgs ${cls || ''}">
@@ -42,7 +47,7 @@ const VDPet = (() => {
             ${p.isFusion ? petImg(p, p.stage, 'wc-mcard-img') : `<img class="wc-mcard-img ${p.owned ? '' : 'pet-sil'}" src="${imgOf(p.id, p.stage)}" alt=""
               onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">`}
             <div class="wc-mcard-cap">
-              <div class="wc-mcard-title">${p.deco || ''}${p.name}</div>
+              <div class="wc-mcard-title">${decoHtml(p.deco, 'mini')}${p.name}</div>
               <span class="wc-mcard-sub">${p.owned ? `Lv.${p.lv}　⚔️${p.atk}　❤️${p.hp}` : `${p.theme}・領養 ${cost === 0 ? '免費' : cost + ' 幣'}`}</span>
             </div>
           </button>`).join('')}
@@ -204,7 +209,7 @@ const VDPet = (() => {
       <div class="wc-card pet-detail">
         ${p.isFusion ? petImg(p, p.stage, 'wc-card-img pet-stage') : `<img class="wc-card-img pet-stage" id="petImg" src="${imgOf(id, p.stage)}" alt=""
           onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">`}
-        ${p.deco ? `<span class="pet-deco">${p.deco}</span>` : ''}
+        ${decoHtml(p.deco)}
         <div class="wc-card-body">
           <h2>${p.ico} ${p.name} <span class="pet-lv">Lv.${p.lv}</span>${p.isActive ? '<span class="wc-mcard-badge" style="position:static">出戰中</span>' : ''}</h2>
           <p class="pg-hint">${p.theme}・第 ${p.stage} 階（${nextEvo}）</p>
@@ -236,7 +241,7 @@ const VDPet = (() => {
 
           <div class="pg-sub">🎀 裝飾</div>
           <div class="pet-decos">${VDPets.DECOS.map(d =>
-            `<button class="pet-dbtn ${p.deco === d ? 'on' : ''}" data-d="${d}">${d || '無'}</button>`).join('')}</div>
+            `<button class="pet-dbtn ${p.deco === d ? 'on' : ''}" data-d="${d}">${d ? decoHtml(d, 'btn') : '無'}</button>`).join('')}</div>
 
           <div class="pg-sub">📚 守護字綴（學這家族＝餵養牠）</div>
           ${affixChips(p)}
@@ -301,7 +306,7 @@ const VDPet = (() => {
     const ov = document.createElement('div');
     ov.className = 'vg-levelup';
     ov.innerHTML = `<div class="pet-closeup">
-      ${p.deco ? `<span class="pet-deco big">${p.deco}</span>` : ''}
+      ${decoHtml(p.deco, 'big')}
       <img src="${imgOf(p.id, p.stage)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">
       <div class="pet-evo-txt">${p.ico} ${p.name}　Lv.${p.lv}</div>
       <div class="pg-hint" style="color:#eee">⚔️${p.atk}　❤️${p.hp}　詞源之力 +${Math.round(p.power * 100)}%</div>
