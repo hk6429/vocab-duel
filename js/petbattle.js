@@ -56,6 +56,7 @@ const VDPetBattle = (() => {
 
   /* ── 開戰（wild 或 shadow 共用引擎） ── */
   function startFight(foe, mode) {
+    VDGame.onBattleStart();   // 詞靈對戰同樣計入每日對戰任務
     const id = VDPets.active();
     const me = VDPets.list().find(x => x.id === id);
     const skills = VDPets.skillsOf(id).filter(s => s.unlocked).map(s => s.id);
