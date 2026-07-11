@@ -14,7 +14,7 @@ const BOARD = "vd:petboard:global";      // ZSET nick → rating，取 Top 50
 const POOL_MAX = 200;
 const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
 const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12;
-const okId = (s) => typeof s === "string" && /^[a-z]{3,16}$/.test(s);
+const okId = (s) => typeof s === "string" && /^[a-z][a-z0-9_]{2,24}$/.test(s); // 幼靈 id 帶 fu_ 前綴
 
 const cors = (res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");

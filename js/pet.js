@@ -5,6 +5,16 @@ const VDPet = (() => {
   const imgOf = (id, stage) => `img/pets/${id}_s${stage}.png`;
   const KNAME = { p: '字首', s: '字尾', r: '字根' };
 
+  /* 幼靈圖＝雙親水彩圖 CSS 疊合＋色相偏移（第一版不生新圖） */
+  const petImg = (p, stage, cls) => p.parents
+    ? `<span class="fu-imgs ${cls || ''}">
+        <img src="${imgOf(p.parents[0], 3)}" alt="" onerror="this.remove()">
+        <img src="${imgOf(p.parents[1], 3)}" class="fu-b" alt="" onerror="this.remove()">
+        <b class="fu-egg">🐣</b>
+      </span>`
+    : `<img class="${cls || ''}" src="${imgOf(p.id, stage)}" alt=""
+        onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">`;
+
   async function render(container) {
     el = container;
     el.innerHTML = '<div class="loading">詞靈甦醒中…</div>';
@@ -29,19 +39,81 @@ const VDPet = (() => {
         ${list.map(p => `
           <button class="wc-mcard pet-card ${p.owned ? '' : 'locked'}" data-id="${p.id}">
             ${p.isActive ? '<span class="wc-mcard-badge">出戰中</span>' : ''}
-            <img class="wc-mcard-img ${p.owned ? '' : 'pet-sil'}" src="${imgOf(p.id, p.stage)}" alt=""
-              onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">
+            ${p.isFusion ? petImg(p, p.stage, 'wc-mcard-img') : `<img class="wc-mcard-img ${p.owned ? '' : 'pet-sil'}" src="${imgOf(p.id, p.stage)}" alt=""
+              onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">`}
             <div class="wc-mcard-cap">
               <div class="wc-mcard-title">${p.deco || ''}${p.name}</div>
               <span class="wc-mcard-sub">${p.owned ? `Lv.${p.lv}　⚔️${p.atk}　❤️${p.hp}` : `${p.theme}・領養 ${cost === 0 ? '免費' : cost + ' 幣'}`}</span>
             </div>
           </button>`).join('')}
       </div>
+      ${altarCard(list)}
       ${bagCard()}
       ${VDGame.milestoneHtml()}
       <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>`;
     el.querySelectorAll('.pet-card').forEach(b => { b.onclick = () => renderDetail(b.dataset.id); });
+    bindAltar();
     bindBag();
+  }
+
+  /* ── 詞源融合祭壇：兩隻滿級 → 幼靈 ── */
+  let fusePick = [];
+  function altarCard(list) {
+    const ready = VDPets.canFuse();
+    const fusions = VDPets.fusions();
+    if (ready.length < 2 && !fusions.length) return '';
+    if (ready.length < 2) return `
+      <div class="wc-card"><div class="wc-card-body">
+        <div class="hero-sec">🐣 詞源融合祭壇</div>
+        <div class="pg-hint">再養滿兩隻 Lv25 詞靈，就能融合出第 21 隻「幼靈」（已有 ${fusions.length}/${VDPets.FUSE_MAX}）。</div>
+      </div></div>`;
+    const cands = list.filter(p => ready.includes(p.id));
+    const picked = fusePick.filter(id => ready.includes(id));
+    const skillPool = picked.length === 2
+      ? [...VDPets.def(picked[0]).skills, ...VDPets.def(picked[1]).skills]
+      : [];
+    return `
+      <div class="wc-card"><div class="wc-card-body">
+        <div class="hero-sec">🐣 詞源融合祭壇　<span class="pg-hint">${fusions.length}/${VDPets.FUSE_MAX} 幼靈</span></div>
+        <div class="pg-hint">選兩隻 Lv25 詞靈融合出幼靈：守護字綴＝雙親聯集（分母變大→先變弱，補學就變強）。代價：雙親降回 Lv15＋${VDPets.FUSE_COST} 字幣。</div>
+        <div class="pg-fam-tags">${cands.map(p => `
+          <button class="pg-tag fu-cand ${picked.includes(p.id) ? 'on' : ''}" data-id="${p.id}">${p.ico} ${p.name}</button>`).join('')}</div>
+        ${picked.length === 2 ? `
+          <div class="pet-actrow" style="margin-top:8px">
+            <input class="rt-join-in" id="fuName" maxlength="4" placeholder="幼靈名 2–4 字" style="width:150px;letter-spacing:normal">
+          </div>
+          <div class="pg-hint">從雙親 6 技挑 3 個：</div>
+          <div class="pg-fam-tags">${skillPool.map(s => `
+            <button class="pg-tag fu-skill" data-s="${s}">${s}</button>`).join('')}</div>
+          <button class="btn" id="doFuse" style="margin-top:8px">🐣 融合（${VDPets.FUSE_COST} 字幣）</button>` : ''}
+      </div></div>`;
+  }
+  function bindAltar() {
+    el.querySelectorAll('.fu-cand').forEach(b => {
+      b.onclick = () => {
+        const id = b.dataset.id;
+        if (fusePick.includes(id)) fusePick = fusePick.filter(x => x !== id);
+        else { fusePick.push(id); if (fusePick.length > 2) fusePick.shift(); }
+        renderList();
+      };
+    });
+    const skillSel = new Set();
+    el.querySelectorAll('.fu-skill').forEach(b => {
+      b.onclick = () => {
+        const s = b.dataset.s;
+        if (skillSel.has(s)) { skillSel.delete(s); b.classList.remove('on'); }
+        else if (skillSel.size < 3) { skillSel.add(s); b.classList.add('on'); }
+      };
+    });
+    const go = el.querySelector('#doFuse');
+    if (go) go.onclick = () => {
+      const name = (el.querySelector('#fuName') || {}).value || '';
+      const r = VDPets.fuse(fusePick[0], fusePick[1], name, [...skillSel]);
+      if (!r.ok) return VDGame.toast(r.msg);
+      fusePick = [];
+      VDGame.toast(`🐣 ${name.trim()} 誕生了！`);
+      renderDetail(r.id);
+    };
   }
 
   /* ── 背包＋鍛造：3 件同階熔 1 件高一階 ── */
@@ -130,8 +202,8 @@ const VDPet = (() => {
     const nextEvo = p.lv < 10 ? `Lv.10 進化` : p.lv < 25 ? `Lv.25 終階` : '終階型態';
     el.innerHTML = `
       <div class="wc-card pet-detail">
-        <img class="wc-card-img pet-stage" id="petImg" src="${imgOf(id, p.stage)}" alt=""
-          onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">
+        ${p.isFusion ? petImg(p, p.stage, 'wc-card-img pet-stage') : `<img class="wc-card-img pet-stage" id="petImg" src="${imgOf(id, p.stage)}" alt=""
+          onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">`}
         ${p.deco ? `<span class="pet-deco">${p.deco}</span>` : ''}
         <div class="wc-card-body">
           <h2>${p.ico} ${p.name} <span class="pet-lv">Lv.${p.lv}</span>${p.isActive ? '<span class="wc-mcard-badge" style="position:static">出戰中</span>' : ''}</h2>

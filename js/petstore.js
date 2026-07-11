@@ -13,13 +13,14 @@ const VDPets = (() => {
   let g = null;      // 玩家狀態
   let wordsOfPet = {};   // petId → Set(word)：家族全部單字（小寫）
 
-  const DEFAULT = () => ({ owned: {}, active: '', rating: 0, wildFloor: 1, bag: [], eqdex: {} });
+  const DEFAULT = () => ({ owned: {}, active: '', rating: 0, wildFloor: 1, bag: [], eqdex: {}, fusions: [] });
 
   function load() {
     try { g = Object.assign(DEFAULT(), JSON.parse(localStorage.getItem(KEY)) || {}); }
     catch { g = DEFAULT(); }
     if (!Array.isArray(g.bag)) g.bag = [];
     if (!g.eqdex || typeof g.eqdex !== 'object') g.eqdex = {};
+    if (!Array.isArray(g.fusions)) g.fusions = [];
   }
   load(); // 同步先載：perk 查詢（閃卡/衝刺/錯題）不必等 init
   const save = () => localStorage.setItem(KEY, JSON.stringify(g));
@@ -39,6 +40,13 @@ const VDPets = (() => {
           for (const m of ax.members) set.add(m.toLowerCase());
       wordsOfPet[p.id] = set;
     }
+    // 幼靈家族＝雙親聯集
+    for (const f of g.fusions) rebuildFusionWords(f);
+  }
+  function rebuildFusionWords(f) {
+    const set = new Set();
+    for (const pid of f.parents) for (const w of (wordsOfPet[pid] || [])) set.add(w);
+    wordsOfPet[f.id] = set;
   }
 
   /* ── 詞源之力：家族已學字比例（box>=0 算已學） ── */
@@ -67,7 +75,9 @@ const VDPets = (() => {
   const hp = id => 100 + 6 * lvOf(id) + equipSum(id, 'hp');
 
   /* ── 領養／升級（花字幣，走 VDGame.raw 直接扣） ── */
-  const ownedCount = () => Object.keys(g.owned).length;
+  const ownedCount = () => data
+    ? data.pets.filter(p => g.owned[p.id]).length
+    : Object.keys(g.owned).filter(id => !id.startsWith('fu_')).length;
   const adoptCost = () => ownedCount() === 0 ? 0 : 100 + 50 * (ownedCount() - 1);
   function adopt(id) {
     if (g.owned[id]) return { ok: false, msg: '已領養' };
@@ -208,22 +218,71 @@ const VDPets = (() => {
   /* ── 技能／裝飾／出戰 ── */
   const SKILL_LV = [5, 12, 20];
   function skillsOf(id) {
-    const def = data.pets.find(p => p.id === id);
+    const def = petDef(id);
     if (!def) return [];
     return def.skills.map((s, i) => ({ id: s, ...data.skills[s], needLv: SKILL_LV[i], unlocked: lvOf(id) >= SKILL_LV[i] }));
+  }
+  /* 通用定義查找：一般寵走 data.pets、幼靈走 g.fusions 合成 */
+  function petDef(id) {
+    if (!data) return null;
+    const base = data.pets.find(p => p.id === id);
+    if (base) return base;
+    const f = g.fusions.find(x => x.id === id);
+    if (!f) return null;
+    const pa = data.pets.find(p => p.id === f.parents[0]) || {};
+    const pb = data.pets.find(p => p.id === f.parents[1]) || {};
+    return {
+      id: f.id, name: f.name, ico: '🐣', skills: f.skills,
+      theme: `${pa.name || '?'}×${pb.name || '?'} 的幼靈`,
+      affixes: [...(pa.affixes || []), ...(pb.affixes || [])],
+      parents: f.parents
+    };
+  }
+
+  /* ── 詞源融合：兩隻滿級本體寵 → 幼靈（雙親降回 Lv15＋500 字幣，上限 3 隻） ── */
+  const FUSE_COST = 500, FUSE_MAX = 3, FUSE_PARENT_LV = 15;
+  function canFuse() {
+    if (!data || g.fusions.length >= FUSE_MAX) return [];
+    return data.pets.filter(p => g.owned[p.id] && g.owned[p.id].lv >= MAX_LV).map(p => p.id);
+  }
+  function fuse(a, b, name, skills) {
+    if (g.fusions.length >= FUSE_MAX) return { ok: false, msg: `幼靈最多 ${FUSE_MAX} 隻` };
+    if (a === b) return { ok: false, msg: '要選兩隻不同的詞靈' };
+    for (const id of [a, b]) {
+      if (!data.pets.some(p => p.id === id)) return { ok: false, msg: '幼靈不能再融合' };
+      if (!g.owned[id] || g.owned[id].lv < MAX_LV) return { ok: false, msg: '雙親都要滿級 Lv25' };
+    }
+    if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 4) return { ok: false, msg: '名字要 2–4 個字' };
+    const pool = [...petDef(a).skills, ...petDef(b).skills];
+    if (!Array.isArray(skills) || skills.length !== 3 || !skills.every(s => pool.includes(s)) || new Set(skills).size !== 3)
+      return { ok: false, msg: '要從雙親 6 技中挑 3 個（不重複）' };
+    if (VDGame.raw.coins < FUSE_COST) return { ok: false, msg: `字幣不足，需要 ${FUSE_COST}` };
+    VDGame.raw.coins -= FUSE_COST;
+    localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
+    g.owned[a].lv = FUSE_PARENT_LV;
+    g.owned[b].lv = FUSE_PARENT_LV;
+    const fid = 'fu_' + (g.fusions.length + 1) + '_' + Date.now().toString(36);
+    const meta = { id: fid, name: name.trim(), parents: [a, b], skills };
+    g.fusions.push(meta);
+    g.owned[fid] = { lv: 1, equip: {}, deco: '' };
+    rebuildFusionWords(meta);
+    save();
+    return { ok: true, id: fid };
   }
   function setDeco(id, deco) { if (g.owned[id] && DECOS.includes(deco)) { g.owned[id].deco = deco; save(); } }
   function setActive(id) { if (g.owned[id]) { g.active = id; save(); } }
   const active = () => g.active && g.owned[g.active] ? g.active : '';
 
-  /* ── 清單 ── */
+  /* ── 清單（本體 20 寵＋幼靈） ── */
   function list() {
-    return data.pets.map(p => {
+    const defs = [...data.pets, ...g.fusions.map(f => petDef(f.id))];
+    return defs.map(p => {
       const o = g.owned[p.id];
       return {
         ...p, owned: !!o, lv: o ? o.lv : 0, stage: o ? stageOf(o.lv) : 1,
         power: power(p.id), atk: o ? atk(p.id) : 0, hp: o ? hp(p.id) : 0,
-        equip: o ? o.equip : {}, deco: o ? o.deco : '', isActive: g.active === p.id
+        equip: o ? o.equip : {}, deco: o ? o.deco : '', isActive: g.active === p.id,
+        isFusion: !!p.parents
       };
     });
   }
@@ -254,7 +313,7 @@ const VDPets = (() => {
     const id = active();
     if (!id) return null;
     return {
-      nick: VDGame.heroName(), petId: id, petName: (data.pets.find(p => p.id === id) || {}).name,
+      nick: VDGame.heroName(), petId: id, petName: (petDef(id) || {}).name,
       lv: lvOf(id), atk: atk(id), hp: hp(id),
       skills: skillsOf(id).filter(s => s.unlocked).map(s => s.id), rating: g.rating
     };
@@ -267,7 +326,8 @@ const VDPets = (() => {
     affixStats, topAffixes, weakAffixes,
     petWin, petLose, get rating() { return g.rating; }, get wildFloor() { return g.wildFloor; }, clearWild,
     snapshot, wordsOf: id => wordsOfPet[id] || new Set(),
-    def: id => data ? data.pets.find(p => p.id === id) : null,
+    def: petDef, canFuse, fuse, FUSE_COST, FUSE_MAX,
+    fusions: () => g.fusions.slice(),
     wild: () => data.wild, MAX_LV
   };
 })();
