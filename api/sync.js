@@ -13,15 +13,17 @@ const MAX_BLOB = 512 * 1024;             // 單筆 512KB 上限，防濫用
 const key = (c) => `vd:sync:${c}`;
 const okCode = (c) => typeof c === "string" && /^[A-Za-z0-9]{6,12}$/.test(c);
 
-const cors = (res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// CORS 白名單：只回信任的來源，其餘退回主站
+const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
+const cors = (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", ORIGINS.includes(req.headers.origin) ? req.headers.origin : ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Cache-Control", "no-store");
 };
 
 export default async function handler(req, res) {
-  cors(res);
+  cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   try {
     if (req.method === "GET") {

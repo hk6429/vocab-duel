@@ -17,19 +17,34 @@ const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().
 const okCode = (c) => typeof c === "string" && /^\d{4}$/.test(c);
 const okRole = (r) => r === "p1" || r === "p2";
 
-const cors = (res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// CORS 白名單：只回信任的來源，其餘退回主站
+const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
+const cors = (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", ORIGINS.includes(req.headers.origin) ? req.headers.origin : ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Cache-Control", "no-store");
 };
 
+// 輕量限流：每 IP 每 60 秒 cap 次寫入，超過回 429
+async function rateLimited(req, scope, cap = 30) {
+  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  const k = `vd:rl:${scope}:${ip}`;
+  const n = await redis.incr(k);
+  if (n === 1) await redis.expire(k, 60);
+  return n > cap;
+}
+
+const stripBad = (x) => String(x ?? "").replace(/[<>&"']/g, ""); // 濾掉危險字元
+
 function cleanSnap(s) {
   if (!s || !okNick(s.nick)) return null;
+  const nick = stripBad(s.nick).trim();
+  if (!nick) return null;
   return {
-    nick: s.nick.trim(),
+    nick,
     petId: typeof s.petId === "string" ? s.petId.slice(0, 16) : "",
-    petName: typeof s.petName === "string" ? s.petName.slice(0, 8) : "詞靈",
+    petName: (typeof s.petName === "string" ? stripBad(s.petName).slice(0, 8) : "") || "詞靈",
     lv: clamp(s.lv, 25) || 1,
     atk: clamp(s.atk, 300) || 10,
     hp: clamp(s.hp, 800) || 100,
@@ -50,11 +65,15 @@ function cleanState(s) {
 }
 
 export default async function handler(req, res) {
-  cors(res);
+  cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
   try {
     const { op } = req.body || {};
+    // 寫入操作限流（poll 為讀取不限；push 頻率高，用較寬的獨立桶）
+    if (op === "create" || op === "join") {
+      if (await rateLimited(req, "room")) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
+    }
 
     if (op === "create") {
       const snap = cleanSnap(req.body.snap);
@@ -87,6 +106,7 @@ export default async function handler(req, res) {
     }
 
     if (op === "push") {
+      if (await rateLimited(req, "room:push", 90)) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
       const { code, role } = req.body;
       const state = cleanState(req.body.state);
       if (!okCode(code) || !okRole(role) || !state) return res.status(400).json({ error: "bad req" });

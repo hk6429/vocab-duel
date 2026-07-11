@@ -99,11 +99,21 @@ const VDApp = (() => {
         </button>`;
       const wrongN = VDStore.wrongWords(words).length;
       const starN = VDStore.starWords(words).length;
+      // 新手引導卡：還沒學過任何字（= 尚未入門）就置頂顯示；練過第一個字自動消失
+      const intro = VDStore.stats(allWords).seen === 0 ? `
+        <div class="wc-card" style="border:2px solid #e8a020;background:linear-gradient(135deg,#fff8ec,#fdefd2)">
+          <div class="wc-card-body">
+            <div class="hero-sec">👋 第一次來？三步開始</div>
+            <p class="pg-hint" style="font-size:1.05em">① 選學段 → ② 閃卡練 10 張 → ③ 領第一個寶箱</p>
+            <button class="btn" onclick="VDApp.go('flash')">👉 從閃卡開始</button>
+          </div>
+        </div>` : '';
       $view().innerHTML = `
         <div class="wc-menu-top">
           <img class="wc-menu-banner" src="img/wc/banner.png" alt="" onerror="this.remove()">
           <h1>字鬥英雄</h1>
         </div>
+        ${intro}
         ${VDGame.heroStrip()}
         ${VDGame.dailyPanel()}
         ${dashboard(words, stageName)}
@@ -169,7 +179,7 @@ const VDApp = (() => {
       VDAffix.start(document.getElementById('mod'));
     },
     exam() {
-      $view().innerHTML = header('會考英文考古題') + '<div id="mod"></div>';
+      $view().innerHTML = header('國中會考英文考古題') + '<div id="mod"></div>';
       VDExam.start(document.getElementById('mod'));
     },
     flash() {

@@ -189,7 +189,7 @@ const VDRT = (() => {
     if (st.locked || st.finished) return;
     st.locked = true;
     const correct = v !== null && v === st.q.ans;
-    VDStore.record(st.q.word, correct);
+    VDStore.record(st.q.word, correct, 'battle');
     VDGame.onAnswer(correct, 'battle', st.combo + (correct ? 1 : 0));
     let log;
     if (correct) {
@@ -223,14 +223,14 @@ const VDRT = (() => {
     el.innerHTML = `
       <div class="bt-arena">
         <div class="bt-side foe">
-          <div class="bt-name">${oppSnap.nick} 的 ${oppSnap.petName}（Lv.${oppSnap.lv}）</div>
+          <div class="bt-name">${VDGame.esc(oppSnap.nick)} 的 ${VDGame.esc(oppSnap.petName)}（Lv.${oppSnap.lv}）</div>
           <div id="rt-foehp">${hpBar(oppHp(), oppSnap.hp, 'foe')}</div>
-          <div class="bt-assist" id="rt-opprog">${oppSnap.nick} 進度 ${Math.min(ROUNDS, st.oppRound)}/${ROUNDS}</div>
+          <div class="bt-assist" id="rt-opprog">${VDGame.esc(oppSnap.nick)} 進度 ${Math.min(ROUNDS, st.oppRound)}/${ROUNDS}</div>
         </div>
-        <div class="bt-log" id="rt-log">第 ${Math.min(ROUNDS, st.round + 1)}/${ROUNDS} 題</div>
+        <div class="bt-log" id="rt-log" role="status" aria-live="polite">第 ${Math.min(ROUNDS, st.round + 1)}/${ROUNDS} 題</div>
         <div class="bt-side me">
           <div id="rt-myhp">${hpBar(myHp(), my.hp, 'me')}</div>
-          <div class="bt-name">${my.nick} 的 ${my.petName} ${st.combo >= 2 ? `🔥×${st.combo}` : ''}</div>
+          <div class="bt-name">${VDGame.esc(my.nick)} 的 ${VDGame.esc(my.petName)} ${st.combo >= 2 ? `🔥×${st.combo}` : ''}</div>
         </div>
       </div>
       ${q ? `
@@ -243,6 +243,8 @@ const VDRT = (() => {
       </div>` : `
       <div class="card-done"><div class="big">⌛</div><p>你已答完 ${ROUNDS} 題（答對 ${st.correct}）——等待對手收尾…</p></div>`}`;
     el.querySelectorAll('.opt').forEach(b => b.onclick = () => answer(decodeURIComponent(b.dataset.v)));
+    const first = el.querySelector('.opt');
+    if (first) first.focus();
   }
 
   function finish(win, note) {
@@ -250,12 +252,13 @@ const VDRT = (() => {
     st.finished = true; st.done = true;
     stopTimers();
     push();
+    VDGame.onBattleFinish();  // 每日對戰任務：結算才計數
     let ratingHtml = '';
     if (win === true) { const pts = VDPets.petWin(); VDGame.raw.coins += 25; localStorage.setItem('vd_game', JSON.stringify(VDGame.raw)); ratingHtml = `<div class="bt-rankdelta up">⚔️ 競技積分 +20（${pts}）・💰 +25 字幣</div>`; }
     else if (win === false) { const pts = VDPets.petLose(); ratingHtml = `<div class="bt-rankdelta down">⚔️ 競技積分 −10（${pts}）</div>`; }
     el.innerHTML = `<div class="card-done">
       <div class="big">${win === true ? '🏆' : win === false ? '💀' : '🤝'}</div>
-      <p>${win === true ? `擊敗 ${oppSnap ? oppSnap.nick : '對手'}！` : win === false ? `不敵 ${oppSnap ? oppSnap.nick : '對手'}……` : '平手！'}</p>
+      <p>${win === true ? `擊敗 ${oppSnap ? VDGame.esc(oppSnap.nick) : '對手'}！` : win === false ? `不敵 ${oppSnap ? VDGame.esc(oppSnap.nick) : '對手'}……` : '平手！'}</p>
       ${note ? `<div class="pg-hint">${note}</div>` : ''}
       <div class="pg-hint">你答對 ${st.correct}/${ROUNDS}・總輸出 ${st.dmg}</div>
       ${ratingHtml}

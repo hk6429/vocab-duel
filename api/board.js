@@ -12,18 +12,29 @@ const TTL = 240 * 24 * 60 * 60;          // 一學年左右
 const MAX_MEMBERS = 60;
 const key = (c) => `vd:board:${c}`;
 const okCode = (c) => typeof c === "string" && /^[一-鿿A-Za-z0-9_-]{2,16}$/.test(c);
-const okName = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12;
+const okName = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n); // 拒收危險字元
 const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
 
-const cors = (res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// CORS 白名單：只回信任的來源，其餘退回主站
+const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
+const cors = (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", ORIGINS.includes(req.headers.origin) ? req.headers.origin : ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Cache-Control", "no-store");
 };
 
+// 輕量限流：每 IP 每 60 秒 30 次寫入，超過回 429
+async function rateLimited(req, scope) {
+  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  const k = `vd:rl:${scope}:${ip}`;
+  const n = await redis.incr(k);
+  if (n === 1) await redis.expire(k, 60);
+  return n > 30;
+}
+
 export default async function handler(req, res) {
-  cors(res);
+  cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   try {
     if (req.method === "GET") {
@@ -37,6 +48,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ code, rows });
     }
     if (req.method === "POST") {
+      if (await rateLimited(req, "board")) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
       const { action, code, name } = req.body || {};
       if (!okCode(code)) return res.status(400).json({ error: "班級代碼須為 2–16 個中英數字" });
       if (action === "sync") {

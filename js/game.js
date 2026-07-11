@@ -12,7 +12,7 @@ const VDGame = (() => {
     xp: 0, coins: 0, nick: '', avatar: '🦸',
     badges: {}, quests: { date: '', prog: { correct: 0, battle: 0, flash: 0 }, claimed: [] },
     mystery: { date: '', opened: false }, shield: 0, unlocked: [],
-    best: { sprint: 0, battleWins: 0 }, seenIntro: false,
+    best: { sprint: 0, battleWins: 0 }, seenIntro: false, seed: 7,
     ss: { correct: 0, spell: 0, exam: 0, battleWon: 0, maxCombo: 0 },
     shop: { owned: [], frame: '' }, revive: 0,
     rank: { pts: 0, peak: 0 },
@@ -105,8 +105,12 @@ const VDGame = (() => {
   }
 
   /* ── 答題事件（各模式共用） ── */
+  const WRONG_XP_CAP = 30; // 每日前 30 次答錯才有參與分
+  const WRONG_MSGS = ['+2 XP，錯的字才是經驗值！', '+2 XP，錯題本已幫你記下這個字！', '+2 XP，再看一眼，下次就是你的分！'];
   function onAnswer(correct, kind, combo) {
     rollDaily();
+    restCheck();
+    if (!g.seenIntro) g.seenIntro = true; // 答過題 → 解鎖每日任務面板
     if (correct) {
       if (window.VDSound) (combo >= 2 ? VDSound.combo(combo) : VDSound.correct());
       g.ss.correct++;
@@ -124,7 +128,15 @@ const VDGame = (() => {
       if (combo && combo >= 5 && combo % 5 === 0) comboSplash(combo);
     } else {
       if (window.VDSound) VDSound.wrong();
-      g.xp += 2; save(); // 參與分，不吐 toast
+      const wn = (g.quests.wrongXp || 0) + 1;
+      g.quests.wrongXp = wn;
+      if (wn <= WRONG_XP_CAP) g.xp += 2; // 參與分（每日上限 30 次）
+      save();
+      // 每 3 次錯才吐一次鼓勵，避免洗版
+      if (wn % 3 === 0) {
+        toast(wn <= WRONG_XP_CAP ? WRONG_MSGS[Math.floor(wn / 3) % WRONG_MSGS.length]
+          : '錯題本記下了，複習就是你的分！');
+      }
     }
     checkBadges();
   }
@@ -135,7 +147,9 @@ const VDGame = (() => {
     award(xp, coins, wrongReview ? '錯題複習完成' : '閃卡回合完成');
   }
   function onQuizDone(score) { award(15 + score * 2, 5 + score, '自測完成'); }
-  function onBattleStart() { rollDaily(); g.quests.prog.battle++; save(); }
+  function onBattleStart() { rollDaily(); }
+  // 每日對戰任務改在真正結算時計數（開戰就跑不再計數）
+  function onBattleFinish() { rollDaily(); g.quests.prog.battle++; save(); checkBadges(); }
   function onBattleWin(oppId, comeback) {
     g.ss.battleWon++;
     if (!g.unlocked.includes('beat_' + oppId)) g.unlocked.push('beat_' + oppId);
@@ -252,6 +266,7 @@ const VDGame = (() => {
       <div class="vg-chest-r">${NAME[rarity]}寶箱</div>
       <div class="vg-chest-loot">+${coins} 字幣　+${xp} XP</div>
       <div class="vg-chest-extra">${extra}</div>
+      <div class="vg-lu-sub">機率：傳說 5%・稀有 25%・普通 70%</div>
       <div class="vg-lu-sub">點一下繼續</div></div>`;
     ov.onclick = () => ov.remove();
     document.body.appendChild(ov);
@@ -265,9 +280,13 @@ const VDGame = (() => {
     document.body.appendChild(ov);
     setTimeout(() => ov.remove(), 1400);
   }
-  // 每次呼叫變化的偽隨機（Date 不可用，改用累積 xp 擾動）
-  let _seed = 7;
-  function seededRand() { _seed = (_seed * 9301 + 49297 + g.xp) % 233280; return _seed / 233280; }
+  // 每次呼叫變化的偽隨機（Date 不可用，改用累積 xp 擾動）；seed 存進存檔，重整不重置（杜絕開箱釣魚）
+  function seededRand() {
+    if (typeof g.seed !== 'number') g.seed = 7;
+    g.seed = (g.seed * 9301 + 49297 + g.xp) % 233280;
+    save();
+    return g.seed / 233280;
+  }
 
   /* ── 每日神秘字（CD6+CD7） ── */
   function mysteryWord() {
@@ -423,11 +442,34 @@ const VDGame = (() => {
     catch { return ''; }
   }
   function decodeChallenge(code) {
-    try { return JSON.parse(decodeURIComponent(escape(atob(code.trim())))); } catch { return null; }
+    try {
+      const d = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+      if (!d || typeof d !== 'object') return null;
+      return { n: String(d.n || '').slice(0, 12), s: +d.s || 0 }; // 對手名夾限 12 字，防灌 HTML
+    } catch { return null; }
   }
 
   /* ── 限時衝刺最佳 ── */
   function setSprintBest(n) { if (n > g.best.sprint) { g.best.sprint = n; save(); return true; } return false; }
+
+  /* ── HTML 轉義（城鎮/市場等模組共用） ── */
+  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+  /* ── 使用時間提醒：答題/操作滿 30 分鐘吐一次溫和提示，每 session 最多 2 次 ── */
+  const _sessStart = Date.now();
+  let _restShown = 0;
+  function restCheck() {
+    if (_restShown >= 2) return;
+    const mins = Math.floor((Date.now() - _sessStart) / 60000);
+    if (mins < 30 * (_restShown + 1)) return;
+    _restShown++;
+    const ov = document.createElement('div'); ov.className = 'vg-levelup';
+    ov.innerHTML = `<div class="vg-lu-card"><div class="vg-lu-ico">🍵</div>
+      <div class="vg-lu-t">練了 ${mins} 分鐘囉</div><div class="vg-lu-title">起來喝口水休息一下 🍵</div>
+      <div class="vg-lu-sub">點一下繼續</div></div>`;
+    ov.onclick = () => ov.remove();
+    document.body.appendChild(ov);
+  }
 
   /* ── 提示 UI ── */
   function toast(html) {
@@ -485,6 +527,10 @@ const VDGame = (() => {
 
   /* ── 首頁每日面板 ── */
   function dailyPanel() {
+    // 新手首次進站：先摺疊，答過題後才展開（避免第一眼被任務牆嚇到）
+    if (!g.seenIntro) {
+      return `<div class="vg-daily wc-card"><div class="vg-daily-head">完成第一輪練習後解鎖每日任務 🎁</div></div>`;
+    }
     const qs = quests();
     const mw = mysteryWord();
     const allClaimed = qs.every(q => q.tiers.some(t => t.claimed));
@@ -557,12 +603,23 @@ const VDGame = (() => {
     VDApp.go('menu');
   }
 
-  function init() { load(); }
+  /* ── 逃跑懲罰：上一場對戰沒結算就離開 → 判敗扣分 ── */
+  function checkEscaped() {
+    let pend = null;
+    try { pend = JSON.parse(localStorage.getItem('vd_pendingBattle')); } catch { /* 壞資料照清 */ }
+    if (!localStorage.getItem('vd_pendingBattle')) return;
+    localStorage.removeItem('vd_pendingBattle');
+    if (pend && pend.mode === 'pet') { if (window.VDPets) VDPets.petLose(); }
+    else rankLose();
+    toast('上一場中途離開，視同敗北');
+  }
+
+  function init() { load(); checkEscaped(); }
 
   return {
     init, level, title, levelProgress, get coins() { return g.coins; }, get avatar() { return g.avatar; },
     get shield() { return g.shield; }, get revive() { return g.revive; }, heroName, get raw() { return g; },
-    onAnswer, onFlash, onFlashDone, onQuizDone, onBattleStart, onBattleWin,
+    onAnswer, onFlash, onFlashDone, onQuizDone, onBattleStart, onBattleFinish, onBattleWin, esc,
     quests, claimQuest, claimAndRefresh, openMystery, openMysteryUI, mysteryWord,
     weekQuest, claimWeek, claimWeekUI, weekVaultReady, openWeekVault,
     SHOP, buy, setFrame, get frame() { return g.shop.frame; }, get owned() { return g.shop.owned.slice(); },

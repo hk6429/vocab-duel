@@ -145,6 +145,8 @@ const VDBattle = (() => {
     locked = false;
     if (window.VDPets) VDPets.init(); // 助戰詞靈資料，首回合前就緒
     VDGame.onBattleStart();
+    // 逃跑懲罰標記：結算時清除；殘留＝中途離開，下次載入判敗
+    localStorage.setItem('vd_pendingBattle', JSON.stringify({ mode: 'rank', ts: Date.now() }));
     nextRound();
   }
 
@@ -168,7 +170,7 @@ const VDBattle = (() => {
     if (locked) return;
     locked = true;
     const correct = v === state.q.ans;
-    VDStore.record(state.q.word, correct);
+    VDStore.record(state.q.word, correct, 'battle');
     VDGame.onAnswer(correct, 'battle', state.combo + (correct ? 1 : 0));
     if (state.pHp < 30) state.comeback = true;
     if (correct) {
@@ -233,7 +235,7 @@ const VDBattle = (() => {
           <div class="bt-name">${opp.name}<span class="bt-tier t-${opp.tier}">${opp.tier}</span></div>
           ${hpBar(state.oHp, 'foe')}
         </div>
-        <div class="bt-log">${state.log}</div>
+        <div class="bt-log" role="status" aria-live="polite">${state.log}</div>
         <div class="bt-side me">
           ${hpBar(state.pHp, 'me')}
           <div class="bt-name">你 ${state.pHp < 30 ? '💢背水一戰' : state.combo >= 2 ? `🔥聚氣 ×${state.combo}` : ''}</div>
@@ -249,6 +251,8 @@ const VDBattle = (() => {
       el.querySelectorAll('.opt').forEach(b => {
         b.onclick = () => onPlayerAnswer(decodeURIComponent(b.dataset.v));
       });
+      const first = el.querySelector('.opt');
+      if (first) first.focus();
     }
   }
 
@@ -274,6 +278,8 @@ const VDBattle = (() => {
   }
 
   function reallyFinish(win) {
+    localStorage.removeItem('vd_pendingBattle'); // 已結算，清逃跑標記
+    VDGame.onBattleFinish();  // 每日對戰任務：結算才計數
     const firstBeat = win && !VDGame.isBeaten(opp.id);
     if (win) VDGame.onBattleWin(opp.id, state.comeback);
     const rk = win ? VDGame.rankWin() : VDGame.rankLose();
@@ -312,7 +318,7 @@ const VDBattle = (() => {
     locked = true;
     const me = state.turn, foe = 1 - me;
     const correct = v === state.q.ans;
-    VDStore.record(state.q.word, correct);
+    VDStore.record(state.q.word, correct, 'battle');
     VDGame.onAnswer(correct, 'battle', 0);
     if (correct) {
       let dmg = 12 + state.combo[me] * 3;
@@ -341,7 +347,7 @@ const VDBattle = (() => {
           <div class="bt-name">玩家 2 ${state.combo[1] >= 2 ? `🔥×${state.combo[1]}` : ''}</div>
           ${hpBar(state.hp[1], t === 1 ? 'active' : '')}
         </div>
-        <div class="bt-log">${state.log}</div>
+        <div class="bt-log" role="status" aria-live="polite">${state.log}</div>
         <div class="bt-side me">
           ${hpBar(state.hp[0], t === 0 ? 'active' : '')}
           <div class="bt-name">玩家 1 ${state.combo[0] >= 2 ? `🔥×${state.combo[0]}` : ''}</div>
@@ -357,6 +363,8 @@ const VDBattle = (() => {
       el.querySelectorAll('.opt').forEach(b => {
         b.onclick = () => onPvpAnswer(decodeURIComponent(b.dataset.v));
       });
+      const first = el.querySelector('.opt');
+      if (first) first.focus();
     }
   }
 

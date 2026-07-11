@@ -74,8 +74,9 @@ const VDCloud = (() => {
         <p class="cloud-tip">老師給一組班級碼，全班輸入同一組。上傳後就能看到全班的已掌握字數排名。</p>
         <div class="cloud-row">
           <input id="ccIn" class="cloud-input" maxlength="16" placeholder="班級碼（老師給）" value="${cc}">
-          <input id="cnIn" class="cloud-input" maxlength="12" placeholder="你的名字" value="${cn}">
+          <input id="cnIn" class="cloud-input" maxlength="12" placeholder="你的暱稱（勿用真名）" value="${cn}">
         </div>
+        <p class="cloud-tip">⚠️ 排行榜全班都看得到——暱稱請勿使用真實姓名，用綽號、座號或代號就好。</p>
         <div class="cloud-row">
           <button class="btn" id="subBtn">📤 上傳我的戰績</button>
           <button class="btn ghost" id="boardBtn">🏆 看排行榜</button>

@@ -57,7 +57,7 @@ const VDExam = (() => {
             ${typesPresent.map(t => `<option value="${t}">${TYPES[t] || t}</option>`).join('')}</select></div>
         <button class="btn" id="exStart">開始練習</button>
       </div>
-      <div class="ex-hint">共 ${allQuestions().length} 題，選好範圍就開始</div>`;
+      <div class="ex-hint">題庫範圍：<b>國中教育會考</b>歷屆英文題（非學測）。共 ${allQuestions().length} 題，選好範圍就開始</div>`;
     el.querySelector('#fYear').value = fYear;
     el.querySelector('#fType').value = fType;
     el.querySelector('#fYear').onchange = e => fYear = e.target.value;

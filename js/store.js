@@ -1,8 +1,8 @@
 /* 進度儲存：localStorage 封裝，key 一律 vd_ 前綴 */
 const VDStore = (() => {
-  const PROG_KEY = 'vd_progress'; // { word: { b:盒0-4, d:'YYYY-MM-DD'到期日, s:看過次數 } }
+  const PROG_KEY = 'vd_progress'; // { word: { b:盒0-5, d:'YYYY-MM-DD'到期日, s:看過次數 } }
   const META_KEY = 'vd_meta';     // { stage:'E'|'J', daily:{date:count}, lastDay, streak }
-  const INTERVALS = [0, 1, 3, 8, 21]; // 各盒複習間隔（天）；擴張式間隔提升長期保留
+  const INTERVALS = [0, 1, 3, 8, 21, 60]; // 各盒複習間隔（天）；擴張式間隔提升長期保留
 
   const today = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD 本地時區
 
@@ -41,10 +41,25 @@ const VDStore = (() => {
     get stage() { return meta.stage; },
     set stage(v) { meta.stage = v; saveMeta(); },
     getWord: w => prog[w] || null,
-    /* 答題結果回寫：correct 升一盒，錯誤歸 0 */
-    record(word, correct) {
+    /* 答題結果回寫：source 選填 — undefined/'quiz' 完整效果、'flash' 閃卡自評、'battle' 限時競技 */
+    record(word, correct, source) {
       const rec = prog[word] || { b: 0, d: today(), s: 0 };
-      rec.b = correct ? Math.min(rec.b + 1, 4) : 0;
+      if (source === 'battle' && !correct) {
+        // 競技答錯：只記錯題本，不降盒、不改到期日（限時手滑不懲罰學習進度）
+        rec.s += 1;
+        prog[word] = rec;
+        meta.wrong[word] = today();
+        saveProg();
+        bumpDaily();
+        return;
+      }
+      if (correct) {
+        // 閃卡自評升盒上限 2（已在盒 2 以上則不動不降）；其餘上限 5
+        rec.b = source === 'flash' ? (rec.b >= 2 ? rec.b : rec.b + 1) : Math.min(rec.b + 1, 5);
+      } else {
+        // 答錯降兩盒（不再歸零），盒 1 以下才回 0
+        rec.b = rec.b >= 2 ? rec.b - 2 : 0;
+      }
       rec.d = addDays(today(), INTERVALS[rec.b]);
       rec.s += 1;
       prog[word] = rec;
@@ -91,14 +106,14 @@ const VDStore = (() => {
       }
       return { mastered, seen, due, todayCount: meta.daily[t] || 0, streak: meta.streak };
     },
-    /* Leitner 五盒分佈：回傳各盒字數＋未學數，供首頁迷你進度條 */
+    /* Leitner 六盒分佈：回傳各盒字數＋未學數，供首頁迷你進度條 */
     boxDist(words) {
-      const d = [0, 0, 0, 0, 0];
+      const d = [0, 0, 0, 0, 0, 0];
       let unseen = 0;
       for (const w of words) {
         const r = prog[w.word];
         if (!r) { unseen++; continue; }
-        d[Math.max(0, Math.min(4, r.b))]++;
+        d[Math.max(0, Math.min(5, r.b))]++;
       }
       return { d, unseen, total: words.length, streak: meta.streak };
     },

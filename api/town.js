@@ -11,15 +11,26 @@ const redis = new Redis({
 const KEY = (code) => `vd:town:${code}`;
 const okCode = (c) => typeof c === "string" && /^[A-Za-z0-9_-]{4,32}$/.test(c.trim());
 
-const cors = (res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// CORS 白名單：只回信任的來源，其餘退回主站
+const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
+const cors = (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", ORIGINS.includes(req.headers.origin) ? req.headers.origin : ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Cache-Control", "no-store");
 };
 
+// 輕量限流：每 IP 每 60 秒 30 次寫入，超過回 429
+async function rateLimited(req, scope) {
+  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  const k = `vd:rl:${scope}:${ip}`;
+  const n = await redis.incr(k);
+  if (n === 1) await redis.expire(k, 60);
+  return n > 30;
+}
+
 export default async function handler(req, res) {
-  cors(res);
+  cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
   try {
@@ -27,8 +38,11 @@ export default async function handler(req, res) {
     if (!okCode(code)) return res.status(200).json({ ok: 0, error: "同步碼格式不對" });
 
     if (op === "save") {
+      if (await rateLimited(req, "town")) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
       const town = req.body.town;
       if (!town || !town.grid || !town.res) return res.status(200).json({ ok: 0, error: "城鎮資料不完整" });
+      // 城名淨化：濾掉危險字元並限長
+      if (typeof town.name === "string") town.name = town.name.replace(/[<>&"']/g, "").slice(0, 12);
       const s = JSON.stringify(town);
       if (s.length > 60000) return res.status(200).json({ ok: 0, error: "資料過大" });
       await redis.set(KEY(code.trim()), s);

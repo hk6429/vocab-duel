@@ -1,4 +1,4 @@
-/* 閃卡模組：Leitner 五盒，一場 20 張（到期優先、其次新字）；支援 英→中／中→英 雙向與發音 */
+/* 閃卡模組：Leitner 六盒，一場 20 張（到期優先、其次新字）；支援 英→中／中→英 雙向與發音 */
 const VDFlash = (() => {
   const SESSION_SIZE = 20;
   let queue = [], idx = 0, flipped = false, doneCount = 0;
@@ -59,7 +59,7 @@ const VDFlash = (() => {
       ? `<div class="flash-word">${w.word} ${VDSpeak.btn(w.word)}</div><div class="flash-hint">點卡片看中文</div>`
       : `<div class="flash-zh big">${w.zh}</div><div class="flash-pos">${w.pos.join(', ')}</div><div class="flash-hint">點卡片看英文</div>`;
     el.innerHTML = `
-      <div class="flash-progress">${idx + 1} / ${queue.length}　${boxNum >= 0 ? '盒 ' + boxNum : '新字'}</div>
+      <div class="flash-progress">${idx + 1} / ${queue.length}　${boxNum >= 0 ? `<span title="盒子越大＝越熟，隔越多天才再考你">盒 ${boxNum}（越大越熟）</span>` : '新字'}</div>
       <div class="flash-ctrl">
         <button class="chip" id="dirBtn">${dir === 'e2z' ? '英→中' : '中→英'} 🔄</button>
         ${acc ? `<button class="chip" id="accBtn">${acc}腔</button>` : ''}
@@ -96,7 +96,7 @@ const VDFlash = (() => {
   }
 
   function answer(correct, el, w) {
-    VDStore.record(w.word, correct);
+    VDStore.record(w.word, correct, 'flash'); // 閃卡自評：升盒上限 2，避免自評灌熟練度
     VDGame.onFlash();
     VDGame.onAnswer(correct, 'flash');
     doneCount++;

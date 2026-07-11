@@ -28,7 +28,7 @@ const VDPetBattle = (() => {
         <img class="wc-card-img" src="img/ui/h_arena.png" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <p class="pg-hint">出戰：${p.ico} <b>${p.name}</b>　Lv.${p.lv}　⚔️${p.atk}　❤️${p.hp}　詞源之力 +${Math.round(p.power * 100)}%　<button class="btn small ghost" onclick="VDApp.go('pets')">換寵</button></p>
-          <div class="pg-sub">🌿 野生試煉（過一層開一層，越深掉越好的裝備）</div>
+          <div class="pg-sub">🌿 野生試煉（過一層開一層，越深掉越好的裝備）・重打已通關層今日全額獎勵剩 ${wildFullLeft()} 次</div>
           <div class="pb-floors">${wild.map((f, i) => {
             const n = i + 1, open = n <= floor;
             return `<button class="pb-floor ${open ? '' : 'locked'} t-${f.dropTier}" data-f="${i}" ${open ? '' : 'disabled'}>
@@ -81,9 +81,26 @@ const VDPetBattle = (() => {
     };
   }
 
-  /* ── 開戰（wild 或 shadow 共用引擎） ── */
+  /* ── 重打已通關層：每日前 3 次全額獎勵，之後字幣/裝備降為 10%（建材照舊），跨日重置 ── */
+  const WILD_FULL_MAX = 3;
+  function wildFullLeft() {
+    const gg = VDGame.raw;
+    if (gg.wildDay !== VDStore.today()) return WILD_FULL_MAX;
+    return Math.max(0, WILD_FULL_MAX - (gg.wildFull || 0));
+  }
+  function useWildFull() { // 記一次重打，回傳這次是否仍屬全額
+    const gg = VDGame.raw, t = VDStore.today();
+    if (gg.wildDay !== t) { gg.wildDay = t; gg.wildFull = 0; }
+    gg.wildFull = (gg.wildFull || 0) + 1;
+    localStorage.setItem('vd_game', JSON.stringify(gg));
+    return gg.wildFull <= WILD_FULL_MAX;
+  }
+
+  /* ── 開戰（wild／shadow／practice 共用引擎） ── */
   function startFight(foe, mode) {
-    VDGame.onBattleStart();   // 詞靈對戰同樣計入每日對戰任務
+    VDGame.onBattleStart();
+    // 逃跑懲罰標記：結算時清除；殘留＝中途離開，下次載入判敗（練習賽不記）
+    if (mode !== 'practice') localStorage.setItem('vd_pendingBattle', JSON.stringify({ mode: 'pet', ts: Date.now() }));
     const id = VDPets.active();
     const me = VDPets.list().find(x => x.id === id);
     const skills = VDPets.skillsOf(id).filter(s => s.unlocked).map(s => s.id);
@@ -156,7 +173,7 @@ const VDPetBattle = (() => {
     if (locked) return;
     locked = true;
     const correct = v === state.q.ans;
-    VDStore.record(state.q.word, correct);
+    VDStore.record(state.q.word, correct, 'battle');
     VDGame.onAnswer(correct, 'battle', state.combo);
     if (correct) {
       const d = dmgOf();
@@ -186,27 +203,34 @@ const VDPetBattle = (() => {
 
   /* ── 結算 ── */
   function finish(win) {
+    localStorage.removeItem('vd_pendingBattle'); // 已結算，清逃跑標記
+    VDGame.onBattleFinish();  // 每日對戰任務：結算才計數
     const { mode, foe, me } = state;
     let dropHtml = '', coins = 0;
     if (win && mode === 'wild') {
       VDPets.clearWild(foe.floorNo);
+      const full = foe.replay ? useWildFull() : true; // 重打已通關層：每日前 3 次全額
       coins = 15 + foe.floorNo * 5;
+      if (!full) coins = Math.max(1, Math.round(coins * 0.1));
       VDGame.raw.coins += coins;
       localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
-      // 城鎮補給：徵戰勝利掉建材（層數越深越多）
+      // 城鎮補給：徵戰勝利掉建材（層數越深越多）——降獎勵時建材照舊
       if (window.VDTown && VDTown.raw) {
         const loot = VDTown.battleLoot(foe.floorNo);
         VDGame.toast('🏰 城鎮補給：' + Object.entries(loot).map(([k, v]) => `${VDTown.RES_META[k].ico}+${v}`).join(' '));
       }
-      const drop = VDPets.rollDrop(foe.dropTier);
-      dropHtml = `
+      const drop = (full || Math.random() < 0.1) ? VDPets.rollDrop(foe.dropTier) : null;
+      if (drop) {
+        dropHtml = `
         <div class="pb-dropcard t-${drop.tier}">
           <div class="pb-dropico">${drop.ico}</div>
           <b>${drop.name}</b><i>${drop.atk ? '⚔️ +' + drop.atk : '❤️ +' + drop.hp}・${VDPets.SLOT_NAME[drop.slot]}${drop.perk ? `・${VDPets.PERKS[drop.perk].ico} ${VDPets.PERKS[drop.perk].name}` : ''}</i>
           <button class="btn small" id="doEquip">裝上 ${me.name}</button>
           <button class="btn ghost small" id="doBag">收進背包</button>
         </div>`;
-      state.drop = drop;
+        state.drop = drop;
+      }
+      if (!full) dropHtml = `<div class="pg-hint">📉 今日全額獎勵已用完——重打已通關層字幣/裝備降為 10%（建材照舊），明天重置</div>` + dropHtml;
     }
     let ratingHtml = '';
     if (mode === 'shadow') {
@@ -215,6 +239,7 @@ const VDPetBattle = (() => {
       if (win) { VDGame.raw.coins += 25; coins = 25; localStorage.setItem('vd_game', JSON.stringify(VDGame.raw)); }
       submitSnapshot();
     }
+    if (mode === 'practice') ratingHtml = `<div class="pg-hint">🎈 練習賽無獎勵——連上雲端再打影子對戰拿積分！</div>`;
     el.innerHTML = `<div class="card-done">
       <div class="big">${win ? '🏆' : '💀'}</div>
       <p>${win ? `${me.name} 擊敗了 ${foe.name}！` : `${me.name} 不敵 ${foe.name}……多學幾個家族字再來！`}</p>
@@ -248,6 +273,7 @@ const VDPetBattle = (() => {
     // 敵人數值以層級推：atk/hp 用同公式（無詞源之力）
     startFight({
       name: w.name, ico: w.ico, lv: w.lv, acc: w.acc, dropTier: w.dropTier, floorNo: i + 1,
+      replay: i + 1 < VDPets.wildFloor,   // 已通關層重打
       atk: 10 + 2 * w.lv, hp: 80 + 6 * w.lv, hue: true
     }, 'wild');
   }
@@ -263,19 +289,21 @@ const VDPetBattle = (() => {
       });
       if (r.ok) opp = (await r.json()).opponent;
     } catch { /* 離線 */ }
+    let practice = false;
     if (!opp) {
-      // 幻影對手：以自己為藍本 ±20%
+      // 幻影對手：以自己為藍本 ±20%——離線打的是練習賽，不發積分與字幣
+      practice = true;
       const me = VDPets.list().find(x => x.id === VDPets.active());
       const k = 0.85 + Math.random() * 0.35;
       opp = { nick: '迷霧幻影', petId: me.id, petName: me.name, lv: me.lv, atk: Math.max(5, Math.round(me.atk * k)), hp: Math.round(me.hp * k), skills: [] };
-      VDGame.toast('沒連上雲端，先跟幻影過招！');
+      VDGame.toast('沒連上雲端，先跟幻影打場練習賽（無獎勵）！');
     }
     startFight({
-      name: `${opp.nick} 的 ${opp.petName}`, ico: '👤', lv: opp.lv,
+      name: `${VDGame.esc(opp.nick)} 的 ${VDGame.esc(opp.petName)}${practice ? '（練習賽）' : ''}`, ico: '👤', lv: opp.lv,
       acc: Math.min(0.9, 0.5 + 0.35 * Math.min(1, opp.atk / Math.max(1, VDPets.atk(VDPets.active())))),
       atk: opp.atk, hp: opp.hp,
       img: `img/pets/${opp.petId}_s${VDPets.stageOf(opp.lv)}.png`, hue: true
-    }, 'shadow');
+    }, practice ? 'practice' : 'shadow');
   }
   async function submitSnapshot() {
     const snap = VDPets.snapshot();

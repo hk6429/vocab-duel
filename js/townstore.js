@@ -25,6 +25,7 @@ const VDTown = (() => {
     log: [],
     pop: [],
     movein: { date: '', count: 0 },
+    rush: { date: '', count: 0 },
     harvest: { date: '' },
     packs: { date: '', claimed: 0 },
     quest: null,        // { text, res, n, rewardTokens, giver }
@@ -48,6 +49,7 @@ const VDTown = (() => {
   function setName(n) {
     n = String(n || '').trim();
     if (!n || n.length > 12) return { ok: false, msg: '城名 1–12 個字' };
+    if (/[<>&"']/.test(n)) return { ok: false, msg: '名字不能包含特殊符號' };
     g.name = n; logEvt(`📜 城名定為「${n}」`); save();
     return { ok: true };
   }
@@ -199,11 +201,18 @@ const VDTown = (() => {
     g.tokens -= 1; finishUp(key); save();
     return { ok: true };
   }
-  /* 答題加速：UI 跑完 5 題對 4 才呼叫（勤學＝最快的工程隊） */
+  /* 答題加速：UI 跑完 5 題對 4 才呼叫（勤學＝最快的工程隊）；每日上限 2 次 */
+  const QUIZRUSH_PER_DAY = 2;
+  function rushInfo() {
+    if (!g.rush || g.rush.date !== today()) { g.rush = { date: today(), count: 0 }; save(); }
+    return { todayLeft: Math.max(0, QUIZRUSH_PER_DAY - g.rush.count) };
+  }
   function quizRush(key, passed) {
     const c = g.grid[key];
     if (!c || !c.up) return { ok: false, msg: '沒有進行中的升級' };
+    if (rushInfo().todayLeft <= 0) return { ok: false, msg: '今日答題加速已用完，明天再來！' };
     if (!passed) return { ok: false, msg: '要先通過加速測驗' };
+    g.rush.count++;
     finishUp(key); save();
     return { ok: true };
   }
@@ -411,7 +420,7 @@ const VDTown = (() => {
     init, GRID, RES, RES_META, MAX_LV,
     get raw() { return g; },
     cells, countOf, thLevel, resCap, popCap, profCount, idle, mastered, nearMastered,
-    canBuild, build, demolish, move, upgradeReq, upgrade, tickUpgrades, rushUpgrade, quizRush,
+    canBuild, build, demolish, move, upgradeReq, upgrade, tickUpgrades, rushUpgrade, quizRush, rushInfo,
     setName,
     moveinInfo, tryMovein, assignJob, train,
     dailyOutput, harvestReady, harvest,

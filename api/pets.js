@@ -16,8 +16,10 @@ const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)))
 const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12;
 const okId = (s) => typeof s === "string" && /^[a-z][a-z0-9_]{2,24}$/.test(s); // 幼靈 id 帶 fu_ 前綴
 
-const cors = (res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// CORS 白名單：只回信任的來源，其餘退回主站
+const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
+const cors = (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", ORIGINS.includes(req.headers.origin) ? req.headers.origin : ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Cache-Control", "no-store");
@@ -38,7 +40,7 @@ function cleanSnap(s) {
 }
 
 export default async function handler(req, res) {
-  cors(res);
+  cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
   try {

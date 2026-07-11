@@ -32,10 +32,12 @@ const PERKS = ["", "xp10", "sprint5", "wrong2"];
 
 const secret = () => process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "vd";
 const sigOf = (item) => createHmac("sha256", secret()).update(JSON.stringify(item)).digest("hex").slice(0, 24);
-const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12;
+const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n); // 拒收危險字元
 
-const cors = (res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// CORS 白名單：只回信任的來源，其餘退回主站
+const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
+const cors = (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", ORIGINS.includes(req.headers.origin) ? req.headers.origin : ORIGINS[0]);
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Cache-Control", "no-store");
@@ -61,12 +63,23 @@ function cleanItem(it) {
 
 const parse = (x) => { try { return typeof x === "string" ? JSON.parse(x) : x; } catch { return null; } };
 
+// 輕量限流：每 IP 每 60 秒 30 次寫入，超過回 429
+async function rateLimited(req, scope) {
+  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  const k = `vd:rl:${scope}:${ip}`;
+  const n = await redis.incr(k);
+  if (n === 1) await redis.expire(k, 60);
+  return n > 30;
+}
+
 export default async function handler(req, res) {
-  cors(res);
+  cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
   try {
     const { op } = req.body || {};
+    // 寫入操作限流（list 為讀取不限）
+    if (op !== "list" && (await rateLimited(req, "market"))) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
 
     if (op === "list") {
       const raw = await redis.zrange(ZKEY, 0, 49, { withScores: true });
@@ -93,7 +106,9 @@ export default async function handler(req, res) {
       const id = randomBytes(6).toString("hex");
       const claimKey = randomBytes(12).toString("hex");
       const entry = { id, item, seller: seller.trim(), ts: Date.now() };
-      await redis.set(ITEM(id), JSON.stringify({ ...entry, price, claimKey, sig: sigOf(item), sold: 0, claimed: 0 }), { ex: ITEM_TTL });
+      // 簽章涵蓋整筆掛單（item＋price＋seller＋id），杜絕掉包
+      const sig = sigOf({ item, price, seller: entry.seller, id });
+      await redis.set(ITEM(id), JSON.stringify({ ...entry, price, claimKey, sig, sold: 0, claimed: 0 }), { ex: ITEM_TTL });
       await redis.zadd(ZKEY, { score: price, member: JSON.stringify(entry) });
       return res.status(200).json({ ok: 1, id, claimKey });
     }
@@ -101,18 +116,21 @@ export default async function handler(req, res) {
     if (op === "buy") {
       const { id, nick } = req.body;
       if (typeof id !== "string" || !okNick(nick)) return res.status(400).json({ error: "bad req" });
-      const buys = await redis.incr(BUYS(nick.trim()));
-      if (buys === 1) await redis.expire(BUYS(nick.trim()), 86400);
-      if (buys > DAILY_BUY_CAP) return res.status(200).json({ ok: 0, error: "每日限購 3 件（保護自己打寶的樂趣）" });
       const rec = parse(await redis.get(ITEM(id)));
       if (!rec || rec.sold) return res.status(200).json({ ok: 0, error: "這件已被買走或下架了" });
       if (rec.seller === nick.trim()) return res.status(200).json({ ok: 0, error: "不能買自己的掛單" });
-      if (sigOf(rec.item) !== rec.sig) return res.status(200).json({ ok: 0, error: "簽章不符，掛單作廢" });
-      // 殺價：由買家暱稱+掛單 id 決定固定折扣 0/5/10/15%（不能重骰）；賣家收款按折後價 ×0.9
+      // 先驗新版全物件簽章，再退回舊版 item-only 簽章（相容既有掛單）
+      const sigNew = sigOf({ item: rec.item, price: rec.price, seller: rec.seller, id: rec.id });
+      if (sigNew !== rec.sig && sigOf(rec.item) !== rec.sig) return res.status(200).json({ ok: 0, error: "簽章不符，掛單作廢" });
+      // 每日限購：所有驗證通過後才計數，買失敗不燒配額
+      const buys = await redis.incr(BUYS(nick.trim()));
+      if (buys === 1) await redis.expire(BUYS(nick.trim()), 86400);
+      if (buys > DAILY_BUY_CAP) return res.status(200).json({ ok: 0, error: "每日限購 3 件（保護自己打寶的樂趣）" });
+      // 殺價：由掛單 id 決定固定折扣 0/5/10/15%（不含暱稱，杜絕改名重抽）；賣家收款按折後價 ×0.9
       let disc = 0;
       if (req.body.haggle) {
         let h = 0;
-        for (const ch of nick.trim() + id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+        for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
         disc = [0, 5, 10, 15][h % 4];
       }
       const finalPrice = Math.ceil(rec.price * (100 - disc) / 100);

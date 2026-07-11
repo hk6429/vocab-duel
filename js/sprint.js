@@ -2,6 +2,7 @@
 const VDSprint = (() => {
   let DUR = 60; // 學習詞條 sprint5 生效時 65 秒
   let el = null, words = [], score = 0, left = DUR, timer = null, q = null, locked = false, target = null;
+  let wrongs = [], paused = false; // 本輪答錯題；閃現正解時暫停倒數 0.8s
 
   function start(w, container) {
     el = container; words = w; target = null;
@@ -28,8 +29,8 @@ const VDSprint = (() => {
   }
 
   function run() {
-    score = 0; left = DUR; locked = false;
-    tick(); timer = setInterval(() => { left--; if (left <= 0) finish(); else paint(); }, 1000);
+    score = 0; left = DUR; locked = false; wrongs = []; paused = false;
+    tick(); timer = setInterval(() => { if (paused) return; left--; if (left <= 0) finish(); else paint(); }, 1000);
     next();
   }
 
@@ -62,10 +63,17 @@ const VDSprint = (() => {
     if (locked) return;
     locked = true;
     const correct = v === q.ans;
-    VDStore.record(q.word, correct);
+    VDStore.record(q.word, correct, 'battle');
     VDGame.onAnswer(correct, 'quiz', 0);
-    if (correct) score++;
-    next();
+    if (correct) { score++; next(); return; }
+    // 答錯：紅字閃現正解 0.8 秒（暫停倒數），再進下一題
+    wrongs.push(q);
+    paused = true;
+    const box = el.querySelector('.sp-q');
+    if (box) box.innerHTML = `
+      <div class="quiz-prompt" style="color:#c0392b">✗ ${q.prompt}</div>
+      <div class="quiz-sub" style="color:#c0392b;font-weight:bold">正解：${q.ans}</div>`;
+    setTimeout(() => { paused = false; next(); }, 800);
   }
 
   function finish() {
@@ -76,7 +84,9 @@ const VDSprint = (() => {
     el.innerHTML = `<div class="card-done">
       <div class="big">${isBest ? '🏅' : '⏱️'}</div>
       <p>時間到！答對 <b>${score}</b> 題${isBest ? '　🎉 新紀錄！' : ''}</p>
-      ${target ? `<div class="bt-quote">${beat ? `擊敗 ${target.n}（${target.s} 分）！` : `${target.n} 是 ${target.s} 分，再拚一次！`}</div>` : ''}
+      ${target ? `<div class="bt-quote">${beat ? `擊敗 ${VDGame.esc(target.n)}（${target.s} 分）！` : `${VDGame.esc(target.n)} 是 ${target.s} 分，再拚一次！`}</div>` : ''}
+      ${wrongs.length ? `<div class="pg-sub">本輪答錯 ${wrongs.length} 題</div>
+        ${wrongs.map(w => `<div class="pg-hint">✗ ${w.word}｜正解：${w.ans}</div>`).join('')}` : ''}
       ${VDGame.milestoneHtml()}
       <button class="btn" onclick="VDApp.go('sprint')">再衝一次</button>
       <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>

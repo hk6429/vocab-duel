@@ -44,6 +44,33 @@ const VDStats = (() => {
     } catch { /* 資料沒到就靜默 */ }
   }
 
+  /* 家長週報：本週（週一起）練習天數、總答題數、每日條狀圖 */
+  function weekCard() {
+    let daily = {};
+    try { daily = (JSON.parse(localStorage.getItem('vd_meta')) || {}).daily || {}; } catch { /* 沒有紀錄 */ }
+    const t = VDStore.today();
+    const base = new Date(t + 'T00:00:00');
+    base.setDate(base.getDate() - (base.getDay() + 6) % 7); // 退到本週一
+    const W = ['一', '二', '三', '四', '五', '六', '日'];
+    let total = 0, days = 0, cells = '';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(base); d.setDate(d.getDate() + i);
+      const ds = d.toLocaleDateString('sv-SE');
+      const n = daily[ds] || 0;
+      const future = ds > t;
+      if (n > 0) { total += n; days++; }
+      cells += `<div style="text-align:center;font-size:12px" title="${ds}：${n} 題">
+        <div>${W[i]}</div>
+        <div style="width:26px;height:26px;border-radius:6px;margin:2px auto 0;
+          background:${n > 0 ? '#4a8f52' : '#e9e2d3'};opacity:${future ? 0.35 : 1}"></div></div>`;
+    }
+    return `<div class="wc-card"><div class="wc-card-body">
+      <div class="hero-sec">📅 本週學習</div>
+      <div style="display:flex;gap:8px;margin:8px 0">${cells}</div>
+      <div class="pg-hint">本週練習 <b>${days}</b> 天・共答 <b>${total}</b> 題（週一起算，實心＝當天有練）</div>
+    </div></div>`;
+  }
+
   function render(allWords, el) {
     const eWords = allWords.filter(w => w.level === 'E');
     const jWords = allWords.filter(w => w.level === 'E' || w.level === 'J');
@@ -69,6 +96,7 @@ const VDStats = (() => {
           <div class="stat-note">「已掌握」= 熟悉度達第 3 盒以上；目前學段待複習 ${s.due} 字</div>
         </div>
       </div>
+      ${weekCard()}
       <div class="wc-card">
         <div class="wc-card-body">
           <div class="hero-sec">🎯 弱點分析</div>
@@ -82,7 +110,9 @@ const VDStats = (() => {
           <div class="io-box">
             <button class="btn ghost" id="btnExport">匯出進度碼</button>
             <button class="btn ghost" id="btnImport">匯入進度碼</button>
-            <textarea id="ioText" placeholder="匯出的進度碼會顯示在這裡；匯入時把進度碼貼進來再按匯入"></textarea>
+            <button class="btn ghost" id="btnWords">匯入單字清單</button>
+            <textarea id="ioText" placeholder="匯出的進度碼會顯示在這裡；匯入時把進度碼貼進來再按匯入。匯入單字清單：一行一個英文字，貼進來後按「匯入單字清單」"></textarea>
+            <div class="pg-hint">匯入的單字會加入複習佇列並加 ⭐ 收藏（例如老師發的考前字表）；「批次標熟」待進度引擎支援後推出。</div>
           </div>
         </div>
       </div>`;
@@ -95,6 +125,22 @@ const VDStats = (() => {
         alert('匯入成功！');
         VDApp.go('stats');
       } catch { alert('進度碼格式不對，請確認後再試。'); }
+    };
+    // 批次匯入字表：按行拆字 → 比對字庫 → enroll ＋ 加星
+    el.querySelector('#btnWords').onclick = () => {
+      const lines = el.querySelector('#ioText').value.split(/\r?\n/).map(s => s.trim().toLowerCase()).filter(Boolean);
+      if (!lines.length) { alert('請先把單字清單（一行一個字）貼進上面的文字框。'); return; }
+      const dict = new Map(allWords.map(w => [w.word.toLowerCase(), w.word]));
+      let n = 0, miss = 0;
+      for (const lw of new Set(lines)) {
+        const word = dict.get(lw);
+        if (!word) { miss++; continue; }
+        VDStore.enroll(word);
+        if (!VDStore.isStar(word)) VDStore.toggleStar(word);
+        n++;
+      }
+      alert(`匯入 ${n} 字（已加入複習佇列並加星）${miss ? `、${miss} 字不在字庫` : ''}`);
+      VDApp.go('stats');
     };
     affixWeak(el);
   }

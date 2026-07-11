@@ -37,13 +37,13 @@ const VDTownUI = (() => {
       const k = `${r},${c}`;
       const cell = g.grid[k];
       grid.push(cell
-        ? `<button class="tw-cell has ${moving === k ? 'mv' : ''}" data-k="${k}">
+        ? `<button class="tw-cell has ${moving === k ? 'mv' : ''}" data-k="${k}" aria-label="${B[cell.b].name} Lv${cell.lv}">
             <span class="tw-b3d">
-              <img src="${img(cell.b + '_s' + stageOf(cell.lv))}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${B[cell.b].ico}',className:'tw-emoji'}))">
+              <img src="${VDGame.esc(img(cell.b + '_s' + stageOf(cell.lv)))}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${B[cell.b].ico}',className:'tw-emoji'}))">
               <i class="tw-lv">Lv${cell.lv}</i>${cell.up ? '<i class="tw-up">🔨</i>' : ''}
             </span>
           </button>`
-        : `<button class="tw-cell ${moving ? 'mvtarget' : ''}" data-k="${k}"></button>`);
+        : `<button class="tw-cell ${moving ? 'mvtarget' : ''}" data-k="${k}" aria-label="${moving ? '空地（可搬遷至此）' : '空地'}"></button>`);
     }
     const res = VDTown.RES.map(r => `<span class="tw-res">${VDTown.RES_META[r].ico} ${g.res[r] || 0}</span>`).join('');
     const q = VDTown.questInfo();
@@ -55,7 +55,7 @@ const VDTownUI = (() => {
       <div class="wc-card">
         <img class="wc-card-img" src="img/ui/h_town.png" alt="" onerror="this.remove()">
         <div class="wc-card-body">
-          <p class="pg-hint">🏛️ <b>${g.name || '（點此為城命名）'}</b>・${era}・市政廳 Lv${VDTown.thLevel()}
+          <p class="pg-hint">🏛️ <b>${VDGame.esc(g.name || '（點此為城命名）')}</b>・${era}・市政廳 Lv${VDTown.thLevel()}
             <button class="btn sm ghost" id="twName">✏️</button><br>
             👥 ${g.pop.length}/${VDTown.popCap()} 人・📚 精熟 ${VDTown.mastered()} 字（城的高度＝你的單字量）</p>
           <div class="tw-resbar">${res}<span class="tw-res">🪙 ${VDTown.raw.tokens} 代幣</span><span class="tw-res">💰 ${VDGame.raw.coins}</span></div>
@@ -72,7 +72,7 @@ const VDTownUI = (() => {
           const av = p.job ? `res_${p.job}` : (p.id % 2 ? 'res_villager_m' : 'res_villager_f');
           return `<button class="tw-npc ${p.rare ? 'rare' : ''}" data-id="${p.id}">
             <img src="${img(av)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${job ? job.ico : '🙂'}',className:'tw-emoji'}))">
-            <b>${p.rare ? '✨' : ''}${p.name}</b><i>${job ? job.ico + job.name : '閒置'}${p.rare ? '・產量×2' : ''}</i>
+            <b>${p.rare ? '✨' : ''}${VDGame.esc(p.name)}</b><i>${job ? job.ico + job.name : '閒置'}${p.rare ? '・產量×2' : ''}</i>
           </button>`;
         }).join('')}</div>
         <div class="pet-actrow">
@@ -98,14 +98,14 @@ const VDTownUI = (() => {
           `<button class="btn small ghost tw-t2r" data-r="${r}">🪙→${VDTown.RES_META[r].ico}×20</button>`).join('')}</div>` : ''}
         ${q ? `<div class="tw-quest ${q.done ? 'done' : ''}">
           <img src="${img('res_mayor')}" alt="" onerror="this.remove()">
-          <span><b>${q.giver}</b>：“${q.text}”${q.done ? '　✅ Done!' : `　<i>(交 ${VDTown.RES_META[q.res].ico}×${q.n} 得 🪙×${q.rewardTokens})</i>`}</span>
+          <span><b>${VDGame.esc(q.giver)}</b>：“${VDGame.esc(q.text)}”${q.done ? '　✅ Done!' : `　<i>(交 ${VDTown.RES_META[q.res].ico}×${q.n} 得 🪙×${q.rewardTokens})</i>`}</span>
           ${q.done ? '' : '<button class="btn small" id="twQuest">交付</button>'}
         </div>` : ''}
       </div></div>
 
       ${(g.log || []).length ? `<div class="wc-card"><div class="wc-card-body">
         <div class="hero-sec">📜 城史紀年</div>
-        <div class="tw-log">${g.log.slice(-8).reverse().map(e => `<div><i>${e.d.slice(5)}</i> ${e.t}</div>`).join('')}</div>
+        <div class="tw-log">${g.log.slice(-8).reverse().map(e => `<div><i>${VDGame.esc(String(e.d).slice(5))}</i> ${VDGame.esc(e.t)}</div>`).join('')}</div>
       </div></div>` : ''}
 
       <div class="wc-card"><div class="wc-card-body">
@@ -137,17 +137,26 @@ const VDTownUI = (() => {
   /* ── 建城史詩：市政廳升級的收官慶典卡 ── */
   function epicShow(lv) {
     const g = VDTown.raw;
+    const prevFocus = document.activeElement;
     const d = document.createElement('div');
     d.className = 'tw-epic';
-    d.innerHTML = `<div class="tw-epic-card">
+    d.innerHTML = `<div class="tw-epic-card" role="dialog" aria-modal="true" aria-label="建城慶典" tabindex="-1">
       <div class="big">🏛️</div>
-      <h3>${g.name || '你的城'}邁入「${ERA[lv]}」時代！</h3>
+      <h3>${VDGame.esc(g.name || '你的城')}邁入「${ERA[lv]}」時代！</h3>
       <p>市政廳 Lv${lv}・精熟 ${VDTown.mastered()} 字<br>這座城的每一塊磚，都是你背下的單字。</p>
       <button class="btn" id="twEpicShare">📋 複製戰報</button>
       <button class="btn ghost" id="twEpicClose">繼續建城</button>
     </div>`;
     document.body.appendChild(d);
-    d.querySelector('#twEpicClose').onclick = () => d.remove();
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    const close = () => {
+      document.removeEventListener('keydown', onKey);
+      d.remove();
+      if (prevFocus && prevFocus.focus) prevFocus.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    d.querySelector('.tw-epic-card').focus();
+    d.querySelector('#twEpicClose').onclick = close;
     d.querySelector('#twEpicShare').onclick = () => {
       const t = `🏛️ 我的單字之城「${g.name || '無名之城'}」升到 Lv${lv}（${ERA[lv]}）！精熟 ${VDTown.mastered()} 個英文單字蓋出來的城 💪 來字鬥英雄跟我拚：https://vocab-duel.vercel.app`;
       navigator.clipboard && navigator.clipboard.writeText(t);
@@ -172,12 +181,12 @@ const VDTownUI = (() => {
         const cell = (t.grid || {})[`${rr},${cc}`];
         if (cell) n++;
         mini.push(cell
-          ? `<span class="tw-vcell"><img src="${img(cell.b + '_s' + stageOf(cell.lv))}" alt="" onerror="this.replaceWith(document.createTextNode('${(B[cell.b] || {}).ico || '🏠'}'))"></span>`
+          ? `<span class="tw-vcell"><img src="${VDGame.esc(img(cell.b + '_s' + stageOf(cell.lv)))}" alt="" onerror="this.replaceWith(document.createTextNode('${(B[cell.b] || {}).ico || '🏠'}'))"></span>`
           : '<span class="tw-vcell"></span>');
       }
       const thlv = ((t.grid || {})['3,3'] || { lv: 1 }).lv;
       box.innerHTML = `<div class="pg-fam">
-        <b>👀 ${t.name || '好友'}的城</b>　市政廳 Lv${thlv}・${n} 棟建築・${(t.pop || []).length} 位居民
+        <b>👀 ${VDGame.esc(t.name || '好友')}的城</b>　市政廳 Lv${thlv}・${n} 棟建築・${(t.pop || []).length} 位居民
         <div class="tw-vgrid">${mini.join('')}</div>
         <div class="pg-hint">觀摩完回自己的城，把它蓋得更高吧！</div>
       </div>`;
@@ -200,7 +209,7 @@ const VDTownUI = (() => {
     const $ = s => el.querySelector(s);
     $('#twName').onclick = () => {
       el.querySelector('#tw-panel').innerHTML = `<div class="pg-fam"><b>📜 為城命名</b>
-        <div class="pet-actrow"><input class="rt-join-in" id="twNameIn" maxlength="12" placeholder="1–12 個字" style="width:160px;letter-spacing:normal" value="${VDTown.raw.name || ''}">
+        <div class="pet-actrow"><input class="rt-join-in" id="twNameIn" maxlength="12" placeholder="1–12 個字" style="width:160px;letter-spacing:normal" value="${VDGame.esc(VDTown.raw.name || '')}">
         <button class="btn small" id="twNameGo">定名</button></div></div>`;
       el.querySelector('#twNameGo').onclick = () => {
         const r = VDTown.setName(el.querySelector('#twNameIn').value);
@@ -266,7 +275,7 @@ const VDTownUI = (() => {
         <b>${cur.ico} 班城「${cur.name}」</b>　全班 ${r.rows.length} 人・共精熟 <b>${total}</b> 字
         <span class="vg-q-bar" style="display:block;margin:6px 0"><span style="width:${pct}%"></span></span>
         <div class="pg-hint">${next ? `再 ${next.at - total} 字，全班晉升「${next.ico} ${next.name}」！` : '已是最高時代——班上是傳說！'}</div>
-        <div class="pg-hint">🏗️ 頭號工程師：${r.rows.slice(0, 3).map((x, k) => `${['🥇', '🥈', '🥉'][k]}${x.name}(${x.mastered})`).join('　')}</div>
+        <div class="pg-hint">🏗️ 頭號工程師：${r.rows.slice(0, 3).map((x, k) => `${['🥇', '🥈', '🥉'][k]}${VDGame.esc(x.name)}(${x.mastered})`).join('　')}</div>
       </div>`;
     } catch { box.innerHTML = ''; VDGame.toast('連不上雲端（本機模式沒有後端）'); }
   }
@@ -320,7 +329,7 @@ const VDTownUI = (() => {
         ${cell.up
           ? `<span class="pg-hint">🔨 升級中，還要約 ${upLeft} 分鐘</span>
              <button class="btn small" id="twRush">🪙×1 立刻完工</button>
-             <button class="btn small" id="twQRush">📚 答 5 題加速完工</button>`
+             <button class="btn small" id="twQRush" ${VDTown.rushInfo().todayLeft ? '' : 'disabled'}>📚 答 5 題加速完工（今日剩 ${VDTown.rushInfo().todayLeft} 次）</button>`
           : req.ok
             ? `<button class="btn small" id="twUp">⬆️ 升 Lv${req.next}（${Object.entries(req.cost).map(([r, v]) => VDTown.RES_META[r].ico + v).join(' ')}・${req.next * 5} 分鐘）</button>`
             : `<span class="pg-hint">⬆️ ${req.msg}</span>`}
@@ -403,9 +412,10 @@ const VDTownUI = (() => {
     const step = () => {
       if (i >= qs.length) {
         const passed = score >= 4;
-        if (passed) VDTown.quizRush(key, true);
-        box.innerHTML = `<div class="pg-fam"><b>${passed ? '⚡ 加速成功，完工！' : '📚 差一點'}</b> 答對 ${score}/5${passed ? '——工人看你讀書讀得起勁，連夜趕完了！' : '，要對 4 題才能加速。再試一次或等時間到。'}</div>`;
-        if (passed) setTimeout(paint, 1500);
+        const r = passed ? VDTown.quizRush(key, true) : null;
+        const done = !!(r && r.ok);
+        box.innerHTML = `<div class="pg-fam"><b>${done ? '⚡ 加速成功，完工！' : '📚 差一點'}</b> 答對 ${score}/5${done ? '——工人看你讀書讀得起勁，連夜趕完了！' : (passed ? `，但${r.msg}` : '，要對 4 題才能加速。再試一次或等時間到。')}</div>`;
+        if (done) setTimeout(paint, 1500);
         return;
       }
       const q = qs[i];
@@ -433,7 +443,7 @@ const VDTownUI = (() => {
     const J = VDTown.jobs();
     const basics = Object.keys(J).filter(j => J[j].basic);
     box.innerHTML = `<div class="tw-bubble">
-      <b>${p.rare ? '✨' : ''}${p.name}</b>：“${line.text}” <button class="btn sm ghost" id="twSay" title="聽發音">🔊</button>
+      <b>${p.rare ? '✨' : ''}${VDGame.esc(p.name)}</b>：“${line.text}” <button class="btn sm ghost" id="twSay" title="聽發音">🔊</button>
       <div class="pg-hint" id="tw-trans">（點 🔊 聽整句、點粗體單字看意思＋加入閃卡）</div>
       <div class="pet-actrow">
         ${J[p.job] && !J[p.job].basic ? `<span class="pg-hint">${J[p.job].ico} ${J[p.job].name}（職業居民不可改派）</span>`
@@ -466,7 +476,7 @@ const VDTownUI = (() => {
     const profs = Object.keys(J).filter(j => !J[j].basic);
     if (!idle.length) { box.innerHTML = '<div class="pg-fam">沒有可訓練的居民（職業居民不能轉職）。</div>'; return; }
     box.innerHTML = `<div class="pg-fam"><b>🎓 職業訓練</b>　挑一位居民＋一個職業，通過 10 題主題單字測驗（對 8 題）就結業。
-      <div class="pet-actrow">學員：<select id="twStu" class="tw-sel">${idle.map(p => `<option value="${p.id}">${p.name}${p.job ? '（' + J[p.job].name + '）' : ''}</option>`).join('')}</select></div>
+      <div class="pet-actrow">學員：<select id="twStu" class="tw-sel">${idle.map(p => `<option value="${p.id}">${VDGame.esc(p.name)}${p.job ? '（' + J[p.job].name + '）' : ''}</option>`).join('')}</select></div>
       <div class="pg-fam-tags">${profs.map(j => `<button class="pg-tag tw-prof" data-j="${j}">${J[j].ico} ${J[j].name}<span>學費 ${J[j].tuition}</span></button>`).join('')}</div>
     </div>`;
     box.querySelectorAll('.tw-prof').forEach(b => b.onclick = () => {
@@ -488,7 +498,7 @@ const VDTownUI = (() => {
         const r = passed ? VDTown.train(id, job, true) : { ok: false, msg: '' };
         el.querySelector('#tw-panel').innerHTML = `<div class="pg-fam">
           <b>${passed && r.ok ? '🎉 結業！' : '📚 再接再厲'}</b> 答對 ${score}/10${passed
-            ? (r.ok ? `——${VDTown.raw.pop.find(p => p.id === id).name} 成為${J.name}！（學費 ${J.tuition} 已繳）` : `，但${r.msg}`)
+            ? (r.ok ? `——${VDGame.esc(VDTown.raw.pop.find(p => p.id === id).name)} 成為${J.name}！（學費 ${J.tuition} 已繳）` : `，但${r.msg}`)
             : '，要對 8 題才能結業。多背幾個主題字再來！'}
         </div>`;
         if (r.ok) setTimeout(paint, 1600);

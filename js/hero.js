@@ -47,10 +47,10 @@ const VDHero = (() => {
         <div class="wc-card-body">
           <div class="hero-sec">設定</div>
           <div class="hero-settings">
-            <button class="set-toggle" id="sndToggle">🔊 音效：<b>${VDSound.on ? '開' : '關'}</b></button>
-            <button class="set-toggle" id="fsToggle">🔠 字級：<b>${(localStorage.getItem('vd_fontscale') || 'normal') === 'large' ? '大' : '標準'}</b></button>
-            <button class="set-toggle" id="thToggle">🌓 深色模式：<b>${localStorage.getItem('vd_theme') === 'dark' ? '開' : '關'}</b></button>
-            <button class="set-toggle" id="qmToggle">🇬🇧 英英模式：<b>${localStorage.getItem('vd_quizmode') === 'en' ? '開' : '關'}</b></button>
+            <button class="set-toggle" id="sndToggle" aria-pressed="${VDSound.on}">🔊 音效：<b>${VDSound.on ? '開' : '關'}</b></button>
+            <button class="set-toggle" id="fsToggle" aria-pressed="${(localStorage.getItem('vd_fontscale') || 'normal') === 'large'}">🔠 字級：<b>${(localStorage.getItem('vd_fontscale') || 'normal') === 'large' ? '大' : '標準'}</b></button>
+            <button class="set-toggle" id="thToggle" aria-pressed="${localStorage.getItem('vd_theme') === 'dark'}">🌓 深色模式：<b>${localStorage.getItem('vd_theme') === 'dark' ? '開' : '關'}</b></button>
+            <button class="set-toggle" id="qmToggle" aria-pressed="${localStorage.getItem('vd_quizmode') === 'en'}">🇬🇧 英英模式：<b>${localStorage.getItem('vd_quizmode') === 'en' ? '開' : '關'}</b></button>
           </div>
           <div class="pg-hint">英英模式：單字自測的「字義題」改用英文定義當選項（學測練兵）。</div>
         </div>
@@ -96,13 +96,24 @@ const VDHero = (() => {
 
   function pickAvatar() {
     const cur = VDGame.avatar;
+    const prevFocus = document.activeElement;
     const box = document.createElement('div');
     box.className = 'av-modal';
-    box.innerHTML = `<div class="av-panel"><div class="av-title">選一個英雄化身</div>
-      <div class="av-grid">${VDGame.AVATARS.map(a => `<button class="av-opt ${a === cur ? 'on' : ''}" data-a="${a}">${a}</button>`).join('')}</div></div>`;
-    box.onclick = e => { if (e.target === box) box.remove(); };
-    box.querySelectorAll('.av-opt').forEach(b => b.onclick = () => { VDGame.setAvatar(b.dataset.a); box.remove(); render(el); });
+    box.innerHTML = `<div class="av-panel" role="dialog" aria-modal="true" aria-label="選一個英雄化身"><div class="av-title">選一個英雄化身</div>
+      <div class="av-grid">${VDGame.AVATARS.map(a => `<button class="av-opt ${a === cur ? 'on' : ''}" data-a="${a}" aria-label="化身 ${a}">${a}</button>`).join('')}</div>
+      <button class="btn ghost" id="avClose">關閉</button></div>`;
+    const close = () => {
+      document.removeEventListener('keydown', onKey);
+      box.remove();
+      if (prevFocus && prevFocus.focus) prevFocus.focus();
+    };
+    const onKey = e => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    box.onclick = e => { if (e.target === box) close(); };
+    box.querySelector('#avClose').onclick = close;
+    box.querySelectorAll('.av-opt').forEach(b => b.onclick = () => { VDGame.setAvatar(b.dataset.a); close(); render(el); });
     document.body.appendChild(box);
+    (box.querySelector('.av-opt.on') || box.querySelector('.av-opt')).focus();
   }
 
   function copyOut(text, ok) {

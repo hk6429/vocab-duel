@@ -50,9 +50,12 @@ const VDSpeak = (() => {
   /* 產生一顆發音鈕（阻止冒泡，避免觸發卡片翻面等父層事件） */
   function btn(text, extra) {
     if (!ok || !text) return '';
+    const brief = String(text).slice(0, 40);
+    const lab = '發音 ' + ((window.VDGame && VDGame.esc) ? VDGame.esc(brief)
+      : brief.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
     return `<button class="spk ${extra || ''}" data-t="${encodeURIComponent(text)}"
       onclick="event.stopPropagation();VDSpeak.say(decodeURIComponent(this.dataset.t))"
-      aria-label="發音" title="發音">🔊</button>`;
+      aria-label="${lab}" title="發音">🔊</button>`;
   }
 
   return { say, btn, setAccent, accent, supported };

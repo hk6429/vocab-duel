@@ -20,7 +20,7 @@ const VDMarket = (() => {
     } catch { return null; }
   }
 
-  const itemLine = (it) => `${it.ico} ${it.name}　${it.atk ? '⚔️+' + it.atk : '❤️+' + it.hp}${it.perk ? '・' + VDPets.PERKS[it.perk].ico + VDPets.PERKS[it.perk].name : ''}`;
+  const itemLine = (it) => `${VDGame.esc(it.ico)} ${VDGame.esc(it.name)}　${it.atk ? '⚔️+' + it.atk : '❤️+' + it.hp}${it.perk ? '・' + VDPets.PERKS[it.perk].ico + VDPets.PERKS[it.perk].name : ''}`;
 
   async function render(container) {
     el = container;
@@ -43,7 +43,7 @@ const VDMarket = (() => {
             <div class="shop-item">
               <span class="shop-body">
                 <span class="shop-name">${itemLine(x.item)}</span>
-                <span class="shop-desc">賣家：${x.seller}</span>
+                <span class="shop-desc">賣家：${VDGame.esc(x.seller)}</span>
               </span>
               <button class="btn sm" data-buy="${x.id}" data-p="${x.price}">🪙 ${x.price}</button>
             </div>`).join('')}</div>` : '<div class="pg-hint">市場空空——當第一個上架的人！</div>'}
