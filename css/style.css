@@ -1033,3 +1033,29 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .pet-deco-img.big { width: 64px; height: 64px; top: 4px; right: 8px; }
 .pet-deco-img.mini { position: static; width: 20px; height: 20px; vertical-align: -4px; margin-right: 4px; border-width: 1px; box-shadow: none; }
 .pet-deco-img.btn { position: static; width: 34px; height: 34px; border-width: 1px; box-shadow: none; display: block; margin: 0 auto; }
+
+/* ── 深色模式（自習室護眼；水彩圖自然融入深底） ── */
+body.dark {
+  --bg: #191c22;
+  --paper2: #1f242c;
+  --panel: #232933;
+  --ink: #e8e4da;
+  --text: #e8e4da;
+  --muted: #9aa3ad;
+  --line: rgba(232,228,218,.14);
+  --wash-blue: #2a3644;
+  --wash-cream: #2e2a22;
+  background: #191c22;
+}
+body.dark .wc-card, body.dark .stat-tile, body.dark .shop-item, body.dark .pet-stat,
+body.dark .pg-fam, body.dark .tw-bubble, body.dark .tw-npc, body.dark .tw-bopt,
+body.dark .pet-skill, body.dark .pet-eq, body.dark .wc-mcard, body.dark .tw-res,
+body.dark .tw-quest, body.dark .set-toggle, body.dark .tw-epic-card {
+  background: #232933; color: var(--text); border-color: var(--line);
+}
+body.dark .btn.ghost, body.dark .btn.sm.ghost, body.dark .btn.small.ghost { background: transparent; color: var(--text); border-color: var(--line); }
+body.dark .btn.opt, body.dark input, body.dark textarea, body.dark select { background: #2a313d; color: var(--text); border-color: var(--line); }
+body.dark .wc-card-img { filter: brightness(.9); }
+body.dark .pg-hint, body.dark .stat-cap, body.dark .wc-mcard-sub { color: var(--muted); }
+body.dark .tw-cell { background: rgba(255,255,255,.06); border-color: rgba(232,228,218,.12); }
+body.dark .tw-cell.has { background: rgba(255,255,255,.1); }

@@ -49,7 +49,10 @@ const VDHero = (() => {
           <div class="hero-settings">
             <button class="set-toggle" id="sndToggle">🔊 音效：<b>${VDSound.on ? '開' : '關'}</b></button>
             <button class="set-toggle" id="fsToggle">🔠 字級：<b>${(localStorage.getItem('vd_fontscale') || 'normal') === 'large' ? '大' : '標準'}</b></button>
+            <button class="set-toggle" id="thToggle">🌓 深色模式：<b>${localStorage.getItem('vd_theme') === 'dark' ? '開' : '關'}</b></button>
+            <button class="set-toggle" id="qmToggle">🇬🇧 英英模式：<b>${localStorage.getItem('vd_quizmode') === 'en' ? '開' : '關'}</b></button>
           </div>
+          <div class="pg-hint">英英模式：單字自測的「字義題」改用英文定義當選項（學測練兵）。</div>
         </div>
       </div>
 
@@ -73,6 +76,19 @@ const VDHero = (() => {
     // 設定
     el.querySelector('#sndToggle').onclick = () => { VDSound.setOn(!VDSound.on); render(el); };
     el.querySelector('#fsToggle').onclick = () => { VDApp.toggleFontScale(); render(el); };
+    el.querySelector('#thToggle').onclick = () => {
+      const next = localStorage.getItem('vd_theme') === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('vd_theme', next);
+      VDApp.applyTheme();
+      render(el);
+    };
+    el.querySelector('#qmToggle').onclick = () => {
+      const next = localStorage.getItem('vd_quizmode') === 'en' ? 'zh' : 'en';
+      localStorage.setItem('vd_quizmode', next);
+      if (next === 'en' && window.VDEnrich) VDEnrich.ensure();
+      VDGame.toast(next === 'en' ? '🇬🇧 英英模式開啟——下一輪自測生效' : '已切回中文選項');
+      render(el);
+    };
     // 分享
     el.querySelector('#shareBtn').onclick = () => copyOut(VDGame.bragText(), '戰績卡已複製，貼給同學！');
     el.querySelector('#chalBtn').onclick = () => copyOut('CHALLENGE:' + VDGame.challengeCode(), '挑戰碼已複製，同學在限時衝刺輸入即可 PK！');

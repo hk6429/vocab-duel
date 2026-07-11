@@ -340,6 +340,12 @@ const VDGame = (() => {
     return { delta: +20, ...after };
   }
   function rankLose() {
+    const wk = weekKey();
+    if (g.rank.shieldWk !== wk) {   // 每週首敗保護：不扣分，輸一場不怕上不了線
+      g.rank.shieldWk = wk; save();
+      toast('🛡️ 本週首敗保護——段位分不扣！');
+      return { delta: 0, shield: true, ...rankInfo() };
+    }
     g.rank.pts = Math.max(0, g.rank.pts - 10); save();
     return { delta: -10, ...rankInfo() };
   }

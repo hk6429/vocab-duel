@@ -112,6 +112,7 @@ const VDExam = (() => {
     fb.innerHTML = `
       <div class="ex-fb ${correct ? 'ok' : 'no'}">
         <div class="ex-verdict">${correct ? '✅ 答對了！' : `❌ 答錯了，正解是 (${q.answer})`}</div>
+        ${correct && window.VDTown ? (() => { const p = VDTown.packInfo(); return `<div class="pg-hint">🏰 已計入城鎮學習包：今日答對 ${p.correct} 題，可領 ${p.avail} 包（每 5 題 1 包）</div>`; })() : ''}
         ${q.explain ? `<div class="ex-explain">${q.explain}</div>` : ''}
         ${kws.length ? `<button class="btn ghost ex-addkw">🃏 把這題 ${kws.length} 個關鍵字加入閃卡</button>` : ''}
       </div>

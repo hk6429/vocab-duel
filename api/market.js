@@ -108,10 +108,18 @@ export default async function handler(req, res) {
       if (!rec || rec.sold) return res.status(200).json({ ok: 0, error: "這件已被買走或下架了" });
       if (rec.seller === nick.trim()) return res.status(200).json({ ok: 0, error: "不能買自己的掛單" });
       if (sigOf(rec.item) !== rec.sig) return res.status(200).json({ ok: 0, error: "簽章不符，掛單作廢" });
-      rec.sold = 1; rec.soldTs = Date.now();
+      // 殺價：由買家暱稱+掛單 id 決定固定折扣 0/5/10/15%（不能重骰）；賣家收款按折後價 ×0.9
+      let disc = 0;
+      if (req.body.haggle) {
+        let h = 0;
+        for (const ch of nick.trim() + id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+        disc = [0, 5, 10, 15][h % 4];
+      }
+      const finalPrice = Math.ceil(rec.price * (100 - disc) / 100);
+      rec.sold = 1; rec.soldTs = Date.now(); rec.price = finalPrice;
       await redis.set(ITEM(id), JSON.stringify(rec), { ex: ITEM_TTL });
       await redis.zrem(ZKEY, JSON.stringify({ id: rec.id, item: rec.item, seller: rec.seller, ts: rec.ts }));
-      return res.status(200).json({ ok: 1, item: rec.item, price: rec.price });
+      return res.status(200).json({ ok: 1, item: rec.item, price: finalPrice, disc });
     }
 
     if (op === "cancel") {

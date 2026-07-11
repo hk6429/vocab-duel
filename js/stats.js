@@ -5,6 +5,45 @@ const VDStats = (() => {
       <div class="stat-bar"><div class="stat-bar-fill" style="width:${pct}%"></div><span>${pct}%</span></div>`;
   }
 
+  /* 弱點分析：各級距錯題率＋錯最兇的字 */
+  function weakness(allWords) {
+    const LV = [['E', '國小'], ['J', '國中'], ['S', '高中']];
+    const rows = LV.map(([lv, name]) => {
+      const ws = allWords.filter(w => lv === 'S' ? w.level.startsWith('S') : w.level === lv);
+      const learned = ws.filter(w => VDStore.box(w.word) >= 0);
+      const wrong = VDStore.wrongWords(learned);
+      const rate = learned.length ? Math.round(wrong.length / learned.length * 100) : 0;
+      return { name, learned: learned.length, wrong: wrong.length, rate };
+    }).filter(r => r.learned);
+    if (!rows.length) return '<div class="pg-hint">先去閃卡或自測練幾個字，這裡就會告訴你弱點在哪。</div>';
+    const worst = rows.slice().sort((a, b) => b.rate - a.rate)[0];
+    const topWrong = VDStore.wrongWords(allWords).slice(0, 10);
+    return `
+      ${rows.map(r => bar(r.rate, `${r.name}：錯題 ${r.wrong}/${r.learned} 學過字${r === worst && r.rate ? '　⚠️ 最弱' : ''}`)).join('')}
+      ${topWrong.length ? `<div class="pg-hint" style="margin-top:8px">🔥 錯最兇：${topWrong.map(w => `<b>${w.word}</b>`).join('、')}</div>
+      <button class="btn small" onclick="VDApp.go('review')">🃏 立刻複習錯題</button>` : '<div class="pg-hint">目前沒有掛在錯題本上的字，讚！</div>'}`;
+  }
+
+  /* 字綴弱點：學了不少但精熟率低的家族（要等 VDPets 資料） */
+  async function affixWeak(el) {
+    try {
+      if (!window.VDPets) return;
+      await VDPets.init();
+      const weak = VDPets.affixStats()
+        .filter(a => a.learned >= 3)
+        .map(a => {
+          let mastered = 0;
+          for (const m of a.members) if (VDStore.box(m.toLowerCase()) >= 3) mastered++;
+          return { ...a, mrate: Math.round(mastered / a.learned * 100) };
+        })
+        .sort((x, y) => x.mrate - y.mrate).slice(0, 3);
+      const box = el.querySelector('#stat-affix');
+      if (!box || !weak.length) return;
+      box.innerHTML = `<div class="pg-hint" style="margin-top:8px">🧩 最弱字綴家族（學了但精熟率低）：
+        ${weak.map(a => `<b>${a.form}</b>（${a.meaning}，精熟 ${a.mrate}%）`).join('、')}——去「字綴心智圖」整族補強！</div>`;
+    } catch { /* 資料沒到就靜默 */ }
+  }
+
   function render(allWords, el) {
     const eWords = allWords.filter(w => w.level === 'E');
     const jWords = allWords.filter(w => w.level === 'E' || w.level === 'J');
@@ -32,6 +71,13 @@ const VDStats = (() => {
       </div>
       <div class="wc-card">
         <div class="wc-card-body">
+          <div class="hero-sec">🎯 弱點分析</div>
+          ${weakness(allWords)}
+          <div id="stat-affix"></div>
+        </div>
+      </div>
+      <div class="wc-card">
+        <div class="wc-card-body">
           <div class="hero-sec">進度備份</div>
           <div class="io-box">
             <button class="btn ghost" id="btnExport">匯出進度碼</button>
@@ -50,6 +96,7 @@ const VDStats = (() => {
         VDApp.go('stats');
       } catch { alert('進度碼格式不對，請確認後再試。'); }
     };
+    affixWeak(el);
   }
 
   return { render };

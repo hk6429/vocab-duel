@@ -112,12 +112,13 @@ const VDMarket = (() => {
       b.onclick = async () => {
         const price = +b.dataset.p;
         if (VDGame.raw.coins < price) return VDGame.toast(`字幣不足，還差 ${price - VDGame.raw.coins}`);
-        const r = await api({ op: 'buy', id: b.dataset.buy, nick: VDGame.heroName() });
+        const r = await api({ op: 'buy', id: b.dataset.buy, nick: VDGame.heroName(), haggle: 1 });
         if (!r || !r.ok) return VDGame.toast(r ? r.error : '連線失敗');
         VDGame.raw.coins -= r.price;
         localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
         const add = VDPets.addToBag(r.item);
-        VDGame.toast(add.ok ? `🎉 買到 ${r.item.name}！已入背包` : `買到了，但${add.msg}`);
+        const cut = r.disc ? `殺價成功 −${r.disc}%，只花 ${r.price}！` : '';
+        VDGame.toast(add.ok ? `🎉 買到 ${r.item.name}！${cut}已入背包` : `買到了，但${add.msg}`);
         render(el);
       };
     });

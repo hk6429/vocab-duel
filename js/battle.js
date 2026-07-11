@@ -74,7 +74,7 @@ const VDBattle = (() => {
         <span class="vg-q-bar"><span style="width:${r.pct}%"></span></span>
         <span class="bt-rank-next">${r.next ? `再 ${r.next.at - r.pts} 分晉升 ${r.next.ico} ${r.next.name}` : '已達最高段位！'}</span>
       </span>
-      <span class="bt-rank-rule">勝 +20／敗 −10</span>
+      <span class="bt-rank-rule">勝 +20／敗 −10・🛡️ 每週首敗不扣分</span>
     </div>`;
   }
 

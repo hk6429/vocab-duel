@@ -76,8 +76,17 @@ const VDQuiz = (() => {
     const type = types[Math.floor(Math.random() * types.length)];
     let q;
     if (type === 'e2z') {
-      const ds = pickDistractors(w, sameLevel, 3, x => x.zh, false);
-      q = { type, prompt: w.word, sub: '這個字是什麼意思？', options: shuffle([w.zh, ...ds.map(d => d.zh)]), ans: w.zh };
+      /* 英英模式：選項改用英文定義（enrich 資料齊全才出，缺則回中文四選一） */
+      const enMode = localStorage.getItem('vd_quizmode') === 'en' && window.VDEnrich;
+      const defOf = x => { const e = enMode ? VDEnrich.get(x.word) : null; return (e && e.def_en) || ''; };
+      if (enMode && defOf(w)) {
+        const ds = pickDistractors(w, sameLevel.filter(x => defOf(x)), 3, x => defOf(x), false);
+        if (ds.length === 3) q = { type, prompt: w.word, sub: 'Which definition matches?（英英模式）', options: shuffle([defOf(w), ...ds.map(defOf)]), ans: defOf(w) };
+      }
+      if (!q) {
+        const ds = pickDistractors(w, sameLevel, 3, x => x.zh, false);
+        q = { type, prompt: w.word, sub: '這個字是什麼意思？', options: shuffle([w.zh, ...ds.map(d => d.zh)]), ans: w.zh };
+      }
     } else if (type === 'z2e') {
       const ds = pickDistractors(w, sameLevel, 3, x => x.word, true);
       q = { type, prompt: w.zh, sub: '哪個英文字對應這個意思？', options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };

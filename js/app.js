@@ -270,6 +270,10 @@ const VDApp = (() => {
     applyFontScale();
     return next;
   }
+  /* 深色模式：自習室護眼用 */
+  function applyTheme() {
+    document.body.classList.toggle('dark', localStorage.getItem('vd_theme') === 'dark');
+  }
 
   async function init() {
     const res = await fetch('data/words.json');
@@ -277,12 +281,13 @@ const VDApp = (() => {
     VDEnrich.ensure();  // 詞彙深度資料背景載入，供閃卡／自測／字綴顯示英英定義＋搭配詞
     VDGame.init();      // 遊戲化引擎：XP／稱號／徽章／每日任務／字幣／護盾
     applyFontScale();
+    applyTheme();
     go(VDStore.stage ? 'menu' : 'stage');
   }
 
   function setSub(v) { VDStore.sub = v; go('menu'); }
 
-  return { init, go, setSub, scopeWords, words: () => allWords, starClick, toggleFontScale };
+  return { init, go, setSub, scopeWords, words: () => allWords, starClick, toggleFontScale, applyTheme };
 })();
 
 document.addEventListener('DOMContentLoaded', VDApp.init);

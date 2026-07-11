@@ -5,6 +5,9 @@ const VDTownUI = (() => {
   let moving = null;       // 搬移模式：待搬建築的格 key
   let lastTh = 0;          // 偵測市政廳升級 → 建城史詩卡
   const ERA = { 2: '拓荒村落', 3: '學者小鎮', 4: '智慧之城', 5: '單字王都' };
+  /* 後端只在 Vercel：CF／Netlify 前端自動指回 vercel API */
+  const API = location.hostname.includes('vercel.app') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? '' : 'https://vocab-duel.vercel.app';
   const img = (n) => `img/town/${n}.png`;
   const stageOf = (lv) => lv >= 4 ? 3 : lv >= 2 ? 2 : 1;
   let wmap = null;
@@ -106,6 +109,16 @@ const VDTownUI = (() => {
       </div></div>` : ''}
 
       <div class="wc-card"><div class="wc-card-body">
+        <div class="hero-sec">🏫 班級之城（全班一起蓋）</div>
+        <div class="pg-hint">全班在班級榜上傳的「已掌握字數」加總，決定班城時代——揪同學一起把班城蓋成王都！</div>
+        <div class="pet-actrow">
+          <input class="rt-join-in" id="twClass" placeholder="班級碼" style="width:150px;letter-spacing:normal" value="${localStorage.getItem('vd_classcode') || ''}">
+          <button class="btn small" id="twClassGo">看班城</button>
+        </div>
+        <div id="tw-class"></div>
+      </div></div>
+
+      <div class="wc-card"><div class="wc-card-body">
         <div class="hero-sec">☁️ 雲端綁定・參觀好友城</div>
         <div class="pg-hint">把城綁到你的同步碼跨裝置繼續蓋；輸入好友的同步碼可以去他的城參觀。</div>
         <div class="pet-actrow">
@@ -147,7 +160,7 @@ const VDTownUI = (() => {
     const box = el.querySelector('#tw-visit');
     box.innerHTML = '<div class="loading">出發參觀…</div>';
     try {
-      const r = await fetch('api/town', {
+      const r = await fetch(API + '/api/town', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ op: 'load', code })
       }).then(x => x.json());
@@ -225,13 +238,44 @@ const VDTownUI = (() => {
       if (code.length < 4) return VDGame.toast('先輸入好友的同步碼（至少 4 碼）');
       visitTown(code);
     };
+    $('#twClassGo').onclick = () => {
+      const code = el.querySelector('#twClass').value.trim();
+      if (!code) return VDGame.toast('先輸入班級碼（跟班級榜同一組）');
+      localStorage.setItem('vd_classcode', code);
+      classCity(code);
+    };
+  }
+
+  /* ── 班級之城：全班已掌握字數加總 → 班城時代 ── */
+  const CLASS_ERA = [
+    { at: 0, name: '無名營地', ico: '⛺' }, { at: 500, name: '拓荒村落', ico: '🛖' },
+    { at: 1500, name: '學者小鎮', ico: '🏘️' }, { at: 3000, name: '智慧之城', ico: '🏰' },
+    { at: 6000, name: '單字王都', ico: '👑' }
+  ];
+  async function classCity(code) {
+    const box = el.querySelector('#tw-class');
+    box.innerHTML = '<div class="loading">召集全班中…</div>';
+    try {
+      const r = await fetch(API + '/api/board?code=' + encodeURIComponent(code)).then(x => x.json());
+      if (!r.rows || !r.rows.length) { box.innerHTML = '<div class="pg-hint">這個班還沒有人上傳戰績——去「雲端／班級榜」當第一個吧！</div>'; return; }
+      const total = r.rows.reduce((s, x) => s + (x.mastered || 0), 0);
+      let i = 0; while (i + 1 < CLASS_ERA.length && total >= CLASS_ERA[i + 1].at) i++;
+      const cur = CLASS_ERA[i], next = CLASS_ERA[i + 1];
+      const pct = next ? Math.round((total - cur.at) / (next.at - cur.at) * 100) : 100;
+      box.innerHTML = `<div class="pg-fam">
+        <b>${cur.ico} 班城「${cur.name}」</b>　全班 ${r.rows.length} 人・共精熟 <b>${total}</b> 字
+        <span class="vg-q-bar" style="display:block;margin:6px 0"><span style="width:${pct}%"></span></span>
+        <div class="pg-hint">${next ? `再 ${next.at - total} 字，全班晉升「${next.ico} ${next.name}」！` : '已是最高時代——班上是傳說！'}</div>
+        <div class="pg-hint">🏗️ 頭號工程師：${r.rows.slice(0, 3).map((x, k) => `${['🥇', '🥈', '🥉'][k]}${x.name}(${x.mastered})`).join('　')}</div>
+      </div>`;
+    } catch { box.innerHTML = ''; VDGame.toast('連不上雲端（本機模式沒有後端）'); }
   }
 
   async function cloudOp(op) {
     const code = el.querySelector('#twCode').value.trim();
     if (code.length < 4) return VDGame.toast('先輸入同步碼（至少 4 碼）');
     try {
-      const r = await fetch('api/town', {
+      const r = await fetch(API + '/api/town', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(op === 'save' ? { op: 'save', code, town: VDTown.exportState() } : { op: 'load', code })
       }).then(x => x.json());
@@ -315,6 +359,36 @@ const VDTownUI = (() => {
     };
   }
 
+  /* 出一題：30% 機率拼寫產出題（純字母 3–12 字），其餘中譯四選一 */
+  function townQ(w, all) {
+    if (/^[a-z]{3,12}$/i.test(w.word) && Math.random() < 0.3) return { w, spell: true };
+    const opts = [w.zh];
+    while (opts.length < 4) {
+      const d = all[Math.floor(Math.random() * all.length)].zh;
+      if (!opts.includes(d)) opts.push(d);
+    }
+    opts.sort(() => Math.random() - 0.5);
+    return { w, opts };
+  }
+  /* 題目主體＋作答繫結（選擇／拼寫共用），答完呼叫 done(correct) */
+  function bindQ(box, q, done) {
+    if (q.spell) {
+      box.querySelector('#twSp').focus();
+      const go = () => done(box.querySelector('#twSp').value.trim().toLowerCase() === q.w.word.toLowerCase());
+      box.querySelector('#twSpGo').onclick = go;
+      box.querySelector('#twSp').onkeydown = (e) => { if (e.key === 'Enter') go(); };
+    } else {
+      box.querySelectorAll('.opt').forEach(b => b.onclick = () => done(decodeURIComponent(b.dataset.v) === q.w.zh));
+    }
+  }
+  const qBody = (q) => q.spell
+    ? `<div class="quiz-prompt" style="margin:8px 0">${q.w.zh}</div>
+       <div class="pg-hint">✍️ 拼出這個英文字（開頭 ${q.w.word[0]}…）</div>
+       <div class="pet-actrow"><input class="rt-join-in" id="twSp" autocomplete="off" autocapitalize="off" style="width:180px;letter-spacing:normal" placeholder="輸入英文">
+       <button class="btn small" id="twSpGo">送出</button></div>`
+    : `<div class="quiz-prompt" style="margin:8px 0">${q.w.word}</div>
+       <div class="quiz-opts">${q.opts.map((o, k) => `<button class="btn opt" data-v="${encodeURIComponent(o)}"><span class="opt-key">${'ABCD'[k]}</span><span class="opt-text">${o}</span></button>`).join('')}</div>`;
+
   /* ── 答題加速：5 題對 4，勤學＝最快的工程隊 ── */
   function rushQuiz(key) {
     const all = VDApp.words();
@@ -322,13 +396,7 @@ const VDTownUI = (() => {
     while (qs.length < 5) {
       const w = all[Math.floor(Math.random() * all.length)];
       if (qs.some(q => q.w.word === w.word)) continue;
-      const opts = [w.zh];
-      while (opts.length < 4) {
-        const d = all[Math.floor(Math.random() * all.length)].zh;
-        if (!opts.includes(d)) opts.push(d);
-      }
-      opts.sort(() => Math.random() - 0.5);
-      qs.push({ w, opts });
+      qs.push(townQ(w, all));
     }
     let i = 0, score = 0;
     const box = el.querySelector('#tw-panel');
@@ -343,11 +411,9 @@ const VDTownUI = (() => {
       const q = qs[i];
       box.innerHTML = `<div class="pg-fam">
         <b>⚡ 加速測驗</b>　第 ${i + 1}/5 題（答對 ${score}）
-        <div class="quiz-prompt" style="margin:8px 0">${q.w.word}</div>
-        <div class="quiz-opts">${q.opts.map((o, k) => `<button class="btn opt" data-v="${encodeURIComponent(o)}"><span class="opt-key">${'ABCD'[k]}</span><span class="opt-text">${o}</span></button>`).join('')}</div>
+        ${qBody(q)}
       </div>`;
-      box.querySelectorAll('.opt').forEach(b => b.onclick = () => {
-        const correct = decodeURIComponent(b.dataset.v) === q.w.zh;
+      bindQ(box, q, (correct) => {
         VDStore.record(q.w.word, correct);
         VDGame.onAnswer(correct, 'quiz', 0);
         if (correct) score++;
@@ -413,15 +479,7 @@ const VDTownUI = (() => {
     const themed = VDTown.trainWords(job).map(w => wm[w]).filter(Boolean);
     const fill = VDApp.words().filter(w => !themed.includes(w));
     while (themed.length < 10) themed.push(fill[Math.floor(Math.random() * fill.length)]);
-    const qs = themed.slice(0, 10).map(w => {
-      const opts = [w.zh];
-      while (opts.length < 4) {
-        const d = fill[Math.floor(Math.random() * fill.length)].zh;
-        if (!opts.includes(d)) opts.push(d);
-      }
-      opts.sort(() => Math.random() - 0.5);
-      return { w, opts };
-    });
+    const qs = themed.slice(0, 10).map(w => townQ(w, fill));
     let i = 0, score = 0;
     const J = VDTown.jobs()[job];
     const step = () => {
@@ -437,13 +495,12 @@ const VDTownUI = (() => {
         return;
       }
       const q = qs[i];
-      el.querySelector('#tw-panel').innerHTML = `<div class="pg-fam">
+      const box = el.querySelector('#tw-panel');
+      box.innerHTML = `<div class="pg-fam">
         <b>🎓 ${J.name}測驗</b>　第 ${i + 1}/10 題（答對 ${score}）
-        <div class="quiz-prompt" style="margin:8px 0">${q.w.word}</div>
-        <div class="quiz-opts">${q.opts.map((o, k) => `<button class="btn opt" data-v="${encodeURIComponent(o)}"><span class="opt-key">${'ABCD'[k]}</span><span class="opt-text">${o}</span></button>`).join('')}</div>
+        ${qBody(q)}
       </div>`;
-      el.querySelectorAll('#tw-panel .opt').forEach(b => b.onclick = () => {
-        const correct = decodeURIComponent(b.dataset.v) === q.w.zh;
+      bindQ(box, q, (correct) => {
         VDStore.record(q.w.word, correct);
         VDGame.onAnswer(correct, 'quiz', 0);
         if (correct) score++;
