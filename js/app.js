@@ -132,6 +132,12 @@ const VDApp = (() => {
           </div>
         </div>
         <div class="menu-group">
+          <div class="menu-glabel">城邦</div>
+          <div class="wc-mgrid">
+            ${card('town', 'm_town', '🏰', '單字之城', '背單字蓋出一座城，居民全講英文', true)}
+          </div>
+        </div>
+        <div class="menu-group">
           <div class="menu-glabel">題庫工具</div>
           <div class="wc-mgrid">
             ${card('search', 'm_search', '🔍', '查單字', '打英文或中文，秒查秒收藏')}
@@ -210,6 +216,10 @@ const VDApp = (() => {
     petbattle() {
       $view().innerHTML = header('詞靈競技') + '<div id="mod"></div>';
       VDPetBattle.render(document.getElementById('mod'));
+    },
+    town() {
+      $view().innerHTML = header('單字之城') + '<div id="mod"></div>';
+      VDTownUI.render(document.getElementById('mod'));
     },
     sprint() {
       $view().innerHTML = header('限時衝刺') + '<div id="mod"></div>';

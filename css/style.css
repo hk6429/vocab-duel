@@ -967,3 +967,33 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .wc-mcard .fu-imgs { height: 120px; }
 .pet-detail .fu-imgs { height: 220px; }
 .pg-tag.fu-cand.on, .pg-tag.fu-skill.on { background: #2b2b2b; color: #fdfcf8; }
+
+/* ── 單字之城 ── */
+.tw-resbar { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 10px; font-size: .95rem; }
+.tw-res { padding: 4px 10px; border: 1px solid rgba(43,43,43,.15); border-radius: 14px; background: rgba(255,255,255,.5); }
+.tw-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; padding: 8px; border-radius: 14px; background-size: cover; background-position: center; border: 1px solid rgba(43,43,43,.12); }
+.tw-cell { position: relative; aspect-ratio: 1; border: 1px dashed rgba(43,43,43,.14); border-radius: 8px; background: rgba(255,255,255,.25); cursor: pointer; padding: 0; overflow: hidden; }
+.tw-cell:hover { border-color: #c9a24b; background: rgba(255,255,255,.5); }
+.tw-cell.has { border-style: solid; background: rgba(255,255,255,.75); }
+.tw-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tw-cell .tw-emoji { font-size: 1.4rem; line-height: 1; display: flex; align-items: center; justify-content: center; height: 100%; }
+.tw-lv { position: absolute; left: 2px; bottom: 2px; font-size: .58rem; font-style: normal; background: rgba(43,43,43,.75); color: #fdfcf8; border-radius: 6px; padding: 0 4px; }
+.tw-up { position: absolute; right: 2px; top: 2px; font-style: normal; font-size: .8rem; animation: pulse 1.2s infinite; }
+.tw-buildmenu { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin-top: 8px; }
+.tw-bopt { text-align: left; border: 1px solid rgba(43,43,43,.2); border-radius: 10px; padding: 8px 10px; background: rgba(255,255,255,.55); cursor: pointer; font-family: inherit; font-size: .88rem; }
+.tw-bopt i { display: block; font-style: normal; color: #5a6b78; font-size: .78rem; }
+.tw-bopt u { display: block; text-decoration: none; color: #b0413e; font-size: .72rem; }
+.tw-bopt.no { opacity: .55; }
+.tw-popgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; margin: 6px 0; }
+.tw-npc { border: 1px solid rgba(43,43,43,.15); border-radius: 12px; background: rgba(255,255,255,.55); padding: 6px; cursor: pointer; font-family: inherit; }
+.tw-npc img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 9px; display: block; }
+.tw-npc b { display: block; font-size: .82rem; margin-top: 4px; }
+.tw-npc i { font-style: normal; font-size: .72rem; color: #5a6b78; }
+.tw-npc .tw-emoji { font-size: 2rem; display: block; text-align: center; padding: 14px 0; }
+.tw-bubble { margin-top: 10px; padding: 12px 14px; border: 1.5px solid rgba(74,123,166,.4); border-radius: 14px 14px 14px 4px; background: rgba(238,244,248,.8); font-size: .95rem; }
+.tw-bubble .npc-w { cursor: pointer; color: #4a7ba6; border-bottom: 2px dotted #4a7ba6; }
+.tw-quest { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px; border: 1.5px dashed #4a7ba6; border-radius: 12px; font-size: .9rem; }
+.tw-quest img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+.tw-quest.done { opacity: .65; border-style: solid; }
+.tw-quest i { font-style: normal; color: #5a6b78; font-size: .8rem; }
+.tw-sel { font-family: inherit; font-size: .92rem; padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(43,43,43,.25); background: rgba(255,255,255,.7); }

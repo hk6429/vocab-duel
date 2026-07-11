@@ -193,6 +193,11 @@ const VDPetBattle = (() => {
       coins = 15 + foe.floorNo * 5;
       VDGame.raw.coins += coins;
       localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
+      // 城鎮補給：徵戰勝利掉建材（層數越深越多）
+      if (window.VDTown && VDTown.raw) {
+        const loot = VDTown.battleLoot(foe.floorNo);
+        VDGame.toast('🏰 城鎮補給：' + Object.entries(loot).map(([k, v]) => `${VDTown.RES_META[k].ico}+${v}`).join(' '));
+      }
       const drop = VDPets.rollDrop(foe.dropTier);
       dropHtml = `
         <div class="pb-dropcard t-${drop.tier}">
