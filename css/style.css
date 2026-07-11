@@ -135,3 +135,10 @@ body {
 .bt-turn { text-align: center; font-weight: 700; color: var(--accent2); margin-bottom: 10px; }
 .bt-q .quiz-prompt { margin-top: 4px; }
 .bt-quote { color: var(--muted); font-style: italic; margin: 12px 0; padding: 0 12px; }
+.bt-portrait {
+  width: 66px; height: 66px; border-radius: 14px; object-fit: cover;
+  border: 1px solid #2e4380; background: #101c3e;
+}
+.bt-portrait.big { width: 104px; height: 104px; border-radius: 18px; }
+.bt-face-emoji { font-size: 40px; }
+.bt-face-emoji.big { font-size: 54px; }

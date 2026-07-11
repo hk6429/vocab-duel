@@ -33,6 +33,13 @@ const VDBattle = (() => {
     return VDApp.words().filter(w => set.has(w.level));
   }
 
+  /* 作家頭像：3D Pixel Q版圖，載入失敗自動退回 emoji */
+  function face(o, big) {
+    const cls = 'bt-portrait' + (big ? ' big' : '');
+    return `<img src="img/authors/${o.id}.png" alt="${o.name}" class="${cls}"
+      onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${o.emoji}',className:'bt-face-emoji${big ? ' big' : ''}'}))">`;
+  }
+
   /* ── 選單：模式 → 對手 ── */
   function chooseMode(container) {
     el = container;
@@ -48,7 +55,7 @@ const VDBattle = (() => {
   function chooseOpponent() {
     el.innerHTML = `<div class="bt-oppgrid">${OPPONENTS.map(o => `
       <button class="bt-oppcard" data-id="${o.id}">
-        <div class="bt-face">${o.emoji}</div>
+        <div class="bt-face">${face(o)}</div>
         <div class="bt-name">${o.name}</div>
         <div class="bt-tier t-${o.tier}">${o.tier}</div>
       </button>`).join('')}</div>`;
@@ -132,7 +139,7 @@ const VDBattle = (() => {
     el.innerHTML = `
       <div class="bt-arena">
         <div class="bt-side foe">
-          <div class="bt-face big">${opp.emoji}</div>
+          <div class="bt-face big">${face(opp, true)}</div>
           <div class="bt-name">${opp.name}<span class="bt-tier t-${opp.tier}">${opp.tier}</span></div>
           ${hpBar(state.oHp, 'foe')}
         </div>
