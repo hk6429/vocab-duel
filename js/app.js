@@ -39,6 +39,7 @@ const VDApp = (() => {
           <button class="btn main" onclick="VDApp.go('quiz')">⚔️ 單字自測</button>
           <button class="btn main" onclick="VDApp.go('battle')">🎭 文學家對戰</button>
           <button class="btn main" onclick="VDApp.go('affix')">🧩 字綴心智圖</button>
+          <button class="btn main" onclick="VDApp.go('exam')">📝 會考考古題</button>
           <button class="btn main" onclick="VDApp.go('stats')">📊 我的戰績</button>
           <button class="btn ghost" onclick="VDApp.go('stage')">切換學段</button>
         </div>`;
@@ -50,6 +51,10 @@ const VDApp = (() => {
     affix() {
       $view().innerHTML = header('字綴心智圖') + '<div id="mod"></div>';
       VDAffix.start(document.getElementById('mod'));
+    },
+    exam() {
+      $view().innerHTML = header('會考英文考古題') + '<div id="mod"></div>';
+      VDExam.start(document.getElementById('mod'));
     },
     flash() {
       $view().innerHTML = header('閃卡練功') + '<div id="mod"></div>';

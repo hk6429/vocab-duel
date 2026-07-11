@@ -184,3 +184,37 @@ body {
 .af-dex { font-size: 14px; margin-top: 6px; }
 .af-dexz { font-size: 13px; color: var(--muted); }
 .af-detail .af-add1 { margin-top: 10px; }
+
+/* ── 會考考古題 ── */
+.ex-empty { text-align: center; padding: 40px 12px; }
+.ex-empty .big { font-size: 54px; }
+.ex-empty p { margin-top: 10px; }
+.ex-empty .ex-sub { color: var(--muted); font-size: 14px; }
+.ex-filter { display: grid; gap: 14px; margin-top: 12px; }
+.ex-frow { display: flex; align-items: center; gap: 10px; }
+.ex-frow span { width: 44px; color: var(--muted); }
+.ex-frow select {
+  flex: 1; padding: 10px; border-radius: 10px; background: var(--panel);
+  color: var(--text); border: 1px solid #2e4380; font-size: 16px; font-family: inherit;
+}
+.ex-hint { text-align: center; color: var(--muted); font-size: 13px; margin-top: 12px; }
+.ex-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.ex-meta { font-size: 12px; color: var(--muted); }
+.ex-passage {
+  background: var(--panel); border: 1px solid #2e4380; border-radius: 12px;
+  padding: 12px; font-size: 14px; line-height: 1.7; margin-bottom: 10px;
+  max-height: 40vh; overflow-y: auto;
+}
+.ex-img { max-width: 100%; border-radius: 10px; margin-bottom: 10px; }
+.ex-stem { font-size: 17px; line-height: 1.6; margin-bottom: 12px; }
+.ex-opts { display: grid; gap: 10px; }
+.ex-opt { text-align: left; background: var(--panel); color: var(--text); border: 1px solid #2e4380; }
+.ex-opt.right { background: var(--green); color: #0b3320; }
+.ex-opt.wrong { background: var(--red); color: #fff; }
+.ex-fb { border-radius: 12px; padding: 12px; margin: 12px 0; }
+.ex-fb.ok { background: rgba(61,220,132,.12); border: 1px solid var(--green); }
+.ex-fb.no { background: rgba(255,107,107,.12); border: 1px solid var(--red); }
+.ex-verdict { font-weight: 700; }
+.ex-explain { font-size: 14px; line-height: 1.6; margin-top: 8px; color: var(--text); }
+.ex-addkw { margin-top: 10px; }
+.ex-next { display: block; width: 100%; }
