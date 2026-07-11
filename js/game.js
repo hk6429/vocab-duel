@@ -69,6 +69,7 @@ const VDGame = (() => {
   function onAnswer(correct, kind, combo) {
     rollDaily();
     if (correct) {
+      if (window.VDSound) (combo >= 2 ? VDSound.combo(combo) : VDSound.correct());
       g.ss.correct++;
       g.quests.prog.correct++;
       if (kind === 'spell') g.ss.spell++;
@@ -78,6 +79,7 @@ const VDGame = (() => {
       const coins = kind === 'spell' ? 4 : 2;
       award(xp, coins);
     } else {
+      if (window.VDSound) VDSound.wrong();
       g.xp += 2; save(); // 參與分，不吐 toast
     }
     checkBadges();
@@ -230,6 +232,7 @@ const VDGame = (() => {
     setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 2600);
   }
   function celebrate(L) {
+    if (window.VDSound) VDSound.levelup();
     const ov = document.createElement('div'); ov.className = 'vg-levelup';
     ov.innerHTML = `<div class="vg-lu-card"><div class="vg-lu-ico">🎉</div>
       <div class="vg-lu-t">升級！Lv ${L}</div><div class="vg-lu-title">${TITLES[Math.min(L - 1, TITLES.length - 1)]}</div>
@@ -258,7 +261,19 @@ const VDGame = (() => {
     const qs = quests();
     const mw = mysteryWord();
     const allClaimed = qs.every(q => q.claimed);
+    const cal = VDStore.dailyCalendar(7);
+    const streak = VDStore.stats([]).streak;
+    const W = ['日', '一', '二', '三', '四', '五', '六'];
+    const calHtml = cal.map(c => {
+      const wd = W[new Date(c.d + 'T00:00:00').getDay()];
+      const isToday = c.d === VDStore.today();
+      return `<span class="vg-cal-day ${c.active ? 'on' : ''} ${isToday ? 'today' : ''}"><i>${wd}</i>${c.active ? '🔥' : '·'}</span>`;
+    }).join('');
     return `<div class="vg-daily">
+      <div class="vg-cal">
+        <div class="vg-cal-strip">${calHtml}</div>
+        <div class="vg-cal-note">連續 <b>${streak}</b> 天　明天再來 +30 XP 首勝獎</div>
+      </div>
       <div class="vg-daily-head">📅 每日任務 ${allClaimed ? '✅ 全清' : ''}</div>
       ${qs.map(q => `
         <div class="vg-quest ${q.done ? 'done' : ''}">
@@ -277,7 +292,7 @@ const VDGame = (() => {
   // 供 onclick 呼叫並重繪選單
   function claimAndRefresh(i) {
     const c = claimQuest(i);
-    if (c) toast(`🎁 ${c.extra}：+${c.coins} 字幣 +${c.xp} XP`);
+    if (c) { if (window.VDSound) VDSound.coin(); toast(`🎁 ${c.extra}：+${c.coins} 字幣 +${c.xp} XP`); }
     VDApp.go('menu');
   }
   function openMysteryUI() {

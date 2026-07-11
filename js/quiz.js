@@ -196,7 +196,7 @@ const VDQuiz = (() => {
     fb.innerHTML = `
       <div class="ex-fb ${correct ? 'ok' : 'no'}">
         <div class="ex-verdict">${correct ? '✅ 答對了！' : `❌ 答錯了，正解是 ${q.ans}`}</div>
-        <div class="qz-word">${q.word} ${VDSpeak.btn(q.word)} <span class="af-pos">${m.pos.join('・')}</span></div>
+        <div class="qz-word">${q.word} ${VDSpeak.btn(q.word)} <span class="af-pos">${m.pos.join('・')}</span> <button class="mini-star ${VDStore.isStar(q.word) ? 'on' : ''}" onclick="VDApp.starClick(this,'${q.word}')">${VDStore.isStar(q.word) ? '⭐' : '☆'}</button></div>
         <div class="qz-zh">${m.zh}</div>
         <div class="qz-ex">${m.example} ${VDSpeak.btn(m.example)}<br><span class="ex-zh">${m.example_zh}</span></div>
         ${VDEnrich.block(q.word)}

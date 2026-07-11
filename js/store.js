@@ -14,6 +14,7 @@ const VDStore = (() => {
   let meta = load(META_KEY, { stage: null, daily: {}, lastDay: null, streak: 0 });
   if (!meta.wrong) meta.wrong = {};   // 錯題本：word → 最後答錯日期
   if (!meta.sub) meta.sub = 'all';    // 高中分級篩選：'all' 或 'S1'..'S6'
+  if (!meta.star) meta.star = {};     // 我的收藏：word → 加星日期
 
   const saveProg = () => localStorage.setItem(PROG_KEY, JSON.stringify(prog));
   const saveMeta = () => localStorage.setItem(META_KEY, JSON.stringify(meta));
@@ -58,6 +59,16 @@ const VDStore = (() => {
     wrongWords(words) { return words.filter(w => meta.wrong[w.word]); },
     get sub() { return meta.sub; },
     set sub(v) { meta.sub = v; saveMeta(); },
+    /* 我的收藏（加星）：任意字主動收藏，考前只刷圈起來的 */
+    toggleStar(word) { if (meta.star[word]) delete meta.star[word]; else meta.star[word] = today(); saveMeta(); return !!meta.star[word]; },
+    isStar: w => !!meta.star[w],
+    starWords(words) { return words.filter(w => meta.star[w.word]); },
+    /* 最近 n 天登入日曆：回傳 [{d, active}]（active＝當天有複習紀錄） */
+    dailyCalendar(n) {
+      const out = [];
+      for (let i = n - 1; i >= 0; i--) { const d = addDays(today(), -i); out.push({ d, active: (meta.daily[d] || 0) > 0 }); }
+      return out;
+    },
     /* 加入閃卡：把字放進待複習（box0、今天到期）；已有進度則不動，回傳是否為新加入 */
     enroll(word) {
       if (prog[word]) return false;

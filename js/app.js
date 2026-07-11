@@ -52,12 +52,16 @@ const VDApp = (() => {
 
   const views = {
     stage() {
+      const simg = (s, ico) => `<img class="stage-img" src="img/ui/${s}.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${ico}',className:'stage-emoji'}))">`;
       $view().innerHTML = `
-        <div class="hero"><h1>字鬥英雄</h1><p>從 1200 到 2000，一字一戰！</p></div>
+        <div class="hero">
+          <img class="hero-banner" src="img/ui/banner.png" alt="字鬥英雄" onerror="this.remove()">
+          <h1>字鬥英雄</h1><p>從 1200 到 6000，一字一戰！</p>
+        </div>
         <div class="stage-btns">
-          <button class="btn stage" data-s="E">🏫 國小挑戰<br><span>基本 1200 字</span></button>
-          <button class="btn stage" data-s="J">🎓 國中挑戰<br><span>常用 2000 字</span></button>
-          <button class="btn stage" data-s="S">🏆 高中挑戰<br><span>學測 6000 字（Level 1–6）</span></button>
+          <button class="btn stage" data-s="E">${simg('s_elem', '🏫')}<span class="stage-t">國小挑戰</span><span>基本 1200 字</span></button>
+          <button class="btn stage" data-s="J">${simg('s_jhs', '🎓')}<span class="stage-t">國中挑戰</span><span>常用 2000 字</span></button>
+          <button class="btn stage" data-s="S">${simg('s_shs', '🏆')}<span class="stage-t">高中挑戰</span><span>學測 6000 字（Level 1–6）</span></button>
         </div>`;
       document.querySelectorAll('.stage').forEach(b => {
         b.onclick = () => { VDStore.stage = b.dataset.s; go('menu'); };
@@ -66,14 +70,24 @@ const VDApp = (() => {
     menu() {
       const words = scopeWords();
       const stageName = { E: '國小 1200', J: '國中 2000', S: '高中 6000' }[VDStore.stage];
-      const item = (view, cls, ico, title, sub) =>
-        `<button class="btn main ${cls}" onclick="VDApp.go('${view}')">
-          <span class="m-ico">${ico}</span>
+      const MICON = { flash: 'm_flash', quiz: 'm_quiz', battle: 'm_battle', affix: 'm_affix', exam: 'm_exam' };
+      const item = (view, cls, ico, title, sub) => {
+        const img = MICON[view];
+        const icoHtml = img
+          ? `<img class="m-img" src="img/ui/${img}.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${ico}',className:'m-ico'}))">`
+          : `<span class="m-ico">${ico}</span>`;
+        return `<button class="btn main ${cls}" onclick="VDApp.go('${view}')">
+          ${icoHtml}
           <span>${title}<span class="m-sub">${sub}</span></span>
         </button>`;
+      };
       const wrongN = VDStore.wrongWords(words).length;
+      const starN = VDStore.starWords(words).length;
       $view().innerHTML = `
-        <div class="hero small"><h1>字鬥英雄</h1></div>
+        <div class="hero small mascot">
+          <img class="menu-mascot" src="img/ui/p_hero1.png" alt="" onerror="this.remove()">
+          <h1>字鬥英雄</h1>
+        </div>
         ${VDGame.heroStrip()}
         ${VDGame.dailyPanel()}
         ${dashboard(words, stageName)}
@@ -91,8 +105,10 @@ const VDApp = (() => {
         </div>
         <div class="menu-group">
           <div class="menu-glabel">題庫工具</div>
+          ${item('search', 'c-tool', '🔍', '查單字', '打英文或中文，秒查秒收藏')}
           ${item('affix', 'c-tool', '🧩', '字綴心智圖', '字首字尾字根，成串記憶')}
           ${item('exam', 'c-tool', '📝', '會考考古題', '104–115 年英語閱讀 445 題')}
+          ${starN ? item('starred', 'c-wrong', '⭐', `我的收藏（${starN}）`, '只刷你加星的字') : ''}
         </div>
         <div class="menu-foot">
           ${item('hero', 'c-tool', '🦸', '英雄檔案', '稱號・徽章・字幣・自訂頭像')}
@@ -136,22 +152,61 @@ const VDApp = (() => {
     sprint() {
       $view().innerHTML = header('限時衝刺') + '<div id="mod"></div>';
       VDSprint.start(scopeWords(), document.getElementById('mod'));
+    },
+    search() {
+      $view().innerHTML = header('查單字') + '<div id="mod"></div>';
+      VDSearch.start(document.getElementById('mod'));
+    },
+    starred() {
+      const stars = VDStore.starWords(scopeWords());
+      $view().innerHTML = header('我的收藏') + '<div id="mod"></div>';
+      if (!stars.length) {
+        document.getElementById('mod').innerHTML = `<div class="card-done"><div class="big">⭐</div>
+          <p>還沒收藏任何字。在查單字或閃卡按 ☆ 加星吧！</p>
+          <button class="btn" onclick="VDApp.go('search')">去查單字</button>
+          <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button></div>`;
+        return;
+      }
+      VDFlash.start(stars, document.getElementById('mod'), { raw: true });
     }
   };
 
   function go(name) { document.body.dataset.view = name; views[name](); }
+
+  /* 任意處的加星鈕：就地切換收藏狀態 */
+  function starClick(btn, word) {
+    const on = VDStore.toggleStar(word);
+    btn.textContent = on ? '⭐' : '☆';
+    btn.classList.toggle('on', on);
+    if (window.VDSound) VDSound.click();
+    VDGame.toast(on ? `⭐ 收藏「${word}」` : `取消收藏「${word}」`);
+  }
+
+  /* 字級：normal / large，套用 body class（放大主要閱讀文字） */
+  function applyFontScale() {
+    const fs = localStorage.getItem('vd_fontscale') || 'normal';
+    document.body.classList.toggle('fs-large', fs === 'large');
+  }
+  function toggleFontScale() {
+    const cur = localStorage.getItem('vd_fontscale') || 'normal';
+    const next = cur === 'large' ? 'normal' : 'large';
+    localStorage.setItem('vd_fontscale', next);
+    applyFontScale();
+    return next;
+  }
 
   async function init() {
     const res = await fetch('data/words.json');
     allWords = await res.json();
     VDEnrich.ensure();  // 詞彙深度資料背景載入，供閃卡／自測／字綴顯示英英定義＋搭配詞
     VDGame.init();      // 遊戲化引擎：XP／稱號／徽章／每日任務／字幣／護盾
+    applyFontScale();
     go(VDStore.stage ? 'menu' : 'stage');
   }
 
   function setSub(v) { VDStore.sub = v; go('menu'); }
 
-  return { init, go, setSub, scopeWords, words: () => allWords };
+  return { init, go, setSub, scopeWords, words: () => allWords, starClick, toggleFontScale };
 })();
 
 document.addEventListener('DOMContentLoaded', VDApp.init);

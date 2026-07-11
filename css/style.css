@@ -437,3 +437,52 @@ body {
 .bt-oppcard.locked { opacity: .55; }
 .bt-locknote { font-size: 11px; color: #ffd76a; margin-top: 2px; }
 .bt-lockhint { text-align: center; color: var(--muted); font-size: 12px; margin-top: 12px; }
+
+/* ── 登入日曆 ── */
+.vg-cal { margin-bottom: 10px; }
+.vg-cal-strip { display: flex; justify-content: space-between; gap: 4px; }
+.vg-cal-day { flex: 1; text-align: center; font-size: 15px; padding: 4px 0; border-radius: 8px; background: rgba(255,255,255,.04); }
+.vg-cal-day i { display: block; font-size: 10px; font-style: normal; color: var(--muted); margin-bottom: 1px; }
+.vg-cal-day.on { background: rgba(255,215,106,.14); }
+.vg-cal-day.today { outline: 2px solid #ffd76a; }
+.vg-cal-note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 6px; } .vg-cal-note b { color: #ffd76a; }
+
+/* ── 加星鈕 ── */
+.mini-star { background: none; border: none; cursor: pointer; font-size: 18px; padding: 0 2px; vertical-align: middle; }
+.mini-star.on { filter: drop-shadow(0 0 4px rgba(255,215,106,.6)); }
+
+/* ── 查單字 ── */
+.sr-box { position: sticky; top: 0; z-index: 5; padding: 4px 0 8px; background: linear-gradient(var(--bg,#0a1330) 70%, transparent); }
+.sr-in { width: 100%; padding: 12px 14px; font-size: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,.16); background: var(--panel); color: var(--text); }
+.sr-hint { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+.sr-empty { text-align: center; color: var(--muted); padding: 30px 0; }
+.sr-card { background: var(--panel); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+.sr-top { display: flex; align-items: center; justify-content: space-between; }
+.sr-word { font-size: 19px; font-weight: 700; font-family: var(--font-en); }
+.sr-star { background: none; border: none; font-size: 22px; cursor: pointer; }
+.sr-pos { color: var(--muted); font-size: 14px; margin: 4px 0; }
+.sr-ex { font-family: var(--font-en); font-size: 14px; line-height: 1.5; }
+.sr-card .sr-add { margin-top: 10px; }
+
+/* ── 設定切換 ── */
+.hero-settings { display: flex; gap: 10px; flex-wrap: wrap; }
+.set-toggle { flex: 1; min-width: 130px; padding: 12px; border-radius: 12px; cursor: pointer;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); color: var(--text); font-size: 14px; }
+.set-toggle b { color: #ffd76a; }
+
+/* ── 字級放大 ── */
+body.fs-large .quiz-prompt { font-size: 30px; }
+body.fs-large .opt-text, body.fs-large .ex-stem, body.fs-large .ex-passage { font-size: 18px; }
+body.fs-large .flash-word { font-size: 40px; }
+body.fs-large .flash-zh, body.fs-large .qz-zh, body.fs-large .sr-pos { font-size: 19px; }
+body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-large .qz-ex { font-size: 17px; }
+
+/* ── 3D Pixel 配圖 ── */
+.m-img { width: 46px; height: 46px; flex: none; border-radius: 10px; object-fit: cover; }
+.hero-banner { display: block; width: 100%; max-width: 420px; margin: 0 auto 6px; border-radius: 18px; }
+.hero.small.mascot { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.menu-mascot { width: 46px; height: 46px; border-radius: 12px; }
+.stage-img { display: block; width: 92px; height: 92px; margin: 0 auto 8px; border-radius: 14px; object-fit: cover; }
+.stage-emoji { font-size: 46px; display: block; margin-bottom: 6px; }
+.btn.stage .stage-t { display: block; font-size: 17px; font-weight: 800; }
+.hero-banner2 { display: block; width: 100%; max-width: 360px; margin: 0 auto 12px; border-radius: 16px; }

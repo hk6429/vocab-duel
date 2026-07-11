@@ -86,7 +86,7 @@ const VDAffix = (() => {
     if (!w) { box.innerHTML = ''; return; }
     box.innerHTML = `
       <div class="af-detail">
-        <div class="af-dword">${w.word} ${VDSpeak.btn(w.word)} <span class="af-pos">${w.pos.join('・')}</span></div>
+        <div class="af-dword">${w.word} ${VDSpeak.btn(w.word)} <span class="af-pos">${w.pos.join('・')}</span> <button class="mini-star ${VDStore.isStar(w.word) ? 'on' : ''}" onclick="VDApp.starClick(this,'${w.word}')">${VDStore.isStar(w.word) ? '⭐' : '☆'}</button></div>
         <div class="af-dzh">${w.zh}</div>
         <div class="af-dex">${w.example} ${VDSpeak.btn(w.example)}</div>
         <div class="af-dexz">${w.example_zh}</div>

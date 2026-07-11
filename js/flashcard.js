@@ -66,7 +66,7 @@ const VDFlash = (() => {
       <div class="flash-card" id="flashCard" role="button" tabindex="0" aria-label="翻卡（Enter 或空白鍵）">
         <div class="flash-front">${front}</div>
         <div class="flash-back hidden">
-          <div class="flash-word small">${w.word} ${VDSpeak.btn(w.word)}</div>
+          <div class="flash-word small">${w.word} ${VDSpeak.btn(w.word)} <button class="mini-star ${VDStore.isStar(w.word) ? 'on' : ''}" onclick="event.stopPropagation();VDApp.starClick(this,'${w.word}')">${VDStore.isStar(w.word) ? '⭐' : '☆'}</button></div>
           <div class="flash-pos">${w.pos.join(', ')}</div>
           <div class="flash-zh">${w.zh}</div>
           <div class="flash-ex">${w.example} ${VDSpeak.btn(w.example)}<br><span class="ex-zh">${w.example_zh}</span></div>

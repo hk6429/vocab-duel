@@ -7,6 +7,7 @@ const VDHero = (() => {
     const g = VDGame, lp = g.levelProgress(), bc = g.badgeCount();
     const badges = g.badges();
     el.innerHTML = `
+      <img class="hero-banner2" src="img/ui/p_hero2.png" alt="" onerror="this.remove()">
       <div class="hero-card">
         <button class="hero-av" id="avPick">${g.avatar}</button>
         <div class="hero-meta">
@@ -31,6 +32,12 @@ const VDHero = (() => {
           <span class="badge-desc">${b.desc}</span></div>`).join('')}
       </div>
 
+      <div class="hero-sec">⚙️ 設定</div>
+      <div class="hero-settings">
+        <button class="set-toggle" id="sndToggle">🔊 音效：<b>${VDSound.on ? '開' : '關'}</b></button>
+        <button class="set-toggle" id="fsToggle">🔠 字級：<b>${(localStorage.getItem('vd_fontscale') || 'normal') === 'large' ? '大' : '標準'}</b></button>
+      </div>
+
       <div class="hero-sec">📣 分享與挑戰</div>
       <div class="hero-share">
         <button class="btn" id="shareBtn">📋 複製戰績卡</button>
@@ -45,6 +52,9 @@ const VDHero = (() => {
     el.querySelector('#nick').onchange = e => VDGame.setNick(e.target.value);
     // 護盾
     el.querySelector('#buyShield').onclick = () => { if (VDGame.buyShield()) render(el); else VDGame.toast('字幣不足，先去答題賺幣吧！'); };
+    // 設定
+    el.querySelector('#sndToggle').onclick = () => { VDSound.setOn(!VDSound.on); render(el); };
+    el.querySelector('#fsToggle').onclick = () => { VDApp.toggleFontScale(); render(el); };
     // 分享
     el.querySelector('#shareBtn').onclick = () => copyOut(VDGame.bragText(), '戰績卡已複製，貼給同學！');
     el.querySelector('#chalBtn').onclick = () => copyOut('CHALLENGE:' + VDGame.challengeCode(), '挑戰碼已複製，同學在限時衝刺輸入即可 PK！');
