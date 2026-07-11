@@ -101,6 +101,7 @@ const VDExam = (() => {
     if (picked) return;
     picked = k;
     const correct = k === q.answer;
+    VDGame.onAnswer(correct, 'exam');
     el.querySelectorAll('.ex-opt').forEach(b => {
       b.disabled = true;
       if (b.dataset.k === q.answer) b.classList.add('right');

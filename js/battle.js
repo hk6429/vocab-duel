@@ -53,14 +53,21 @@ const VDBattle = (() => {
   }
 
   function chooseOpponent() {
-    el.innerHTML = `<div class="bt-oppgrid">${OPPONENTS.map(o => `
-      <button class="bt-oppcard" data-id="${o.id}">
-        <div class="bt-face">${face(o)}</div>
+    el.innerHTML = `<div class="bt-oppgrid">${OPPONENTS.map(o => {
+      const open = VDGame.tierUnlocked(o.tier);
+      return `<button class="bt-oppcard ${open ? '' : 'locked'}" data-id="${o.id}" data-open="${open ? 1 : 0}">
+        <div class="bt-face">${open ? face(o) : '<span class="bt-face-emoji">🔒</span>'}</div>
         <div class="bt-name">${o.name}</div>
         <div class="bt-tier t-${o.tier}">${o.tier}</div>
-      </button>`).join('')}</div>`;
+        ${open ? '' : `<div class="bt-locknote">Lv${VDGame.tierNeed(o.tier)} 解鎖</div>`}
+      </button>`;
+    }).join('')}</div>
+    <div class="bt-lockhint">升等（練習／對戰賺 XP）就能解鎖更強的文學家。</div>`;
     el.querySelectorAll('.bt-oppcard').forEach(b => {
-      b.onclick = () => startCpu(OPPONENTS.find(o => o.id === b.dataset.id));
+      b.onclick = () => {
+        if (b.dataset.open === '0') { VDGame.toast(`這位文學家要 Lv${VDGame.tierNeed(OPPONENTS.find(o => o.id === b.dataset.id).tier)} 才能挑戰`); return; }
+        startCpu(OPPONENTS.find(o => o.id === b.dataset.id));
+      };
     });
   }
 
@@ -68,8 +75,9 @@ const VDBattle = (() => {
   function startCpu(o) {
     opp = o;
     words = scopedWords(o.levels);
-    state = { pHp: MAX_HP, oHp: MAX_HP, combo: 0, round: 0, log: opp.taunt };
+    state = { pHp: MAX_HP, oHp: MAX_HP, combo: 0, round: 0, log: opp.taunt, comeback: false };
     locked = false;
+    VDGame.onBattleStart();
     nextRound();
   }
 
@@ -94,6 +102,8 @@ const VDBattle = (() => {
     locked = true;
     const correct = v === state.q.ans;
     VDStore.record(state.q.word, correct);
+    VDGame.onAnswer(correct, 'battle', state.combo + (correct ? 1 : 0));
+    if (state.pHp < 30) state.comeback = true;
     if (correct) {
       const dmg = playerDamage();
       state.oHp = Math.max(0, state.oHp - dmg);
@@ -163,6 +173,7 @@ const VDBattle = (() => {
   }
 
   function finish(win) {
+    if (win) VDGame.onBattleWin(opp.id, state.comeback);
     el.innerHTML = `<div class="card-done">
       <div class="big">${win ? '🏆' : '💀'}</div>
       <p>${win ? `擊敗 ${opp.name}！` : `不敵 ${opp.name}……`}</p>
@@ -195,6 +206,7 @@ const VDBattle = (() => {
     const me = state.turn, foe = 1 - me;
     const correct = v === state.q.ans;
     VDStore.record(state.q.word, correct);
+    VDGame.onAnswer(correct, 'battle', 0);
     if (correct) {
       let dmg = 12 + state.combo[me] * 3;
       if (state.hp[me] < 30) dmg = Math.round(dmg * 1.5);

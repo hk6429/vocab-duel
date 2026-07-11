@@ -74,12 +74,15 @@ const VDApp = (() => {
       const wrongN = VDStore.wrongWords(words).length;
       $view().innerHTML = `
         <div class="hero small"><h1>字鬥英雄</h1></div>
+        ${VDGame.heroStrip()}
+        ${VDGame.dailyPanel()}
         ${dashboard(words, stageName)}
         ${levelChips()}
         <div class="menu-group">
           <div class="menu-glabel">練習</div>
           ${item('flash', 'c-study', '🃏', '閃卡練功', '五盒間隔複習，記得牢')}
           ${item('quiz', 'c-study', '✍️', '單字自測', '三題型隨機，一輪十題')}
+          ${item('sprint', 'c-battle', '⏱️', '限時衝刺', '60 秒搶答，衝高分刷紀錄')}
           ${wrongN ? item('review', 'c-wrong', '🩹', `錯題複習（${wrongN}）`, '只練你答錯過的字') : ''}
         </div>
         <div class="menu-group">
@@ -92,6 +95,7 @@ const VDApp = (() => {
           ${item('exam', 'c-tool', '📝', '會考考古題', '104–115 年英語閱讀 445 題')}
         </div>
         <div class="menu-foot">
+          ${item('hero', 'c-tool', '🦸', '英雄檔案', '稱號・徽章・字幣・自訂頭像')}
           <button class="btn ghost" onclick="VDApp.go('stats')">📊 我的戰績</button>
           <button class="btn ghost" onclick="VDApp.go('stage')">切換學段</button>
         </div>`;
@@ -124,6 +128,14 @@ const VDApp = (() => {
     stats() {
       $view().innerHTML = header('我的戰績') + '<div id="mod"></div>';
       VDStats.render(allWords, document.getElementById('mod'));
+    },
+    hero() {
+      $view().innerHTML = header('英雄檔案') + '<div id="mod"></div>';
+      VDHero.render(document.getElementById('mod'));
+    },
+    sprint() {
+      $view().innerHTML = header('限時衝刺') + '<div id="mod"></div>';
+      VDSprint.start(scopeWords(), document.getElementById('mod'));
     }
   };
 
@@ -133,6 +145,7 @@ const VDApp = (() => {
     const res = await fetch('data/words.json');
     allWords = await res.json();
     VDEnrich.ensure();  // 詞彙深度資料背景載入，供閃卡／自測／字綴顯示英英定義＋搭配詞
+    VDGame.init();      // 遊戲化引擎：XP／稱號／徽章／每日任務／字幣／護盾
     go(VDStore.stage ? 'menu' : 'stage');
   }
 
