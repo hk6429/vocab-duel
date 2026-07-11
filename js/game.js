@@ -78,6 +78,13 @@ const VDGame = (() => {
     save();
     return chest;
   }
+  /* 週末寶庫：週任務領取後，本週可在詞靈競技開一次，必掉稀有以上裝備 */
+  function weekVaultReady() { rollWeekly(); return !!g.week.claimed && !g.week.vault; }
+  function openWeekVault() {
+    if (!weekVaultReady()) return false;
+    g.week.vault = true; save();
+    return true;
+  }
 
   /* ── 核心給獎 ── */
   function award(xp, coins, reason) {
@@ -122,7 +129,11 @@ const VDGame = (() => {
     checkBadges();
   }
   function onFlash() { rollDaily(); g.quests.prog.flash++; save(); checkBadges(); }
-  function onFlashDone() { award(15, 5, '閃卡回合完成'); }
+  function onFlashDone(wrongReview) {
+    const xp = window.VDPets && VDPets.hasPerk('xp10') ? 17 : 15; // 學習詞條：閃卡 XP +10%
+    const coins = wrongReview && window.VDPets && VDPets.hasPerk('wrong2') ? 10 : 5;
+    award(xp, coins, wrongReview ? '錯題複習完成' : '閃卡回合完成');
+  }
   function onQuizDone(score) { award(15 + score * 2, 5 + score, '自測完成'); }
   function onBattleStart() { rollDaily(); g.quests.prog.battle++; save(); }
   function onBattleWin(oppId, comeback) {
@@ -547,7 +558,7 @@ const VDGame = (() => {
     get shield() { return g.shield; }, get revive() { return g.revive; }, heroName, get raw() { return g; },
     onAnswer, onFlash, onFlashDone, onQuizDone, onBattleStart, onBattleWin,
     quests, claimQuest, claimAndRefresh, openMystery, openMysteryUI, mysteryWord,
-    weekQuest, claimWeek, claimWeekUI,
+    weekQuest, claimWeek, claimWeekUI, weekVaultReady, openWeekVault,
     SHOP, buy, setFrame, get frame() { return g.shop.frame; }, get owned() { return g.shop.owned.slice(); },
     rankInfo, rankWin, rankLose, useRevive,
     nextMilestone, milestoneHtml,

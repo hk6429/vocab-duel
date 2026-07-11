@@ -1,6 +1,6 @@
 /* 限時衝刺：60 秒搶答，衝高分（CD6 迫切＋CD8 倒數壓力）；可貼同學挑戰碼 PK（CD5） */
 const VDSprint = (() => {
-  const DUR = 60;
+  let DUR = 60; // 學習詞條 sprint5 生效時 65 秒
   let el = null, words = [], score = 0, left = DUR, timer = null, q = null, locked = false, target = null;
 
   function start(w, container) {
@@ -10,9 +10,10 @@ const VDSprint = (() => {
 
   function intro() {
     clearInterval(timer);
+    DUR = 60 + (window.VDPets && VDPets.hasPerk('sprint5') ? 5 : 0);
     el.innerHTML = `
       <div class="sp-intro">
-        <div class="sp-big">⏱️ 60 秒</div>
+        <div class="sp-big">⏱️ ${DUR} 秒${DUR > 60 ? '<span class="sp-perk">⏱️ 詞條加時 +5s</span>' : ''}</div>
         <p>時間內答對越多越好，答錯不扣分只耗時間。</p>
         <div class="sp-best">🏅 你的最佳：<b>${VDGame.sprintBest}</b> 分</div>
         <input class="sp-chal" id="chal" placeholder="（選填）貼上同學的挑戰碼來 PK">

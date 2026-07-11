@@ -143,6 +143,7 @@ const VDBattle = (() => {
     words = scopedWords(o.levels);
     state = { pHp: MAX_HP, oHp: MAX_HP, combo: 0, round: 0, log: opp.taunt, comeback: false };
     locked = false;
+    if (window.VDPets) VDPets.init(); // 助戰詞靈資料，首回合前就緒
     VDGame.onBattleStart();
     nextRound();
   }
@@ -175,6 +176,13 @@ const VDBattle = (() => {
       state.oHp = Math.max(0, state.oHp - dmg);
       state.combo++;
       state.log = `命中！對 ${opp.name} 造成 ${dmg} 點傷害${state.combo >= 2 ? `（連擊 ×${state.combo}）` : ''}`;
+      // 詞靈助戰：出戰詞靈追擊 atk/10，leech 解鎖再回血
+      const as = window.VDPets ? VDPets.assist() : null;
+      if (as && state.oHp > 0) {
+        state.oHp = Math.max(0, state.oHp - as.atk);
+        state.log += `　${as.ico} ${as.name} 追擊 -${as.atk}`;
+        if (as.leech) { state.pHp = Math.min(MAX_HP, state.pHp + as.leech); state.log += `・回血 +${as.leech}`; }
+      }
     } else {
       state.combo = 0;
       state.pHp = Math.max(0, state.pHp - 8);
@@ -205,6 +213,11 @@ const VDBattle = (() => {
     return `<button class="btn opt ${extra}" ${attr}><span class="opt-key">${'ABCD'[i]}</span><span class="opt-text">${o}</span></button>`;
   }
 
+  function assistTag() {
+    const as = window.VDPets ? VDPets.assist() : null;
+    return as ? `<div class="bt-assist">${as.ico} ${as.name} 助戰（追擊 ${as.atk}${as.leech ? '・回血' : ''}）</div>` : '';
+  }
+
   function hpBar(hp, cls) {
     return `<div class="bt-hp ${hp <= 30 ? 'low' : ''} ${cls}">
       <div class="bt-hp-fill" style="width:${hp}%"></div><span>${hp}</span></div>`;
@@ -224,6 +237,7 @@ const VDBattle = (() => {
         <div class="bt-side me">
           ${hpBar(state.pHp, 'me')}
           <div class="bt-name">你 ${state.pHp < 30 ? '💢背水一戰' : state.combo >= 2 ? `🔥聚氣 ×${state.combo}` : ''}</div>
+          ${assistTag()}
         </div>
       </div>
       <div class="bt-q">

@@ -37,9 +37,65 @@ const VDPet = (() => {
             </div>
           </button>`).join('')}
       </div>
+      ${bagCard()}
       ${VDGame.milestoneHtml()}
       <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>`;
     el.querySelectorAll('.pet-card').forEach(b => { b.onclick = () => renderDetail(b.dataset.id); });
+    bindBag();
+  }
+
+  /* ── 背包＋鍛造：3 件同階熔 1 件高一階 ── */
+  let sel = new Set();
+  function bagCard() {
+    const bag = VDPets.bag();
+    const perks = VDPets.activePerks();
+    const item = (it, i) => `
+      <button class="pet-eq bag-it t-${it.tier} ${sel.has(i) ? 'sel' : ''}" data-i="${i}">
+        ${it.ico} ${it.name}<i>${it.atk ? '⚔️+' + it.atk : '❤️+' + it.hp}${it.perk ? '・' + VDPets.PERKS[it.perk].ico : ''}</i>
+      </button>`;
+    return `
+      <div class="wc-card">
+        <div class="wc-card-body">
+          <div class="hero-sec">🎒 裝備背包　<b>${bag.length}</b>/${VDPets.BAG_MAX}</div>
+          ${perks.length ? `<div class="pg-hint">出戰詞條生效中：${perks.map(p => `${p.ico} ${p.name}`).join('・')}</div>` : ''}
+          ${bag.length ? `<div class="pet-equips">${bag.map(item).join('')}</div>
+          <div class="pet-actrow">
+            <button class="btn small" id="bagEquip" ${sel.size === 1 ? '' : 'disabled'}>裝上出戰詞靈</button>
+            <button class="btn small" id="bagForge" ${sel.size === 3 ? '' : 'disabled'}>🔥 鍛造（3 同階 → 高一階）</button>
+            <button class="btn small ghost" id="bagDrop" ${sel.size ? '' : 'disabled'}>丟棄</button>
+          </div>
+          <div class="hero-shieldhint">點裝備選取；稀有以上可能帶「學習詞條」，掛在出戰詞靈身上全站生效。</div>`
+        : '<div class="pg-hint">背包空空——去野生試煉打寶吧！</div>'}
+        </div>
+      </div>`;
+  }
+  function bindBag() {
+    el.querySelectorAll('.bag-it').forEach(b => {
+      b.onclick = () => {
+        const i = +b.dataset.i;
+        sel.has(i) ? sel.delete(i) : sel.add(i);
+        renderList();
+      };
+    });
+    const $ = s => el.querySelector(s);
+    if ($('#bagEquip')) $('#bagEquip').onclick = () => {
+      const active = VDPets.active();
+      if (!active) return VDGame.toast('先設定出戰詞靈');
+      const r = VDPets.equipFromBag(active, [...sel][0]);
+      VDGame.toast(r.ok ? (r.prev ? '已裝上（原裝備回背包）' : '已裝上') : r.msg);
+      sel.clear(); renderList();
+    };
+    if ($('#bagForge')) $('#bagForge').onclick = () => {
+      const r = VDPets.forge([...sel]);
+      if (!r.ok) return VDGame.toast(r.msg);
+      VDGame.toast(`🔥 鍛造成功：${r.item.name}！`);
+      sel.clear(); renderList();
+    };
+    if ($('#bagDrop')) $('#bagDrop').onclick = () => {
+      [...sel].sort((a, b) => b - a).forEach(i => VDPets.dropBag(i));
+      VDGame.toast('已丟棄');
+      sel.clear(); renderList();
+    };
   }
 
   /* ── 詳情 ── */
@@ -102,7 +158,7 @@ const VDPet = (() => {
           <div class="pet-equips">${VDPets.SLOTS.map(sl => {
             const it = p.equip[sl];
             return it
-              ? `<button class="pet-eq t-${it.tier}" data-sl="${sl}">${it.ico} ${it.name}<i>${it.atk ? '⚔️+' + it.atk : '❤️+' + it.hp}</i></button>`
+              ? `<button class="pet-eq t-${it.tier}" data-sl="${sl}">${it.ico} ${it.name}<i>${it.atk ? '⚔️+' + it.atk : '❤️+' + it.hp}${it.perk ? '・' + VDPets.PERKS[it.perk].ico + VDPets.PERKS[it.perk].name : ''}</i></button>`
               : `<div class="pet-eq empty">${VDPets.SLOT_NAME[sl]}<i>對戰掉落</i></div>`;
           }).join('')}</div>
 
@@ -134,7 +190,11 @@ const VDPet = (() => {
     if ($('#doActive')) $('#doActive').onclick = () => { VDPets.setActive(id); VDGame.toast(`🚩 ${p.name} 出戰！`); renderDetail(id); };
     $('#doClose').onclick = () => closeUp(p);
     el.querySelectorAll('.pet-eq[data-sl]').forEach(b => {
-      b.onclick = () => { VDPets.unequip(id, b.dataset.sl); VDGame.toast('已卸下'); renderDetail(id); };
+      b.onclick = () => {
+        const r = VDPets.unequip(id, b.dataset.sl);
+        VDGame.toast(r.ok ? '已卸下，收進背包' : r.msg);
+        if (r.ok) renderDetail(id);
+      };
     });
     el.querySelectorAll('.pet-dbtn').forEach(b => {
       b.onclick = () => { VDPets.setDeco(id, b.dataset.d); renderDetail(id); };

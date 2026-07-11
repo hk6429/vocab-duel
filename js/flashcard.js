@@ -19,9 +19,10 @@ const VDFlash = (() => {
     }
   }
 
-  let curEl = null;
+  let curEl = null, curOpts = {};
   function start(words, el, opts) {
     curEl = el;
+    curOpts = opts || {};
     // raw=true（錯題複習）：不套到期/新字篩選，直接用傳入的字
     queue = opts && opts.raw ? (shuffle(words = words.slice()), words.slice(0, SESSION_SIZE)) : buildQueue(words);
     idx = 0; doneCount = 0; render._awarded = false;
@@ -44,7 +45,7 @@ const VDFlash = (() => {
       return;
     }
     if (idx >= queue.length) {
-      if (doneCount > 0 && !render._awarded) { VDGame.onFlashDone(); render._awarded = true; }
+      if (doneCount > 0 && !render._awarded) { VDGame.onFlashDone(!!curOpts.wrong); render._awarded = true; }
       el.innerHTML = `<div class="card-done"><div class="big">✅</div><p>本回合完成，共複習 ${doneCount} 張！</p>
         <button class="btn" onclick="VDApp.go('flash')">再來一回合</button>
         <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button></div>`;

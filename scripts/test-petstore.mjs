@@ -117,5 +117,41 @@ ok(snap && snap.petId === 'inkfox' && snap.lv === 25 && snap.skills.length === 3
 const saved = JSON.parse(store.vd_pets);
 ok(saved.owned.inkfox.lv === 25 && saved.rating === 30, 'localStorage 持久化正確');
 
+
+/* 11. 背包／鍛造／詞條／助戰（二期D） */
+{
+  while (P.bag().length) P.dropBag(0); // 清掉前面測試卸下的殘件
+  // 背包收納與上限
+  for (let i = 0; i < 3; i++) P.addToBag({ slot: 'weapon', tier: 'common', base: '羽毫劍', name: '羽毫劍', ico: '⚔️', atk: 3, hp: 0, perk: '' });
+  ok(P.bag().length === 3, '背包收 3 件');
+  // 鍛造：3 同階 → 高一階
+  const r = P.forge([0, 1, 2]);
+  ok(r.ok && r.item.tier === 'rare', '鍛造 3 普通 → 1 稀有');
+  ok(P.bag().length === 1, '鍛造後背包剩 1 件');
+  const bad = P.forge([0, 0, 0]);
+  ok(!bad.ok, '重複索引不可鍛造');
+  // 卸下進背包
+  P.equip('inkfox', { slot: 'weapon', tier: 'legendary', base: '斷句斧', name: '傳說斷句斧', ico: '⚔️', atk: 12, hp: 0, perk: 'xp10' });
+  ok(P.hasPerk('xp10') && !P.hasPerk('sprint5'), '出戰詞靈詞條生效');
+  const u = P.unequip('inkfox', 'weapon');
+  ok(u.ok && P.bag().length === 2, '卸下裝備進背包');
+  ok(!P.hasPerk('xp10'), '卸下後詞條失效');
+  // 從背包裝上（換裝把原件放回背包）
+  const e1 = P.equipFromBag('inkfox', P.bag().length - 1);
+  ok(e1.ok && P.hasPerk('xp10'), '背包裝上恢復詞條');
+  // 裝備圖鑑
+  const dex = P.eqDex();
+  ok(dex.length === 48, `裝備圖鑑 48 格 (${dex.length})`);
+  ok(dex.filter(x => x.got).length >= 2, '打過的裝備已點亮');
+  // 助戰
+  const as = P.assist();
+  ok(as && as.atk === Math.max(1, Math.round(P.atk('inkfox') / 10)), '助戰追擊 = atk/10');
+  ok(as.leech === 0 || as.leech === 3, 'leech 僅 0 或 3');
+  // 掉落帶 base 與 perk 規則
+  let legendPerk = true;
+  for (let i = 0; i < 20; i++) { const d = P.rollDrop('legendary'); if (!d.perk || !d.base) legendPerk = false; }
+  ok(legendPerk, '傳說裝備必帶詞條與 base');
+}
+
 if (fail) { console.error(`\n${fail} 個問題`); process.exit(1); }
 console.log('\nALL PASS — petstore 純邏輯 10 組驗證通過');

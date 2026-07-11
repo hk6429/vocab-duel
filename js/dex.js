@@ -54,8 +54,10 @@ const VDDex = (() => {
           ${secs}
         </div>
       </div>
+      <div id="eq-dex"></div>
       ${VDGame.milestoneHtml()}
       <button class="btn ghost wide" onclick="VDApp.go('menu')">回主選單</button>`;
+    renderEqDex();
     el.querySelectorAll('.dex-head').forEach(b => b.onclick = () => toggleWall(b.dataset.k, all));
     // 點格子看字：事件委派，6 千格只掛一個 listener
     el.onclick = e => {
@@ -64,6 +66,29 @@ const VDDex = (() => {
       const w = all.find(x => x.word === cell.dataset.w);
       if (w) VDGame.toast(`<b>${w.word}</b>　${w.zh}`);
     };
+  }
+
+  /* 裝備圖鑑：16 名稱 × 3 階收集牆（打過寶就點亮） */
+  function renderEqDex() {
+    const box = el.querySelector('#eq-dex');
+    if (!box || !window.VDPets) return;
+    VDPets.init().then(() => {
+      if (!box.isConnected) return;
+      const items = VDPets.eqDex();
+      const got = items.filter(x => x.got).length;
+      const TIER_N = { common: '普通', rare: '稀有', legendary: '傳說' };
+      box.innerHTML = `
+        <div class="wc-card">
+          <div class="wc-card-body">
+            <div class="hero-sec">裝備圖鑑　<b>${got}</b> / ${items.length} 收集</div>
+            ${['common', 'rare', 'legendary'].map(tier => `
+              <div class="pg-sub">${TIER_N[tier]}</div>
+              <div class="eqdex-row">${items.filter(x => x.tier === tier).map(x =>
+                `<span class="eqdex-cell t-${tier} ${x.got ? 'got' : ''}" title="${x.got ? x.base : '？？？'}">${x.got ? x.ico : '❔'}<i>${x.got ? x.base : '？？？'}</i></span>`).join('')}</div>`).join('')}
+            <div class="hero-shieldhint">野生試煉、影子對戰與鍛造都會掉裝備——集滿一整排！</div>
+          </div>
+        </div>`;
+    });
   }
 
   function toggleWall(key, all) {

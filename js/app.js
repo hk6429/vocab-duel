@@ -173,7 +173,7 @@ const VDApp = (() => {
     review() {
       const wrong = VDStore.wrongWords(scopeWords());
       $view().innerHTML = header('錯題複習') + '<div id="mod"></div>';
-      VDFlash.start(wrong, document.getElementById('mod'), { raw: true });
+      VDFlash.start(wrong, document.getElementById('mod'), { raw: true, wrong: true });
     },
     quiz() {
       $view().innerHTML = header('單字自測') + '<div id="mod"></div>';

@@ -13,12 +13,15 @@ const VDPets = (() => {
   let g = null;      // 玩家狀態
   let wordsOfPet = {};   // petId → Set(word)：家族全部單字（小寫）
 
-  const DEFAULT = () => ({ owned: {}, active: '', rating: 0, wildFloor: 1 });
+  const DEFAULT = () => ({ owned: {}, active: '', rating: 0, wildFloor: 1, bag: [], eqdex: {} });
 
   function load() {
     try { g = Object.assign(DEFAULT(), JSON.parse(localStorage.getItem(KEY)) || {}); }
     catch { g = DEFAULT(); }
+    if (!Array.isArray(g.bag)) g.bag = [];
+    if (!g.eqdex || typeof g.eqdex !== 'object') g.eqdex = {};
   }
+  load(); // 同步先載：perk 查詢（閃卡/衝刺/錯題）不必等 init
   const save = () => localStorage.setItem(KEY, JSON.stringify(g));
 
   async function init() {
@@ -99,27 +102,107 @@ const VDPets = (() => {
     weapon: ['羽毫劍', '斷句斧', '音節弓', '詞鋒匕'], armor: ['紙鎧', '墨紋盾甲', '綴皮氅', '疊字重甲'],
     trinket: ['字符鈴', '綴玉墜', '詞露瓶', '音標戒'], crest: ['字首紋章', '字尾徽記', '字根圖騰', '詞源印']
   };
+  /* 學習詞條：稀有 50%／傳說必帶一條，掛在出戰詞靈身上全站生效 */
+  const PERKS = {
+    xp10: { ico: '✨', name: '閃卡 XP +10%' },
+    sprint5: { ico: '⏱️', name: '衝刺 +5 秒' },
+    wrong2: { ico: '🩹', name: '錯題複習字幣 ×2' }
+  };
   function rollDrop(tier) {
     const slot = SLOTS[Math.floor(rand() * SLOTS.length)];
     const [lo, hi] = TIER_RANGE[tier] || TIER_RANGE.common;
     const v = lo + Math.floor(rand() * (hi - lo + 1));
     const isAtk = slot === 'weapon' || slot === 'crest' ? true : slot === 'armor' ? false : rand() < 0.5;
     const names = POOL[slot];
+    const base = names[Math.floor(rand() * names.length)];
+    let perk = '';
+    if (tier === 'legendary' || (tier === 'rare' && rand() < 0.5)) {
+      const keys = Object.keys(PERKS);
+      perk = keys[Math.floor(rand() * keys.length)];
+    }
     return {
-      slot, tier, name: `${tier === 'legendary' ? '傳說' : tier === 'rare' ? '稀有' : ''}${names[Math.floor(rand() * names.length)]}`,
+      slot, tier, base, name: `${tier === 'legendary' ? '傳說' : tier === 'rare' ? '稀有' : ''}${base}`,
       ico: { weapon: '⚔️', armor: '🛡️', trinket: '📿', crest: '🏵️' }[slot],
-      atk: isAtk ? v : 0, hp: isAtk ? 0 : v * 3
+      atk: isAtk ? v : 0, hp: isAtk ? 0 : v * 3, perk
     };
   }
   function equip(id, item) {
     const o = g.owned[id];
     if (!o) return false;
+    recordDex(item);
     o.equip[item.slot] = item; save(); return true;
   }
   function unequip(id, slot) {
     const o = g.owned[id];
-    if (o && o.equip[slot]) { delete o.equip[slot]; save(); return true; }
-    return false;
+    if (!o || !o.equip[slot]) return { ok: false, msg: '沒有裝備' };
+    if (g.bag.length >= BAG_MAX) return { ok: false, msg: '背包滿了（上限 20 件），放不下' };
+    g.bag.push(o.equip[slot]); delete o.equip[slot]; save();
+    return { ok: true };
+  }
+
+  /* ── 背包／鍛造／裝備圖鑑 ── */
+  const BAG_MAX = 20;
+  const TIER_UP = { common: 'rare', rare: 'legendary' };
+  function recordDex(item) { g.eqdex[`${item.tier}:${item.base || item.name}`] = 1; }
+  function addToBag(item) {
+    recordDex(item);
+    if (g.bag.length >= BAG_MAX) { save(); return { ok: false, msg: '背包滿了（上限 20 件）——先鍛造或丟棄' }; }
+    g.bag.push(item); save(); return { ok: true };
+  }
+  const bag = () => g.bag.slice();
+  function dropBag(i) { if (g.bag[i]) { g.bag.splice(i, 1); save(); return true; } return false; }
+  function forge(idxs) {
+    if (!Array.isArray(idxs) || new Set(idxs).size !== 3) return { ok: false, msg: '要選 3 件同階裝備' };
+    const items = idxs.map(i => g.bag[i]);
+    if (items.some(x => !x)) return { ok: false, msg: '裝備不存在' };
+    const tier = items[0].tier;
+    if (!items.every(x => x.tier === tier)) return { ok: false, msg: '三件必須同一階' };
+    if (!TIER_UP[tier]) return { ok: false, msg: '傳說裝備已是最高階' };
+    [...idxs].sort((a, b) => b - a).forEach(i => g.bag.splice(i, 1));
+    const item = rollDrop(TIER_UP[tier]);
+    recordDex(item);
+    g.bag.push(item); save();
+    return { ok: true, item };
+  }
+  function equipFromBag(id, i) {
+    const o = g.owned[id], item = g.bag[i];
+    if (!o || !item) return { ok: false, msg: '無法裝備' };
+    g.bag.splice(i, 1);
+    const prev = o.equip[item.slot];
+    o.equip[item.slot] = item;
+    if (prev) g.bag.push(prev);
+    save(); return { ok: true, prev };
+  }
+  function eqDex() {
+    const out = [];
+    for (const tier of ['common', 'rare', 'legendary'])
+      for (const slot of SLOTS)
+        for (const base of POOL[slot])
+          out.push({ tier, slot, base, ico: { weapon: '⚔️', armor: '🛡️', trinket: '📿', crest: '🏵️' }[slot], got: !!g.eqdex[`${tier}:${base}`] });
+    return out;
+  }
+  function hasPerk(p) {
+    const id = active();
+    if (!id) return false;
+    const eq = (g.owned[id] || {}).equip || {};
+    return SLOTS.some(sl => (eq[sl] || {}).perk === p);
+  }
+  function activePerks() {
+    const id = active(); if (!id) return [];
+    const eq = (g.owned[id] || {}).equip || {};
+    return SLOTS.map(sl => (eq[sl] || {}).perk).filter(Boolean).map(p => ({ id: p, ...PERKS[p] }));
+  }
+  /* 文學家對戰助戰：出戰詞靈追擊 atk/10、leech 技能解鎖再回 3 血 */
+  function assist() {
+    const id = active();
+    if (!id || !data) return null;
+    const def = data.pets.find(p => p.id === id);
+    if (!def) return null;
+    return {
+      id, name: def.name, ico: def.ico,
+      atk: Math.max(1, Math.round(atk(id) / 10)),
+      leech: skillsOf(id).some(s => s.unlocked && s.id === 'leech') ? 3 : 0
+    };
   }
 
   /* ── 技能／裝飾／出戰 ── */
@@ -180,6 +263,7 @@ const VDPets = (() => {
   return {
     init, list, adopt, adoptCost, levelUp, levelCost, power, familyStats, atk, hp, stageOf, lvOf,
     rollDrop, equip, unequip, skillsOf, setDeco, setActive, active, DECOS, SLOTS, SLOT_NAME,
+    PERKS, hasPerk, activePerks, assist, bag, addToBag, dropBag, forge, equipFromBag, eqDex, BAG_MAX,
     affixStats, topAffixes, weakAffixes,
     petWin, petLose, get rating() { return g.rating; }, get wildFloor() { return g.wildFloor; }, clearWild,
     snapshot, wordsOf: id => wordsOfPet[id] || new Set(),

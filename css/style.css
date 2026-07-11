@@ -939,3 +939,15 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .wg-tab.on { background: #2b2b2b; color: #fdfcf8; border-color: #2b2b2b; }
 .wg-stats { font-size: .88rem; color: #5a6b78; margin: 0 0 8px; }
 #wg-canvas { width: 100%; touch-action: none; cursor: grab; background: transparent; border: 1px dashed rgba(74,123,166,.25); border-radius: 12px; }
+
+/* ── 二期D：背包/鍛造/裝備圖鑑/助戰/週末寶庫 ── */
+.bag-it.sel { outline: 2.5px solid #c9a24b; outline-offset: 2px; }
+.bt-assist { font-size: .78rem; color: #5a6b78; margin-top: 2px; }
+.pb-vault { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; border: 1.5px dashed #c9a24b; border-radius: 12px; font-size: .9rem; background: rgba(201,162,75,.07); }
+.eqdex-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.eqdex-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 72px; padding: 8px 4px; border: 1px solid rgba(43,43,43,.15); border-radius: 10px; font-size: 1.1rem; opacity: .35; filter: grayscale(1); }
+.eqdex-cell i { font-size: .68rem; font-style: normal; color: #5a6b78; }
+.eqdex-cell.got { opacity: 1; filter: none; }
+.eqdex-cell.t-rare.got { border-color: #4a7ba6; }
+.eqdex-cell.t-legendary.got { border-color: #c9a24b; background: rgba(201,162,75,.08); }
+.sp-perk { display: block; font-size: .8rem; color: #c9a24b; }

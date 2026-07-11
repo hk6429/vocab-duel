@@ -43,6 +43,11 @@ const VDPetBattle = (() => {
             <button class="btn ghost" id="doBoard">🏆 詞靈排行榜</button>
             <span class="pg-hint">目前積分：<b>${VDPets.rating}</b></span>
           </div>
+          ${VDGame.weekVaultReady() ? `
+          <div class="pb-vault">
+            <span>👑 週末寶庫開啟——週任務達成的犒賞，必掉稀有以上裝備！</span>
+            <button class="btn small" id="doVault">開寶庫</button>
+          </div>` : ''}
         </div>
       </div>
       ${VDGame.milestoneHtml()}
@@ -52,6 +57,14 @@ const VDPetBattle = (() => {
     });
     el.querySelector('#doShadow').onclick = startShadow;
     el.querySelector('#doBoard').onclick = showBoard;
+    const vault = el.querySelector('#doVault');
+    if (vault) vault.onclick = () => {
+      if (!VDGame.openWeekVault()) return;
+      const item = VDPets.rollDrop(Math.random() < 0.15 ? 'legendary' : 'rare');
+      const r = VDPets.addToBag(item);
+      VDGame.toast(r.ok ? `👑 週末寶庫：獲得 ${item.name}！已收進背包` : `👑 獲得 ${item.name}——但${r.msg}`);
+      chooseMode();
+    };
   }
 
   /* ── 開戰（wild 或 shadow 共用引擎） ── */
@@ -170,8 +183,9 @@ const VDPetBattle = (() => {
       dropHtml = `
         <div class="pb-dropcard t-${drop.tier}">
           <div class="pb-dropico">${drop.ico}</div>
-          <b>${drop.name}</b><i>${drop.atk ? '⚔️ +' + drop.atk : '❤️ +' + drop.hp}・${VDPets.SLOT_NAME[drop.slot]}</i>
+          <b>${drop.name}</b><i>${drop.atk ? '⚔️ +' + drop.atk : '❤️ +' + drop.hp}・${VDPets.SLOT_NAME[drop.slot]}${drop.perk ? `・${VDPets.PERKS[drop.perk].ico} ${VDPets.PERKS[drop.perk].name}` : ''}</i>
           <button class="btn small" id="doEquip">裝上 ${me.name}</button>
+          <button class="btn ghost small" id="doBag">收進背包</button>
         </div>`;
       state.drop = drop;
     }
@@ -191,11 +205,20 @@ const VDPetBattle = (() => {
       <button class="btn" id="doAgain">再戰</button>
       <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>
     </div>`;
-    const eq = el.querySelector('#doEquip');
+    const eq = el.querySelector('#doEquip'), bagBtn = el.querySelector('#doBag');
+    const claimDrop = (label) => {
+      if (eq) eq.remove();
+      if (bagBtn) bagBtn.replaceWith(Object.assign(document.createElement('span'), { textContent: label, className: 'pg-hint' }));
+    };
     if (eq) eq.onclick = () => {
       VDPets.equip(me.id, state.drop);
       VDGame.toast(`已裝上：${state.drop.name}`);
-      eq.replaceWith(Object.assign(document.createElement('span'), { textContent: '✅ 已裝備', className: 'pg-hint' }));
+      claimDrop('✅ 已裝備');
+    };
+    if (bagBtn) bagBtn.onclick = () => {
+      const r = VDPets.addToBag(state.drop);
+      VDGame.toast(r.ok ? '已收進背包' : r.msg);
+      if (r.ok) claimDrop('🎒 已入包');
     };
     el.querySelector('#doAgain').onclick = chooseMode;
   }
