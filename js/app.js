@@ -294,8 +294,12 @@ const VDApp = (() => {
     }
   };
 
+  /* 漸進解鎖門檻：與 menu() 卡片顯示的 Lv 一致；直接呼叫 go()/改網址列都擋，不只是選單裝飾 */
+  const LEVEL_GATE = { sprint: 2, pets: 3, graph: 3, petbattle: 3, town: 4, shop: 5 };
   function go(name, noPush) {
     if (!views[name]) name = 'menu';
+    const need = LEVEL_GATE[name];
+    if (need && VDGame.level() < need) name = 'menu';
     document.body.dataset.view = name;
     views[name]();
     // History API：換頁推一筆，讓手機返回鍵是「回上一頁」而非退出；同頁重繪不重複疊
