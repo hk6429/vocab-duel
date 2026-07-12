@@ -3,8 +3,14 @@
    claimKey 存本機 vd_market_claims，憑券下架／領款。 */
 const VDMarket = (() => {
   const CKEY = 'vd_market_claims';
-  const BAND = { common: [10, 50], rare: [40, 200], legendary: [150, 800] };
-  const TIER_N = { common: '普通', rare: '稀有', legendary: '傳說' };
+  /* 價格帶：前三階比舊版高（拉開難度），傳說之上每階再放大 ~1.9 倍，跟鍛造成本一起漲 */
+  const BAND = (() => {
+    const out = { common: [15, 75], rare: [60, 300], legendary: [225, 1200] };
+    let [lo, hi] = out.legendary;
+    const T = VDPets.TIERS;
+    for (let i = 3; i < T.length; i++) { lo = Math.round(lo * 1.9); hi = Math.round(hi * 1.9); out[T[i]] = [lo, hi]; }
+    return out;
+  })();
   let el = null;
 
   const claims = () => { try { return JSON.parse(localStorage.getItem(CKEY)) || []; } catch { return []; } };
@@ -103,7 +109,7 @@ const VDMarket = (() => {
         const [lo, hi] = BAND[it.tier];
         const row = box.querySelector('#mk-price-row');
         row.hidden = false;
-        box.querySelector('#mk-band').textContent = `${TIER_N[it.tier]}價格帶 ${lo}–${hi}`;
+        box.querySelector('#mk-band').textContent = `${VDPets.tierName(it.tier)}價格帶 ${lo}–${hi}`;
         box.querySelector('#mk-price').value = lo;
       };
     });

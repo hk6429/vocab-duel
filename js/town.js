@@ -49,6 +49,7 @@ const VDTownUI = (() => {
   }
   const resbarHtml = () =>
     VDTown.RES.map(r => `<span class="tw-res">${VDTown.RES_META[r].ico} ${VDTown.raw.res[r] || 0}</span>`).join('') +
+    `<span class="tw-res" title="倉庫上限＝300＋市政廳每級200＋雕像每座2，升市政廳或蓋雕像可擴充">📦 上限 ${VDTown.resCap()}</span>` +
     `<span class="tw-res">🪙 ${VDTown.raw.tokens} 代幣</span><span class="tw-res">💰 ${VDGame.raw.coins}</span>`;
   function refreshRes() { const b = el && el.querySelector('#tw-resbar'); if (b) b.innerHTML = resbarHtml(); }
   function supplyHtml() {

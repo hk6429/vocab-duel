@@ -383,13 +383,16 @@ const VDGame = (() => {
     return true;
   }
 
-  /* ── 字幣商店：頭像框（永久）＋消耗品，給字幣一個出口 ── */
+  /* ── 字幣商店：頭像框（永久）＋消耗品，給字幣一個出口。價格跟著裝備鍛造的難度一起漲，種類也加多，別讓人太快集滿 ── */
   const SHOP = [
-    { id: 'frame_ink', kind: 'frame', ico: '⭕', name: '墨圈框', desc: '手繪墨線頭像框', price: 200 },
-    { id: 'frame_gold', kind: 'frame', ico: '🟡', name: '金箔框', desc: '燙金雙環頭像框', price: 500 },
-    { id: 'frame_laurel', kind: 'frame', ico: '🏛️', name: '桂冠框', desc: '文豪桂冠頭像框', price: 900 },
-    { id: 'shield', kind: 'consume', ico: '🛡️', name: '連續護盾', desc: '斷練一天自動頂上，🔥 不歸零', price: 100 },
-    { id: 'revive', kind: 'consume', ico: '🪶', name: '復活羽毛', desc: '對戰倒下時原地復活（回 40 血）', price: 120 }
+    { id: 'frame_ink', kind: 'frame', ico: '⭕', name: '墨圈框', desc: '手繪墨線頭像框', price: 380 },
+    { id: 'frame_gold', kind: 'frame', ico: '🟡', name: '金箔框', desc: '燙金雙環頭像框', price: 900 },
+    { id: 'frame_laurel', kind: 'frame', ico: '🏛️', name: '桂冠框', desc: '文豪桂冠頭像框', price: 1600 },
+    { id: 'frame_jade', kind: 'frame', ico: '🟢', name: '玉環框', desc: '溫潤翠玉雙環頭像框', price: 2600 },
+    { id: 'frame_phoenix', kind: 'frame', ico: '🔥', name: '鳳羽框', desc: '烈焰鳳羽頭像框，字鬥高手的象徵', price: 4200 },
+    { id: 'frame_cosmos', kind: 'frame', ico: '🌌', name: '星雲框', desc: '流轉星雲頭像框，至尊等級的門面', price: 6800 },
+    { id: 'shield', kind: 'consume', ico: '🛡️', name: '連續護盾', desc: '斷練一天自動頂上，🔥 不歸零', price: 180 },
+    { id: 'revive', kind: 'consume', ico: '🪶', name: '復活羽毛', desc: '對戰倒下時原地復活（回 40 血）', price: 220 }
   ];
   function buy(id) {
     const it = SHOP.find(x => x.id === id);

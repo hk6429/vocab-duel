@@ -121,7 +121,7 @@ const VDPet = (() => {
     };
   }
 
-  /* ── 背包＋鍛造：3 件同階熔 1 件高一階 ── */
+  /* ── 背包＋鍛造：N 件同階熔 1 件高一階（N 隨階數遞增，越高階越難） ── */
   let sel = new Set();
   function bagCard() {
     const bag = VDPets.bag();
@@ -130,18 +130,29 @@ const VDPet = (() => {
       <button class="pet-eq bag-it t-${it.tier} ${sel.has(i) ? 'sel' : ''}" data-i="${i}">
         ${it.ico} ${it.name}<i>${it.atk ? '⚔️+' + it.atk : '❤️+' + it.hp}${it.perk ? '・' + VDPets.PERKS[it.perk].ico : ''}</i>
       </button>`;
+    // 選取的裝備若同階，顯示該階的鍛造門檻；否則顯示提示
+    const selItems = [...sel].map(i => bag[i]).filter(Boolean);
+    const sameTier = selItems.length && selItems.every(x => x.tier === selItems[0].tier) ? selItems[0].tier : null;
+    const req = sameTier ? VDPets.forgeReq(sameTier) : null;
+    const forgeLabel = req
+      ? `🔥 鍛造成 ${VDPets.tierName(req.into)}（需 ${req.items} 件・${req.cost} 字幣・成功率 ${Math.round(req.chance * 100)}%）`
+      : '🔥 鍛造（先選同階裝備）';
+    const forgeReady = sameTier && req && selItems.length === req.items;
+    const bagCost = VDPets.bagUpgradeCost();
     return `
       <div class="wc-card">
         <div class="wc-card-body">
-          <div class="hero-sec">🎒 裝備背包　<b>${bag.length}</b>/${VDPets.BAG_MAX}</div>
+          <div class="hero-sec">🎒 裝備背包　<b>${bag.length}</b>/${VDPets.bagMax()}
+            ${bagCost != null ? `<button class="btn small ghost" id="bagUp">🧰 擴充至 ${VDPets.bagMax() + 20} 件（${bagCost} 字幣）</button>` : '<span class="shop-tag on">背包已滿階</span>'}
+          </div>
           ${perks.length ? `<div class="pg-hint">出戰詞條生效中：${perks.map(p => `${p.ico} ${p.name}`).join('・')}</div>` : ''}
           ${bag.length ? `<div class="pet-equips">${bag.map(item).join('')}</div>
           <div class="pet-actrow">
             <button class="btn small" id="bagEquip" ${sel.size === 1 ? '' : 'disabled'}>裝上出戰詞靈</button>
-            <button class="btn small" id="bagForge" ${sel.size === 3 ? '' : 'disabled'}>🔥 鍛造（3 同階 → 高一階）</button>
+            <button class="btn small" id="bagForge" ${forgeReady ? '' : 'disabled'}>${forgeLabel}</button>
             <button class="btn small ghost" id="bagDrop" ${sel.size ? '' : 'disabled'}>丟棄</button>
           </div>
-          <div class="hero-shieldhint">點裝備選取；稀有以上可能帶「學習詞條」，掛在出戰詞靈身上全站生效。</div>`
+          <div class="hero-shieldhint">點裝備選取同一階；稀有以上可能帶「學習詞條」，掛在出戰詞靈身上全站生效；鍛造有失敗機率，材料與字幣失敗照扣。</div>`
         : '<div class="pg-hint">背包空空——去野生試煉打寶吧！</div>'}
         </div>
       </div>`;
@@ -165,13 +176,18 @@ const VDPet = (() => {
     if ($('#bagForge')) $('#bagForge').onclick = () => {
       const r = VDPets.forge([...sel]);
       if (!r.ok) return VDGame.toast(r.msg);
-      VDGame.toast(`🔥 鍛造成功：${r.item.name}！`);
+      VDGame.toast(r.failed ? `💥 ${r.msg}` : `🔥 鍛造成功：${r.item.name}！`);
       sel.clear(); renderList();
     };
     if ($('#bagDrop')) $('#bagDrop').onclick = () => {
       [...sel].sort((a, b) => b - a).forEach(i => VDPets.dropBag(i));
       VDGame.toast('已丟棄');
       sel.clear(); renderList();
+    };
+    if ($('#bagUp')) $('#bagUp').onclick = () => {
+      const r = VDPets.upgradeBag();
+      VDGame.toast(r.ok ? `🧰 背包擴充到 ${r.max} 件！` : r.msg);
+      renderList();
     };
   }
 

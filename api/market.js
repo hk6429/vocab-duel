@@ -21,8 +21,21 @@ const ITEM_TTL = 7 * 86400;   // 掛單／貨款保留 7 天
 const DAILY_BUY_CAP = 3;
 const TAX = 0.1;
 
-const PRICE_BAND = { common: [10, 50], rare: [40, 200], legendary: [150, 800] };
-const TIER_RANGE = { common: [2, 4], rare: [5, 8], legendary: [10, 15] };
+// 裝備階梯：與前端 js/petstore.js 的 TIERS/TIER_RANGE 同步，傳說之上再 10 階，數值與價格逐階放大
+const TIERS = ["common", "rare", "legendary", "mythic", "celestial", "emperor", "eternal", "genesis", "stellar", "cosmic", "primordial", "transcendent", "supreme"];
+const TIER_RANGE = (() => {
+  const out = { common: [2, 4], rare: [5, 8], legendary: [10, 15] };
+  let [lo, hi] = out.legendary;
+  for (let i = 3; i < TIERS.length; i++) { lo = Math.round(lo * 1.8); hi = Math.round(hi * 1.8); out[TIERS[i]] = [lo, hi]; }
+  return out;
+})();
+const PRICE_BAND = (() => {
+  const out = { common: [15, 75], rare: [60, 300], legendary: [225, 1200] };
+  let [lo, hi] = out.legendary;
+  for (let i = 3; i < TIERS.length; i++) { lo = Math.round(lo * 1.9); hi = Math.round(hi * 1.9); out[TIERS[i]] = [lo, hi]; }
+  return out;
+})();
+const TIER_NAME = { common: "", rare: "稀有", legendary: "傳說", mythic: "神話", celestial: "天位", emperor: "帝皇", eternal: "永恆", genesis: "創世", stellar: "星辰", cosmic: "宇宙", primordial: "太初", transcendent: "超凡", supreme: "至尊" };
 const SLOTS = ["weapon", "armor", "trinket", "crest"];
 const POOL = {
   weapon: ["羽毫劍", "斷句斧", "音節弓", "詞鋒匕"], armor: ["紙鎧", "墨紋盾甲", "綴皮氅", "疊字重甲"],
@@ -54,7 +67,7 @@ function cleanItem(it) {
   const isAtk = atk > 0;
   if (isAtk && (hp !== 0 || atk < lo || atk > hi)) return null;
   if (!isAtk && (hp < lo * 3 || hp > hi * 3)) return null;
-  const prefix = it.tier === "legendary" ? "傳說" : it.tier === "rare" ? "稀有" : "";
+  const prefix = TIER_NAME[it.tier] || "";
   return {
     slot: it.slot, tier: it.tier, base: it.base, name: `${prefix}${it.base}`,
     ico: { weapon: "⚔️", armor: "🛡️", trinket: "📿", crest: "🏵️" }[it.slot],

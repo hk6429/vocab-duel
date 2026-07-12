@@ -1023,6 +1023,32 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .eqdex-cell.t-legendary.got { border-color: #c9a24b; background: rgba(201,162,75,.08); }
 .sp-perk { display: block; font-size: .8rem; color: #c9a24b; }
 
+/* 傳說之上 10 階配色，越高階越炫（裝備卡／爬塔按鈕／掉落卡／圖鑑格共用） */
+.t-mythic { --tc: #8a5fd6; --tcs: rgba(138,95,214,.4); }
+.t-celestial { --tc: #2fb6c9; --tcs: rgba(47,182,201,.4); }
+.t-emperor { --tc: #d6543f; --tcs: rgba(214,84,63,.4); }
+.t-eternal { --tc: #3f9e5f; --tcs: rgba(63,158,95,.4); }
+.t-genesis { --tc: #e0762f; --tcs: rgba(224,118,47,.4); }
+.t-stellar { --tc: #d94f9b; --tcs: rgba(217,79,155,.4); }
+.t-cosmic { --tc: #4f6bd9; --tcs: rgba(79,107,217,.4); }
+.t-primordial { --tc: #6a4fd9; --tcs: rgba(106,79,217,.4); }
+.t-transcendent { --tc: #cfa030; --tcs: rgba(207,160,48,.45); }
+.t-supreme { --tc: #ff3b6b; --tcs: rgba(255,59,107,.5); }
+.pet-eq.t-mythic, .pet-eq.t-celestial, .pet-eq.t-emperor, .pet-eq.t-eternal, .pet-eq.t-genesis,
+.pet-eq.t-stellar, .pet-eq.t-cosmic, .pet-eq.t-primordial, .pet-eq.t-transcendent, .pet-eq.t-supreme {
+  border: 1.5px solid var(--tc); box-shadow: 0 0 10px var(--tcs);
+}
+.pb-floor.t-mythic:not(.locked), .pb-floor.t-celestial:not(.locked), .pb-floor.t-emperor:not(.locked),
+.pb-floor.t-eternal:not(.locked), .pb-floor.t-genesis:not(.locked), .pb-floor.t-stellar:not(.locked),
+.pb-floor.t-cosmic:not(.locked), .pb-floor.t-primordial:not(.locked), .pb-floor.t-transcendent:not(.locked),
+.pb-floor.t-supreme:not(.locked) { border-color: var(--tc); }
+.pb-dropcard.t-mythic, .pb-dropcard.t-celestial, .pb-dropcard.t-emperor, .pb-dropcard.t-eternal,
+.pb-dropcard.t-genesis, .pb-dropcard.t-stellar, .pb-dropcard.t-cosmic, .pb-dropcard.t-primordial,
+.pb-dropcard.t-transcendent, .pb-dropcard.t-supreme { border-color: var(--tc); box-shadow: 0 0 16px var(--tcs); }
+.eqdex-cell.t-mythic.got, .eqdex-cell.t-celestial.got, .eqdex-cell.t-emperor.got, .eqdex-cell.t-eternal.got,
+.eqdex-cell.t-genesis.got, .eqdex-cell.t-stellar.got, .eqdex-cell.t-cosmic.got, .eqdex-cell.t-primordial.got,
+.eqdex-cell.t-transcendent.got, .eqdex-cell.t-supreme.got { border-color: var(--tc); background: var(--tcs); }
+
 /* ── 即時對戰 ── */
 .rt-code { font-size: clamp(1.8rem, 12vw, 3rem); font-weight: 800; letter-spacing: .25em; overflow-wrap: anywhere; text-align: center; color: var(--ink); margin: 12px 0; }
 .rt-join-in { width: 110px; padding: 10px 12px; border: 1.5px solid rgba(43,43,43,.3); border-radius: 12px; font-size: 1.05rem; text-align: center; letter-spacing: .2em; font-family: inherit; background: transparent; }

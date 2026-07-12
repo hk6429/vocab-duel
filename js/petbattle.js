@@ -34,7 +34,7 @@ const VDPetBattle = (() => {
             return `<button class="pb-floor ${open ? '' : 'locked'} t-${f.dropTier}" data-f="${n}" ${open ? '' : 'disabled'}>
               <span class="pb-fico">${open ? f.ico : '🔒'}</span>
               <b>第 ${n} 層</b><i>${f.name}・Lv.${f.lv}</i>
-              <span class="pb-drop">${{ common: '🎁 普通', rare: '💠 稀有', legendary: '👑 傳說' }[f.dropTier]}${f.legBonus ? '↑' : ''}</span>
+              <span class="pb-drop">${VDPets.TIER_ICO[VDPets.tierIdx(f.dropTier)]} ${VDPets.tierName(f.dropTier)}${f.legBonus ? '↑' : ''}</span>
             </button>`;
           }).join('')}</div>
           <div class="pg-sub">👤 影子對戰（挑戰其他玩家的詞靈快照）</div>
@@ -248,8 +248,8 @@ const VDPetBattle = (() => {
         const loot = VDTown.battleLoot(foe.floorNo);
         VDGame.toast('🏰 城鎮補給：' + Object.entries(loot).map(([k, v]) => `${VDTown.RES_META[k].ico}+${v}`).join(' '));
       }
-      // 高層輪迴：legBonus 機率把掉落升為傳說
-      const tier = foe.legBonus && Math.random() < foe.legBonus ? 'legendary' : foe.dropTier;
+      // 高層輪迴：legBonus 機率把掉落再升一階
+      const tier = foe.legBonus && Math.random() < foe.legBonus ? VDPets.tierUp(foe.dropTier) : foe.dropTier;
       const drop = (full || Math.random() < 0.1) ? VDPets.rollDrop(tier) : null;
       if (drop) {
         dropHtml = `
@@ -300,7 +300,7 @@ const VDPetBattle = (() => {
 
   /* ── 野生：無限爬塔敵人公式生成 ──
      1–10 層照 pets.json；第 11 層起以 10 層一循環（名字加「・輪迴 N」），
-     血/攻按 1 + 0.15*(floor-10) 放大；高層 legendary 掉落權重隨層數提升 */
+     血/攻按 1 + 0.15*(floor-10) 放大；每 3 輪迴掉落底階往上爬一階，跟著新裝備天花板走 */
   function floorDef(n) {
     const wild = VDPets.wild();
     const base = wild[(n - 1) % wild.length];
@@ -308,12 +308,14 @@ const VDPetBattle = (() => {
       return { name: base.name, ico: base.ico, lv: base.lv, acc: base.acc, dropTier: base.dropTier, floorNo: n, atk: 10 + 2 * base.lv, hp: 80 + 6 * base.lv };
     const k = 1 + 0.15 * (n - 10);
     const cycle = Math.ceil((n - wild.length) / wild.length);
+    const baseIdx = VDPets.tierIdx(base.dropTier === 'common' ? 'rare' : base.dropTier);
+    const dropTier = VDPets.TIERS[Math.min(VDPets.TIERS.length - 1, baseIdx + Math.floor(cycle / 3))];
     return {
       name: `${base.name}・輪迴 ${cycle}`, ico: base.ico,
       lv: Math.round(base.lv * k),
       acc: Math.min(0.92, base.acc + 0.02 * cycle),
-      dropTier: base.dropTier === 'common' ? 'rare' : base.dropTier,
-      legBonus: Math.min(0.5, 0.05 * (n - 10)),   // 掉落時有機會升為傳說
+      dropTier,
+      legBonus: Math.min(0.5, 0.05 * (n - 10)),   // 掉落時有機會再升一階
       floorNo: n,
       atk: Math.round((10 + 2 * base.lv) * k),
       hp: Math.round((80 + 6 * base.lv) * k)

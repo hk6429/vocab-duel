@@ -4,16 +4,54 @@ const VDPets = (() => {
   const KIND = { p: 'prefixes', s: 'suffixes', r: 'roots' };
   const SLOTS = ['weapon', 'armor', 'trinket', 'crest'];
   const SLOT_NAME = { weapon: '武器', armor: '護甲', trinket: '飾品', crest: '紋章' };
-  const TIER_RANGE = { common: [2, 4], rare: [5, 8], legendary: [10, 15] };
+  /* 裝備階梯：傳說之上再加 10 階，越高階數值放大越多、鍛造也越難（見 forgeReq） */
+  const TIERS = ['common', 'rare', 'legendary', 'mythic', 'celestial', 'emperor', 'eternal', 'genesis', 'stellar', 'cosmic', 'primordial', 'transcendent', 'supreme'];
+  const TIER_NAME = ['普通', '稀有', '傳說', '神話', '天位', '帝皇', '永恆', '創世', '星辰', '宇宙', '太初', '超凡', '至尊'];
+  const TIER_ICO = ['🎁', '💠', '👑', '🔮', '🌠', '🐲', '♾️', '🌋', '✨', '🌌', '🌑', '🕊️', '🏆'];
+  const TIER_RANGE = (() => {
+    const out = { common: [2, 4], rare: [5, 8], legendary: [10, 15] };
+    let [lo, hi] = out.legendary;
+    for (let i = 3; i < TIERS.length; i++) { lo = Math.round(lo * 1.8); hi = Math.round(hi * 1.8); out[TIERS[i]] = [lo, hi]; }
+    return out;
+  })();
+  const tierIdx = t => TIERS.indexOf(t);
+  const tierName = t => TIER_NAME[tierIdx(t)] || '';
+  const tierUp = t => { const i = tierIdx(t); return i >= 0 && i < TIERS.length - 1 ? TIERS[i + 1] : t; };
+  /* 鍛造門檻：目標階序位 step=1(稀有)…12(至尊)；材料件數 4→15、成功率傳說以下必成、之後遞減到 20%、字幣成本每階倍增以上 */
+  function forgeReq(tier) {
+    const step = tierIdx(tier) + 1;
+    if (step <= 0 || step >= TIERS.length) return null;
+    const items = 3 + step;
+    const chance = step <= 2 ? 1 : Math.max(0.2, 0.9 - 0.07 * (step - 2));
+    const cost = step === 1 ? 50 : step === 2 ? 150 : Math.round(300 * Math.pow(1.85, step - 3) / 10) * 10;
+    return { items, chance: Math.round(chance * 100) / 100, cost, into: TIERS[step] };
+  }
   const DECOS = ['', '🎀', '👑', '🧣', '👓', '🌸', '⭐'];
   const MAX_LV = 25;
+  /* 背包容量：20 件起，花字幣一階一階擴充到 500 件（25 階） */
+  const BAG_STEP = 20, BAG_LV_MAX = 24;
+  const bagMax = () => BAG_STEP * ((g.bagLv || 0) + 1);
+  function bagUpgradeCost() {
+    const lv = g.bagLv || 0;
+    return lv >= BAG_LV_MAX ? null : 80 + lv * 60;
+  }
+  function upgradeBag() {
+    const cost = bagUpgradeCost();
+    if (cost == null) return { ok: false, msg: '背包已是最大容量' };
+    if (VDGame.raw.coins < cost) return { ok: false, msg: `字幣不足，需要 ${cost}` };
+    VDGame.raw.coins -= cost;
+    localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
+    g.bagLv = (g.bagLv || 0) + 1;
+    save();
+    return { ok: true, max: bagMax() };
+  }
 
   let data = null;   // pets.json
   let affixData = null;
   let g = null;      // 玩家狀態
   let wordsOfPet = {};   // petId → Set(word)：家族全部單字（小寫）
 
-  const DEFAULT = () => ({ owned: {}, active: '', rating: 0, wildFloor: 1, bag: [], eqdex: {}, fusions: [], seed: 13 });
+  const DEFAULT = () => ({ owned: {}, active: '', rating: 0, wildFloor: 1, bag: [], eqdex: {}, fusions: [], seed: 13, bagLv: 0 });
 
   function load() {
     try { g = Object.assign(DEFAULT(), JSON.parse(localStorage.getItem(KEY)) || {}); }
@@ -139,13 +177,14 @@ const VDPets = (() => {
     const isAtk = slot === 'weapon' || slot === 'crest' ? true : slot === 'armor' ? false : rand() < 0.5;
     const names = POOL[slot];
     const base = names[Math.floor(rand() * names.length)];
+    const idx = tierIdx(tier);
     let perk = '';
-    if (tier === 'legendary' || (tier === 'rare' && rand() < 0.5)) {
+    if (idx >= 2 || (idx === 1 && rand() < 0.5)) {
       const keys = Object.keys(PERKS);
       perk = keys[Math.floor(rand() * keys.length)];
     }
     return {
-      slot, tier, base, name: `${tier === 'legendary' ? '傳說' : tier === 'rare' ? '稀有' : ''}${base}`,
+      slot, tier, base, name: `${idx > 0 ? tierName(tier) : ''}${base}`,
       ico: { weapon: '⚔️', armor: '🛡️', trinket: '📿', crest: '🏵️' }[slot],
       atk: isAtk ? v : 0, hp: isAtk ? 0 : v * 3, perk
     };
@@ -159,31 +198,37 @@ const VDPets = (() => {
   function unequip(id, slot) {
     const o = g.owned[id];
     if (!o || !o.equip[slot]) return { ok: false, msg: '沒有裝備' };
-    if (g.bag.length >= BAG_MAX) return { ok: false, msg: '背包滿了（上限 20 件），放不下' };
+    if (g.bag.length >= bagMax()) return { ok: false, msg: `背包滿了（上限 ${bagMax()} 件），放不下` };
     g.bag.push(o.equip[slot]); delete o.equip[slot]; save();
     return { ok: true };
   }
 
   /* ── 背包／鍛造／裝備圖鑑 ── */
-  const BAG_MAX = 20;
-  const TIER_UP = { common: 'rare', rare: 'legendary' };
   function recordDex(item) { g.eqdex[`${item.tier}:${item.base || item.name}`] = 1; }
   function addToBag(item) {
     recordDex(item);
-    if (g.bag.length >= BAG_MAX) { save(); return { ok: false, msg: '背包滿了（上限 20 件）——先鍛造或丟棄' }; }
+    if (g.bag.length >= bagMax()) { save(); return { ok: false, msg: `背包滿了（上限 ${bagMax()} 件）——先鍛造或丟棄` }; }
     g.bag.push(item); save(); return { ok: true };
   }
   const bag = () => g.bag.slice();
   function dropBag(i) { if (g.bag[i]) { g.bag.splice(i, 1); save(); return true; } return false; }
   function forge(idxs) {
-    if (!Array.isArray(idxs) || new Set(idxs).size !== 3) return { ok: false, msg: '要選 3 件同階裝備' };
+    if (!Array.isArray(idxs) || !idxs.length) return { ok: false, msg: '請選裝備' };
     const items = idxs.map(i => g.bag[i]);
     if (items.some(x => !x)) return { ok: false, msg: '裝備不存在' };
     const tier = items[0].tier;
-    if (!items.every(x => x.tier === tier)) return { ok: false, msg: '三件必須同一階' };
-    if (!TIER_UP[tier]) return { ok: false, msg: '傳說裝備已是最高階' };
+    if (!items.every(x => x.tier === tier)) return { ok: false, msg: '必須同一階' };
+    const req = forgeReq(tier);
+    if (!req) return { ok: false, msg: `${tierName(tier)}裝備已是最高階` };
+    if (new Set(idxs).size !== req.items) return { ok: false, msg: `要選 ${req.items} 件同階裝備` };
+    if (VDGame.raw.coins < req.cost) return { ok: false, msg: `字幣不足，鍛造需要 ${req.cost}` };
+    VDGame.raw.coins -= req.cost;
+    localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
     [...idxs].sort((a, b) => b - a).forEach(i => g.bag.splice(i, 1));
-    const item = rollDrop(TIER_UP[tier]);
+    const success = rand() < req.chance;
+    save();
+    if (!success) return { ok: true, failed: true, msg: `鍛造失敗……${req.items} 件材料與 ${req.cost} 字幣付諸流水，再接再厲！` };
+    const item = rollDrop(req.into);
     recordDex(item);
     g.bag.push(item); save();
     return { ok: true, item };
@@ -199,7 +244,7 @@ const VDPets = (() => {
   }
   function eqDex() {
     const out = [];
-    for (const tier of ['common', 'rare', 'legendary'])
+    for (const tier of TIERS)
       for (const slot of SLOTS)
         for (const base of POOL[slot])
           out.push({ tier, slot, base, ico: { weapon: '⚔️', armor: '🛡️', trinket: '📿', crest: '🏵️' }[slot], got: !!g.eqdex[`${tier}:${base}`] });
@@ -336,7 +381,9 @@ const VDPets = (() => {
   return {
     init, list, adopt, adoptCost, levelUp, levelCost, power, familyStats, atk, hp, stageOf, lvOf,
     rollDrop, equip, unequip, skillsOf, setDeco, setActive, active, DECOS, SLOTS, SLOT_NAME,
-    PERKS, hasPerk, activePerks, assist, bag, addToBag, dropBag, forge, equipFromBag, eqDex, BAG_MAX,
+    PERKS, hasPerk, activePerks, assist, bag, addToBag, dropBag, forge, forgeReq, equipFromBag, eqDex,
+    bagMax, bagUpgradeCost, upgradeBag,
+    TIERS, TIER_NAME, TIER_ICO, tierIdx, tierName, tierUp,
     affixStats, topAffixes, weakAffixes,
     petWin, petLose, get rating() { return g.rating; }, get wildFloor() { return g.wildFloor; }, clearWild,
     lifetime: () => g.lifetime || 0,

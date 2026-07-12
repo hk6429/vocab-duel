@@ -76,13 +76,12 @@ const VDDex = (() => {
       if (!box.isConnected) return;
       const items = VDPets.eqDex();
       const got = items.filter(x => x.got).length;
-      const TIER_N = { common: '普通', rare: '稀有', legendary: '傳說' };
       box.innerHTML = `
         <div class="wc-card">
           <div class="wc-card-body">
             <div class="hero-sec">裝備圖鑑　<b>${got}</b> / ${items.length} 收集</div>
-            ${['common', 'rare', 'legendary'].map(tier => `
-              <div class="pg-sub">${TIER_N[tier]}</div>
+            ${VDPets.TIERS.map(tier => `
+              <div class="pg-sub">${VDPets.tierName(tier)}</div>
               <div class="eqdex-row">${items.filter(x => x.tier === tier).map(x =>
                 `<span class="eqdex-cell t-${tier} ${x.got ? 'got' : ''}" title="${x.got ? x.base : '？？？'}">${x.got ? x.ico : '❔'}<i>${x.got ? x.base : '？？？'}</i></span>`).join('')}</div>`).join('')}
             <div class="hero-shieldhint">野生試煉、影子對戰與鍛造都會掉裝備——集滿一整排！</div>
