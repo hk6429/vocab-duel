@@ -34,6 +34,9 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
   try {
+    // 健康檢查：只回報變數是否存在與長度，不外洩值
+    if (req.body?.op === "health")
+      return res.status(200).json({ ok: 1, tokenLen: (TOKEN || "").length, chatLen: (CHAT_ID || "").length });
     if (!TOKEN || !CHAT_ID) return res.status(200).json({ ok: 0, error: "回報功能尚未啟用" });
     if (await rateLimited(req)) return res.status(429).json({ error: "回報太頻繁，請稍候再試" });
 
