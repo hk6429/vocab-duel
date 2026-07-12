@@ -47,15 +47,17 @@ const VDSpeak = (() => {
   function accent() { return lang; }
   function supported() { return ok; }
 
-  /* 產生一顆發音鈕（阻止冒泡，避免觸發卡片翻面等父層事件） */
+  /* 產生一顆發音鈕（阻止冒泡，避免觸發卡片翻面等父層事件），旁邊固定跟一顆回報鈕 */
   function btn(text, extra) {
     if (!ok || !text) return '';
     const brief = String(text).slice(0, 40);
     const lab = '發音 ' + ((window.VDGame && VDGame.esc) ? VDGame.esc(brief)
       : brief.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
-    return `<button class="spk ${extra || ''}" data-t="${encodeURIComponent(text)}"
+    const spk = `<button class="spk ${extra || ''}" data-t="${encodeURIComponent(text)}"
       onclick="event.stopPropagation();VDSpeak.say(decodeURIComponent(this.dataset.t))"
       aria-label="${lab}" title="發音">🔊</button>`;
+    const rpt = (window.VDReport && VDReport.btn) ? VDReport.btn(text) : '';
+    return spk + rpt;
   }
 
   return { say, btn, setAccent, accent, supported };
