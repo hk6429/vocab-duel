@@ -48,7 +48,9 @@ const VDCloud = (() => {
     const badges = (window.VDGame && VDGame.badgeCount) ? VDGame.badgeCount().got : 0;
     // 本週新掌握字數：由 VDStore.weekMastered() 提供（別組實作）；沒有就傳 0
     const weekMastered = (window.VDStore && typeof VDStore.weekMastered === 'function') ? (VDStore.weekMastered() || 0) : 0;
-    return { mastered, level, streak: meta.streak || 0, badges, weekMastered };
+    // 目前作用中字表指派完成進度：{code,name,done,total} 或 null；供班級榜顯示「本週指派」小徽章
+    const assign = (window.VDStore && typeof VDStore.activeAssignmentProgress === 'function') ? VDStore.activeAssignmentProgress() : null;
+    return { mastered, level, streak: meta.streak || 0, badges, weekMastered, assign };
   }
 
   async function api(path, opts) {
@@ -179,7 +181,8 @@ const VDCloud = (() => {
       rows.forEach((x, i) => {
         if (!show.has(i)) return;
         if (i !== lastShown + 1) body += `<tr><td colspan="5" style="text-align:center;opacity:.5">⋯</td></tr>`;
-        body += `<tr class="${x.name === me ? 'me' : ''}"><td>${medal(i)}</td><td>${esc(x.name)}</td><td>${val(x)}</td><td>Lv${x.level}</td><td>${x.streak}</td></tr>`;
+        const asg = x.assign ? `<span class="cloud-tag" title="${esc(x.assign.name)}">📋 ${x.assign.done}/${x.assign.total}</span>` : '';
+        body += `<tr class="${x.name === me ? 'me' : ''}"><td>${medal(i)}</td><td>${esc(x.name)}${asg}</td><td>${val(x)}</td><td>Lv${x.level}</td><td>${x.streak}</td></tr>`;
         lastShown = i;
       });
       const hidden = rows.length - show.size;

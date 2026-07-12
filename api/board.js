@@ -16,6 +16,28 @@ const okCode = (c) => typeof c === "string" && /^[一-鿿A-Za-z0-9_-]{2,16}$/.te
 const okName = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n); // 拒收危險字元
 const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
 
+// 暱稱黑名單：常見中英文辱罵字詞（非窮舉），排行榜公開可見，擋掉明顯攻擊性暱稱
+const BAD_WORDS = /笨蛋|白癡|智障|廢物|去死|三小|幹你|靠北|媽的|垃圾|腦殘|fuck|shit|bitch|asshole|idiot|stupid|retard/i;
+
+// 進度合理性檢查（防端點灌數，非完整答題紀錄重建）：對照上次同步紀錄，
+// 拒絕短時間內暴增到不合理的數值；沒有前次紀錄（第一次同步）一律放行
+const MASTER_RATE_PER_HR = 50;   // 每小時最多新增掌握字數（寬鬆上限，抓灌數不抓認真刷題）
+const MASTER_BURST_FLOOR = 30;   // 不論時間差多短，每次同步至少允許增加這麼多（容忍連續快速同步）
+const LEVEL_RATE_PER_HR = 5;
+const LEVEL_BURST_FLOOR = 3;
+function implausibleSync(prev, next) {
+  if (!prev || !prev.ts) return null; // 第一次同步，沒有基準可比，一律放行
+  const hrs = Math.max((Date.now() - prev.ts) / 3600000, 0);
+  if (next.mastered > prev.mastered + Math.max(MASTER_RATE_PER_HR * hrs, MASTER_BURST_FLOOR))
+    return "掌握字數增加幅度異常，請稍後再試";
+  if (next.level > prev.level + Math.max(LEVEL_RATE_PER_HR * hrs, LEVEL_BURST_FLOOR))
+    return "等級提升幅度異常，請稍後再試";
+  const days = hrs / 24;
+  if (next.streak !== 0 && next.streak > prev.streak + Math.ceil(days) + 1)
+    return "連續天數異常，請稍後再試";
+  return null;
+}
+
 // CORS 白名單：只回信任的來源，其餘退回主站
 const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
 const cors = (req, res) => {
@@ -56,10 +78,12 @@ export default async function handler(req, res) {
       if (!okCode(code)) return res.status(400).json({ error: "班級代碼須為 2–16 個中英數字" });
       if (action === "sync") {
         if (!okName(name)) return res.status(400).json({ error: "名字須為 1–12 字" });
+        if (BAD_WORDS.test(name)) return res.status(400).json({ error: "名字含不當字詞，請更換" });
         const nm = name.trim();
         const k = key(code);
-        const exists = await redis.hexists(k, nm);
-        if (!exists && (await redis.hlen(k)) >= MAX_MEMBERS)
+        const prevRaw = await redis.hget(k, nm);
+        const prev = prevRaw ? (typeof prevRaw === "string" ? JSON.parse(prevRaw) : prevRaw) : null;
+        if (!prev && (await redis.hlen(k)) >= MAX_MEMBERS)
           return res.status(400).json({ error: "這個班級已滿 60 人" });
         const rec = {
           mastered: clamp(req.body.mastered, 6205),
@@ -69,6 +93,8 @@ export default async function handler(req, res) {
           weekMastered: clamp(req.body.weekMastered, 6205),
           ts: Date.now(),
         };
+        const reason = implausibleSync(prev, rec);
+        if (reason) return res.status(400).json({ error: reason });
         await redis.hset(k, { [nm]: JSON.stringify(rec) });
         await redis.expire(k, TTL);
         return res.status(200).json({ ok: 1 });

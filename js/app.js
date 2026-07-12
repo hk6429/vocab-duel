@@ -289,6 +289,7 @@ const VDApp = (() => {
             這是認知心理學驗證過最有效的長期記憶策略之一，
             遊戲化只是讓孩子願意天天回來複習的糖衣。
           </p>
+          <p style="margin-top:12px"><a href="privacy.html" target="_blank" rel="noopener">🔒 隱私與資料說明</a></p>
         </div></div>
         <button class="btn ghost wide" onclick="VDApp.go('menu')">回主選單</button>`;
     }

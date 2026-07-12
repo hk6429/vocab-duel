@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>字鬥英雄・隱私與資料說明</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --ink:#2b2b2b; --sub:#6b7280; --line:#e5e7eb; --green:#3a7d44; --bg:#f6f7f9; --card:#ffffff; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; background:var(--bg); color:var(--ink); line-height:1.8; }
+  .wrap { max-width:720px; margin:0 auto; padding:24px 16px 48px; }
+  header h1 { font-size:22px; font-weight:700; }
+  header p { color:var(--sub); font-size:14px; margin-top:4px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-top:16px; }
+  .card h2 { font-size:16px; font-weight:700; margin-bottom:10px; color:var(--green); }
+  .card p, .card li { font-size:14.5px; }
+  .card ul { padding-left:20px; margin:8px 0; }
+  .card li { margin-bottom:4px; }
+  .note { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:8px; padding:10px 14px; font-size:13.5px; margin-top:10px; }
+  .tag { display:inline-block; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3; border-radius:999px; padding:2px 10px; font-size:12.5px; margin:2px 4px 2px 0; }
+  a { color:var(--green); }
+  footer { margin-top:24px; font-size:13px; color:var(--sub); text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>字鬥英雄・隱私與資料說明</h1>
+    <p>寫給家長、老師、學校資訊組參考。用白話文說明，不是正式法律文件。</p>
+  </header>
+
+  <div class="card">
+    <h2>1. 這是什麼</h2>
+    <p>「字鬥英雄」是新竹一位國中國文老師（陳乃誠）利用課餘時間開發、維護的<b>免費個人教學side project</b>，不是公司產品，沒有商業公司、沒有客服部門、也沒有 SLA（服務保證）。</p>
+    <p style="margin-top:8px">老實說：這是一個人業餘維護的網站，<b>可能因為工作忙碌、個人因素而暫停更新，甚至有一天停止服務</b>。目前規劃會持續維護，但無法承諾長期營運，請學校與家長知悉這個風險，不建議把它當成「不可或缺」的正式教學系統使用。</p>
+  </div>
+
+  <div class="card">
+    <h2>2. 蒐集什麼資料</h2>
+    <p>遊戲<b>不需要註冊帳號</b>，也<b>沒有身分驗證機制</b>。實際會被存放的欄位如下：</p>
+    <ul>
+      <li>單字學習進度（答對/答錯紀錄、Leitner 複習盒次）</li>
+      <li>學習統計（連續天數、每日答題數、歷史曲線、錯題本）</li>
+      <li>遊戲內虛擬進度（等級、字幣、徽章、詞靈、城鎮存檔、市場掛單）</li>
+      <li>使用者自行輸入的「暱稱」（用於班級排行榜、城鎮訪客簿留言）</li>
+      <li>使用者自行產生的「同步碼」（6–12 位英數字，跨裝置抓回進度用）與老師提供的「班級碼」</li>
+    </ul>
+    <div class="note">⚠️ 暱稱請<b>務必不要填真實姓名</b>，用綽號、座號或代號就好。系統不會、也無法驗證你填的是不是真名——這件事完全靠使用者自律。</div>
+  </div>
+
+  <div class="card">
+    <h2>3. 資料存在哪裡</h2>
+    <p><b>裝置端（localStorage）</b>：預設所有進度都先存在孩子使用的瀏覽器裡。清除瀏覽器資料／換瀏覽器／換裝置，這份資料就會直接消失（除非曾主動同步到雲端）。</p>
+    <p style="margin-top:8px"><b>雲端（Upstash Redis）</b>：只有使用者<b>主動輸入同步碼或班級碼</b>去「上傳」時，才會把資料送到雲端資料庫，用來做跨裝置同步或班級排行榜。沒有操作這兩個功能，就完全不會有雲端資料。各類雲端資料的自動到期時間（過期後系統自動清除）：</p>
+    <ul>
+      <li><span class="tag">個人同步存檔</span>約 400 天（一年多）未使用會自動清除</li>
+      <li><span class="tag">班級排行榜</span>約 240 天（一學年左右）未使用會自動清除</li>
+      <li><span class="tag">即時對戰房間</span>10 分鐘後自動清除；非同步「挑戰書」7 天後自動清除</li>
+      <li><span class="tag">裝備市場掛單</span>7 天後自動清除</li>
+      <li><span class="tag">單字之城（城鎮）存檔</span>目前<b>沒有</b>自動到期設定，會一直保留在資料庫，直到使用者自己覆寫或本專案手動清除</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>4. 資料不會被拿去做什麼</h2>
+    <p>不轉售給第三方、不做任何形式的廣告投放、站上沒有任何金流／付費機制（遊戲內「字幣」純虛擬、無法儲值也無法兌現）。經檢查，網站程式碼中<b>沒有埋設</b> Google Analytics、Facebook Pixel 或其他任何第三方追蹤分析工具。</p>
+  </div>
+
+  <div class="card">
+    <h2>5. 想刪除資料怎麼做</h2>
+    <p><b>本機資料</b>：直接在瀏覽器清除該網站的「網站資料／localStorage」即可完全清除，或使用無痕視窗遊玩就不會留下任何本機紀錄。</p>
+    <p style="margin-top:8px"><b>雲端資料</b>：因為沒有帳號系統，本站<b>無法遠端指定「刪除某位特定使用者」的資料</b>（系統不知道同步碼/暱稱背後對應的是誰）。雲端資料會依上表 TTL 到期後自動清除；若需要提前處理或有疑慮，請透過學校聯繫本站維護者（大乃老師），會盡力協助。</p>
+  </div>
+
+  <div class="card">
+    <h2>6. 給未成年人使用的建議</h2>
+    <p>建議家長／老師陪同孩子第一次使用，了解遊戲內容與社交功能的範圍。<b>需要特別留意的是社交功能</b>：班級排行榜、即時對戰挑戰、城鎮訪客簿留言，都會讓孩子輸入的「暱稱」被同班同學（甚至知道班級碼的任何人）看到，請務必提醒孩子使用非真實姓名的暱稱。</p>
+  </div>
+
+  <footer>
+    <p>本頁面為誠實告知，非正式法律文件，內容如有更新以本頁最新版本為準。</p>
+    <p style="margin-top:6px"><a href="parent.html">← 回家長成果頁</a></p>
+  </footer>
+</div>
+</body>
+</html>

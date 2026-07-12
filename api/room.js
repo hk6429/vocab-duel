@@ -26,7 +26,9 @@ const genChCode = () => {
   return s;
 };
 const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
-const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12;
+// 暱稱黑名單：常見中英文辱罵字詞（非窮舉），暱稱會顯示在對戰畫面與戰帖，擋掉明顯攻擊性暱稱
+const BAD_WORDS = /笨蛋|白癡|智障|廢物|去死|三小|幹你|靠北|媽的|垃圾|腦殘|fuck|shit|bitch|asshole|idiot|stupid|retard/i;
+const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !BAD_WORDS.test(n);
 const okCode = (c) => typeof c === "string" && /^\d{4}$/.test(c);
 const okRole = (r) => r === "p1" || r === "p2";
 

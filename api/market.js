@@ -32,7 +32,8 @@ const PERKS = ["", "xp10", "sprint5", "wrong2"];
 
 const secret = () => process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "vd";
 const sigOf = (item) => createHmac("sha256", secret()).update(JSON.stringify(item)).digest("hex").slice(0, 24);
-const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n); // 拒收危險字元
+const BAD_WORDS = /笨蛋|白癡|白痴|智障|廢物|去死|王八蛋|三小|幹你|靠北|媽的|滾蛋|垃圾|腦殘|廢咖|fuck|shit|bitch|asshole|idiot|stupid|retard/i; // 賣家/預留者暱稱在市場公開可見，擋常見髒話羞辱字眼
+const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n) && !BAD_WORDS.test(n); // 拒收危險字元
 
 // CORS 白名單：只回信任的來源，其餘退回主站
 const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];

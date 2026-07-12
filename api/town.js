@@ -11,13 +11,16 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
 });
 
+const TTL = 400 * 24 * 60 * 60;          // 約一年多，過期自動清（與 sync.js 個人存檔一致；原本城鎮資料永不過期，隱私頁審查點名補上）
 const KEY = (code) => `vd:town:${code}`;
 const VISIT = (v) => `vd:town:visit:${v}`;       // 參觀碼 → 本體 code
 const VISIT_OF = (code) => `vd:town:visitof:${code}`; // 本體 code → 參觀碼（冪等）
 const GUEST = (code) => `vd:town:guest:${code}`; // 訪客簿（LPUSH，保 20 筆）
 const okCode = (c) => typeof c === "string" && /^[A-Za-z0-9_-]{4,32}$/.test(c.trim());
 const okVisit = (v) => typeof v === "string" && /^[A-Z0-9]{6}$/.test(String(v).trim().toUpperCase());
-const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n); // 拒收危險字元
+// 暱稱黑名單：常見中英文辱罵字詞（非窮舉），暱稱/城名會顯示在訪客簿與城鎮頁，擋掉明顯攻擊性字詞
+const BAD_WORDS = /笨蛋|白癡|智障|廢物|去死|三小|幹你|靠北|媽的|垃圾|腦殘|fuck|shit|bitch|asshole|idiot|stupid|retard/i;
+const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n) && !BAD_WORDS.test(n); // 拒收危險字元
 const EMOJIS = ["👍", "🎉", "🏰", "💪", "🌟", "❤️", "😆", "👏"]; // 留言表情白名單
 const genVisit = () => {
   const c = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // 避開易混淆字元
@@ -58,23 +61,29 @@ export default async function handler(req, res) {
       if (await rateLimited(req, "town")) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
       const town = req.body.town;
       if (!town || !town.grid || !town.res) return res.status(200).json({ ok: 0, error: "城鎮資料不完整" });
-      // 城名淨化：濾掉危險字元並限長
-      if (typeof town.name === "string") town.name = town.name.replace(/[<>&"']/g, "").slice(0, 12);
+      // 城名淨化：濾掉危險字元並限長；含黑名單字詞直接拒絕（不靜默截斷）
+      if (typeof town.name === "string") {
+        town.name = town.name.replace(/[<>&"']/g, "").slice(0, 12);
+        if (BAD_WORDS.test(town.name)) return res.status(200).json({ ok: 0, error: "城名含不當字詞，請更換" });
+      }
       const s = JSON.stringify(town);
       if (s.length > 60000) return res.status(200).json({ ok: 0, error: "資料過大" });
       const c = code.trim();
-      await redis.set(KEY(c), s);
+      await redis.set(KEY(c), s, { ex: TTL });
       // 參觀碼：冪等——同一本體碼永遠回同一組；沒有才發新碼（最多試 5 次避撞）
       let visitCode = await redis.get(VISIT_OF(c));
       if (!visitCode) {
         for (let i = 0; i < 5 && !visitCode; i++) {
           const v = genVisit();
           if (!(await redis.exists(VISIT(v)))) {
-            await redis.set(VISIT(v), c);
-            await redis.set(VISIT_OF(c), v);
+            await redis.set(VISIT(v), c, { ex: TTL });
+            await redis.set(VISIT_OF(c), v, { ex: TTL });
             visitCode = v;
           }
         }
+      } else {
+        await redis.expire(VISIT(visitCode), TTL);
+        await redis.expire(VISIT_OF(c), TTL);
       }
       return res.status(200).json({ ok: 1, visitCode: visitCode || "" });
     }
@@ -108,6 +117,7 @@ export default async function handler(req, res) {
       const gk = GUEST(owner);
       await redis.lpush(gk, JSON.stringify({ nick: nick.trim(), emoji, ts: Date.now() }));
       await redis.ltrim(gk, 0, 19); // 訪客簿只保最新 20 筆
+      await redis.expire(gk, TTL);
       return res.status(200).json({ ok: 1 });
     }
 

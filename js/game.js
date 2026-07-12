@@ -493,7 +493,14 @@ const VDGame = (() => {
   const tierNeed = tier => TIER_LV[tier] || 1;
 
   /* ── 自訂英雄檔案（CD3/CD4） ── */
-  function setNick(v) { g.nick = (v || '').slice(0, 12); save(); }
+  /* 暱稱粗篩：擋掉常見髒話／羞辱字眼，班級榜／挑戰書全班可見，不能只靠自律（教育圈審查點名） */
+const NICK_BLOCK = /笨蛋|白癡|白痴|智障|廢物|去死|王八蛋|三小|幹你|靠北|媽的|滾蛋|垃圾|腦殘|廢咖|死gay|fuck|shit|bitch|asshole|idiot|stupid|retard/i;
+function setNick(v) {
+  let s = (v || '').slice(0, 12);
+  if (NICK_BLOCK.test(s)) s = s.replace(NICK_BLOCK, m => '＊'.repeat(m.length));
+  g.nick = s;
+  save();
+}
   function setAvatar(a) { g.avatar = a; save(); }
   const heroName = () => g.nick || '無名字鬥者';
 
@@ -523,7 +530,7 @@ const VDGame = (() => {
   /* ── HTML 轉義（城鎮/市場等模組共用） ── */
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-  /* ── 使用時間提醒：每日累計答題時間持久化（跨重整不歸零），滿 30 分鐘吐提示，每日最多 2 次 ── */
+  /* ── 使用時間提醒：每日累計答題時間持久化（跨重整不歸零），每滿 30 分鐘吐一次提示，不設每日次數上限（原本超過 2 次就完全不再提醒，等於形同虛設） ── */
   let _lastAct = Date.now();
   function restCheck() {
     const t = VDStore.today();
@@ -532,7 +539,6 @@ const VDGame = (() => {
     const gap = (now - _lastAct) / 60000;
     _lastAct = now;
     if (gap > 0) g.rest.mins += Math.min(gap, 5); // 掛機發呆超過 5 分鐘不計入
-    if ((g.rest.shown || 0) >= 2) return;
     if (g.rest.mins < 30 * (g.rest.shown + 1)) return;
     g.rest.shown++;
     save();

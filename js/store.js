@@ -235,6 +235,16 @@ const VDStore = (() => {
       saveMeta();
     },
     assignments() { return meta.assignments; },
+    /* 目前作用中字表指派（最近一次新增）完成進度：{code,name,done,total} 或 null 無指派時
+       done 定義與 stats.js assignmentCard() 一致＝box≥1（不是精熟，避免剛派下去全班顯示 0 太打擊士氣） */
+    activeAssignmentProgress() {
+      const codes = Object.keys(meta.assignments);
+      if (!codes.length) return null;
+      const code = codes.sort((a, b) => meta.assignments[b].ts - meta.assignments[a].ts)[0];
+      const a = meta.assignments[code];
+      const done = a.words.filter(w => (prog[w] ? prog[w].b : -1) >= 1).length;
+      return { code, name: a.name, done, total: a.words.length };
+    },
     isDue: w => prog[w] && prog[w].d <= today(),
     isSeen: w => !!prog[w],
     box: w => (prog[w] ? prog[w].b : -1), // -1 = 未學

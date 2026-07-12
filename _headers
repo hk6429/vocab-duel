@@ -1,4 +1,12 @@
-# 快取規則（Cloudflare Pages / Netlify 共用；後面的規則覆蓋前面同名 header）
+# 安全標頭（Cloudflare Pages / Netlify 共用；全站套用，CSP 允許 inline script/style 因模板大量用 onclick=）
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://vocab-duel.vercel.app https://vocab-duel.pages.dev https://vocab-duel.netlify.app; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+
+# 快取規則（後面的規則覆蓋前面同名 header）
 /img/*
   Cache-Control: public, max-age=31536000, immutable
 
