@@ -2,10 +2,10 @@
 // 防作弊：上架時伺服器驗數值區間＋HMAC 簽章（金鑰＝現有 env token，不新增秘密）；
 //        賣家憑上架時發的 claimKey 領貨款／下架；買家每日限購 3 件；成交抽 10% 稅。
 // POST { op:'list' }                              → 市場前 50 筆（價格低→高）
-// POST { op:'post', item, price, seller }         → 上架，回 { id, claimKey }
+// POST { op:'post', item, price, seller, reserveFor? } → 上架（可保留給指定同學），回 { id, claimKey }
 // POST { op:'buy', id, nick }                     → 購買，回 { item }
 // POST { op:'cancel', id, claimKey }              → 下架，回 { item }
-// POST { op:'claim', id, claimKey }               → 已售出的掛單領貨款，回 { coins }
+// POST { op:'claim', id, claimKey }               → 已售出的掛單領貨款，回 { coins, buyer }
 import { Redis } from "@upstash/redis";
 import { createHmac, randomBytes } from "crypto";
 
@@ -63,6 +63,13 @@ function cleanItem(it) {
 
 const parse = (x) => { try { return typeof x === "string" ? JSON.parse(x) : x; } catch { return null; } };
 
+// zset member 的標準序列化：欄位順序固定，post／buy／cancel 三處都用它，zrem 才對得起來
+const memberOf = (rec) => JSON.stringify(
+  rec.reserveFor
+    ? { id: rec.id, item: rec.item, seller: rec.seller, ts: rec.ts, reserveFor: rec.reserveFor }
+    : { id: rec.id, item: rec.item, seller: rec.seller, ts: rec.ts }
+);
+
 // 輕量限流：每 IP 每 60 秒 30 次寫入，超過回 429
 async function rateLimited(req, scope) {
   const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
@@ -103,13 +110,20 @@ export default async function handler(req, res) {
       const raw = await redis.zrange(ZKEY, 0, 199);
       const mine = raw.map(parse).filter(x => x && x.seller === seller.trim());
       if (mine.length >= 3) return res.status(200).json({ ok: 0, error: "最多同時掛 3 件" });
+      // 選填：保留給指定同學（淨化＋限長；填了只有這位暱稱買得走）
+      let reserveFor = "";
+      if (req.body.reserveFor != null && String(req.body.reserveFor).trim()) {
+        if (!okNick(req.body.reserveFor)) return res.status(200).json({ ok: 0, error: "保留對象暱稱不合法" });
+        reserveFor = String(req.body.reserveFor).trim().slice(0, 12);
+      }
       const id = randomBytes(6).toString("hex");
       const claimKey = randomBytes(12).toString("hex");
       const entry = { id, item, seller: seller.trim(), ts: Date.now() };
+      if (reserveFor) entry.reserveFor = reserveFor;
       // 簽章涵蓋整筆掛單（item＋price＋seller＋id），杜絕掉包
       const sig = sigOf({ item, price, seller: entry.seller, id });
       await redis.set(ITEM(id), JSON.stringify({ ...entry, price, claimKey, sig, sold: 0, claimed: 0 }), { ex: ITEM_TTL });
-      await redis.zadd(ZKEY, { score: price, member: JSON.stringify(entry) });
+      await redis.zadd(ZKEY, { score: price, member: memberOf(entry) });
       return res.status(200).json({ ok: 1, id, claimKey });
     }
 
@@ -119,6 +133,9 @@ export default async function handler(req, res) {
       const rec = parse(await redis.get(ITEM(id)));
       if (!rec || rec.sold) return res.status(200).json({ ok: 0, error: "這件已被買走或下架了" });
       if (rec.seller === nick.trim()) return res.status(200).json({ ok: 0, error: "不能買自己的掛單" });
+      // 保留單：只有被指定的同學買得走（在計數前擋，不燒配額）
+      if (rec.reserveFor && rec.reserveFor !== nick.trim())
+        return res.status(200).json({ ok: 0, error: `這是保留給 ${rec.reserveFor} 的` });
       // 先驗新版全物件簽章，再退回舊版 item-only 簽章（相容既有掛單）
       const sigNew = sigOf({ item: rec.item, price: rec.price, seller: rec.seller, id: rec.id });
       if (sigNew !== rec.sig && sigOf(rec.item) !== rec.sig) return res.status(200).json({ ok: 0, error: "簽章不符，掛單作廢" });
@@ -134,9 +151,9 @@ export default async function handler(req, res) {
         disc = [0, 5, 10, 15][h % 4];
       }
       const finalPrice = Math.ceil(rec.price * (100 - disc) / 100);
-      rec.sold = 1; rec.soldTs = Date.now(); rec.price = finalPrice;
+      rec.sold = 1; rec.soldTs = Date.now(); rec.price = finalPrice; rec.buyer = nick.trim();
       await redis.set(ITEM(id), JSON.stringify(rec), { ex: ITEM_TTL });
-      await redis.zrem(ZKEY, JSON.stringify({ id: rec.id, item: rec.item, seller: rec.seller, ts: rec.ts }));
+      await redis.zrem(ZKEY, memberOf(rec));
       return res.status(200).json({ ok: 1, item: rec.item, price: finalPrice, disc });
     }
 
@@ -145,7 +162,7 @@ export default async function handler(req, res) {
       const rec = parse(await redis.get(ITEM(id)));
       if (!rec || rec.claimKey !== claimKey) return res.status(200).json({ ok: 0, error: "找不到掛單" });
       if (rec.sold) return res.status(200).json({ ok: 0, error: "已售出，請領貨款" });
-      await redis.zrem(ZKEY, JSON.stringify({ id: rec.id, item: rec.item, seller: rec.seller, ts: rec.ts }));
+      await redis.zrem(ZKEY, memberOf(rec));
       await redis.del(ITEM(id));
       return res.status(200).json({ ok: 1, item: rec.item });
     }
@@ -158,7 +175,7 @@ export default async function handler(req, res) {
       if (rec.claimed) return res.status(200).json({ ok: 0, error: "貨款已領過" });
       rec.claimed = 1;
       await redis.set(ITEM(id), JSON.stringify(rec), { ex: ITEM_TTL });
-      return res.status(200).json({ ok: 1, coins: Math.floor(rec.price * (1 - TAX)) });
+      return res.status(200).json({ ok: 1, coins: Math.floor(rec.price * (1 - TAX)), buyer: rec.buyer || "" });
     }
 
     return res.status(400).json({ error: "bad op" });

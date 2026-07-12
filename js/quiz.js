@@ -1,8 +1,10 @@
 /* 自測模組：英選中 / 中選英 / 例句挖空，一輪 10 題，結果回寫熟悉度 */
 const VDQuiz = (() => {
   const ROUND = 10;
-  let questions = [], idx = 0, score = 0;
+  const SESSION_MAX = 20; // 畢業自測最多考一批閃卡的量
+  let questions = [], idx = 0, score = 0, combo = 0;
   let wrongStreak = 0, rescue = false, curPool = []; // 連錯救援：連錯 3 題起後續誘答改隨機
+  let session = 0; // 場次代號：自動下一題的計時器用來偵測「已離開這一輪」
 
   function shuffle(a) {
     for (let i = a.length - 1; i > 0; i--) {
@@ -131,7 +133,17 @@ const VDQuiz = (() => {
   function start(words, el) {
     curPool = words.slice();
     questions = buildQuestions(words);
-    idx = 0; score = 0; wrongStreak = 0; rescue = false; render._awarded = false;
+    idx = 0; score = 0; combo = 0; wrongStreak = 0; rescue = false; render._awarded = false;
+    session++;
+    render(el);
+  }
+
+  /* 指定字開一輪（閃卡「畢業自測」入口）：list＝要考的字，pool＝誘答來源（預設 list） */
+  function startWith(list, el, pool) {
+    curPool = (pool && pool.length ? pool : list).slice();
+    questions = list.slice(0, SESSION_MAX).map(w => makeQuestionFor(w, curPool, true));
+    idx = 0; score = 0; combo = 0; wrongStreak = 0; rescue = false; render._awarded = false;
+    session++;
     render(el);
   }
 
@@ -177,8 +189,9 @@ const VDQuiz = (() => {
         locked = true;
         const v = decodeURIComponent(btn.dataset.v);
         const correct = v === q.ans;
+        combo = correct ? combo + 1 : 0;
         VDStore.record(q.word, correct);
-        VDGame.onAnswer(correct, 'quiz');
+        VDGame.onAnswer(correct, 'quiz', combo);
         trackStreak(correct);
         if (correct) score++;
         el.querySelectorAll('.opt').forEach(b => {
@@ -212,8 +225,9 @@ const VDQuiz = (() => {
     let locked = false;
     const finish = correct => {
       locked = true;
+      combo = correct ? combo + 1 : 0;
       VDStore.record(q.word, correct);
-      VDGame.onAnswer(correct, 'spell');
+      VDGame.onAnswer(correct, 'spell', combo);
       trackStreak(correct);
       if (correct) score++;
       input.disabled = true;
@@ -246,9 +260,18 @@ const VDQuiz = (() => {
         <div class="qz-ex">${m.example} ${VDSpeak.btn(m.example)}<br><span class="ex-zh">${m.example_zh}</span></div>
         ${VDEnrich.block(q.word)}
       </div>
-      <button class="btn qz-next">下一題 →</button>`;
-    fb.querySelector('.qz-next').onclick = () => { idx++; render(el); };
+      ${correct ? `<div class="pg-hint">${combo >= 2 ? `🔥 連對 ×${combo}！` : ''}即將自動下一題…</div>` : '<button class="btn qz-next">下一題 →</button>'}`;
+    const mySession = session;
+    let advanced = false;
+    const next = () => {
+      if (advanced || mySession !== session || !el.contains(fb)) return; // 已離開這一輪／換頁就不動畫面
+      advanced = true;
+      idx++;
+      render(el);
+    };
+    if (correct) setTimeout(next, 1200); // 答對 1.2 秒自動前進；答錯保留手動看解析
+    else fb.querySelector('.qz-next').onclick = next;
   }
 
-  return { start, randomQuestion };
+  return { start, startWith, randomQuestion };
 })();

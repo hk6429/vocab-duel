@@ -13,7 +13,7 @@ const VDPets = (() => {
   let g = null;      // 玩家狀態
   let wordsOfPet = {};   // petId → Set(word)：家族全部單字（小寫）
 
-  const DEFAULT = () => ({ owned: {}, active: '', rating: 0, wildFloor: 1, bag: [], eqdex: {}, fusions: [] });
+  const DEFAULT = () => ({ owned: {}, active: '', rating: 0, wildFloor: 1, bag: [], eqdex: {}, fusions: [], seed: 13 });
 
   function load() {
     try { g = Object.assign(DEFAULT(), JSON.parse(localStorage.getItem(KEY)) || {}); }
@@ -21,6 +21,12 @@ const VDPets = (() => {
     if (!Array.isArray(g.bag)) g.bag = [];
     if (!g.eqdex || typeof g.eqdex !== 'object') g.eqdex = {};
     if (!Array.isArray(g.fusions)) g.fusions = [];
+    // 舊存檔容錯：lifetime（累計勝場積分，只增不減）用 rating 與城鎮已兌換積分較大者補齊，避免老玩家兌換權縮水
+    if (typeof g.lifetime !== 'number') {
+      let redeemed = 0;
+      try { redeemed = (JSON.parse(localStorage.getItem('vd_town')) || {}).redeemedRating || 0; } catch { /* 無城鎮存檔 */ }
+      g.lifetime = Math.max(g.rating || 0, redeemed);
+    }
   }
   load(); // 同步先載：perk 查詢（閃卡/衝刺/錯題）不必等 init
   const save = () => localStorage.setItem(KEY, JSON.stringify(g));
@@ -95,6 +101,9 @@ const VDPets = (() => {
     const o = g.owned[id];
     if (!o) return { ok: false, msg: '尚未領養' };
     if (o.lv >= MAX_LV) return { ok: false, msg: '已滿級' };
+    // 學習門檻：詞源之力（家族已學比例）要跟得上等級——升級的正道是學字
+    const pw = Math.round(power(id) * 100), need = o.lv * 3;
+    if (pw < need) return { ok: false, needStudy: true, msg: `先學會這家族更多字（現在 ${pw}%，需要 ${need}%）` };
     const cost = levelCost(o.lv);
     if (VDGame.raw.coins < cost) return { ok: false, msg: `字幣不足，需要 ${cost}` };
     const before = stageOf(o.lv);
@@ -106,8 +115,13 @@ const VDPets = (() => {
   }
 
   /* ── 裝備 ── */
-  let _seed = 13;
-  function rand() { _seed = (_seed * 9301 + 49297 + (VDGame.raw.xp || 0)) % 233280; return _seed / 233280; }
+  /* 偽隨機 seed 併入 g 持久化（比照 vd_game 的 seed 做法）——重整不重置，杜絕刷裝備/鍛造 */
+  function rand() {
+    if (typeof g.seed !== 'number') g.seed = 13;
+    g.seed = (g.seed * 9301 + 49297 + (VDGame.raw.xp || 0)) % 233280;
+    save();
+    return g.seed / 233280;
+  }
   const POOL = {
     weapon: ['羽毫劍', '斷句斧', '音節弓', '詞鋒匕'], armor: ['紙鎧', '墨紋盾甲', '綴皮氅', '疊字重甲'],
     trinket: ['字符鈴', '綴玉墜', '詞露瓶', '音標戒'], crest: ['字首紋章', '字尾徽記', '字根圖騰', '詞源印']
@@ -305,9 +319,9 @@ const VDPets = (() => {
   const weakAffixes = n => affixStats().sort((x, y) => x.pct - y.pct || y.total - x.total).slice(0, n);
 
   /* ── 競技積分／野生進度 ── */
-  function petWin() { g.rating += 20; save(); return g.rating; }
+  function petWin() { g.rating += 20; g.lifetime = (g.lifetime || 0) + 20; save(); return g.rating; }
   function petLose() { g.rating = Math.max(0, g.rating - 10); save(); return g.rating; }
-  function clearWild(floor) { if (floor === g.wildFloor && floor < 10) { g.wildFloor = floor + 1; save(); } }
+  function clearWild(floor) { if (floor === g.wildFloor) { g.wildFloor = floor + 1; save(); } } // 無限爬塔：不封頂
 
   function snapshot() {
     const id = active();
@@ -325,6 +339,7 @@ const VDPets = (() => {
     PERKS, hasPerk, activePerks, assist, bag, addToBag, dropBag, forge, equipFromBag, eqDex, BAG_MAX,
     affixStats, topAffixes, weakAffixes,
     petWin, petLose, get rating() { return g.rating; }, get wildFloor() { return g.wildFloor; }, clearWild,
+    lifetime: () => g.lifetime || 0,
     snapshot, wordsOf: id => wordsOfPet[id] || new Set(),
     def: petDef, canFuse, fuse, FUSE_COST, FUSE_MAX,
     fusions: () => g.fusions.slice(),

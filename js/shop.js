@@ -14,7 +14,7 @@ const VDShop = (() => {
       else if (owned) action = `<button class="btn ghost sm" data-equip="${it.id}">裝備</button>`;
       else action = `<button class="btn sm" data-buy="${it.id}">🪙 ${it.price}</button>`;
       return `<div class="shop-item ${owned ? 'owned' : ''}">
-        <span class="shop-ico ${it.kind === 'frame' ? 'fr-' + it.id : ''}"><img class="shop-ico-img" src="img/ui/shop_${it.id}.png" alt="" onerror="this.replaceWith(document.createTextNode('${it.ico}'))"></span>
+        <span class="shop-ico ${it.kind === 'frame' ? 'fr-' + it.id : ''}"><img loading="lazy" decoding="async" class="shop-ico-img" src="img/ui/shop_${it.id}.webp" alt="" onerror="this.replaceWith(document.createTextNode('${it.ico}'))"></span>
         <span class="shop-body">
           <span class="shop-name">${it.name}${count ? `　<b class="shop-count">×${count}</b>` : ''}</span>
           <span class="shop-desc">${it.desc}</span>
@@ -24,7 +24,7 @@ const VDShop = (() => {
     }).join('');
     el.innerHTML = `
       <div class="wc-card">
-        <img class="wc-card-img" src="img/ui/h_shop.png" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_shop.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <div class="hero-sec">字幣商店　<b class="shop-wallet">🪙 ${g.coins}</b></div>
           <div class="shop-list">${items}</div>

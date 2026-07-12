@@ -45,10 +45,39 @@ const VDBattle = (() => {
     return VDApp.words().filter(w => set.has(w.level));
   }
 
+  /* 本週擂主：由 VDGame.weekInfo() 提供（別組介面）；沒有就降級不顯示 */
+  function weekChampion() {
+    try {
+      if (typeof VDGame.weekInfo === 'function') return VDGame.weekInfo().championId || null;
+    } catch { /* 降級 */ }
+    return null;
+  }
+
+  /* 同對手連敗計數：只記在 sessionStorage，不進存檔 */
+  function loseStreak(id) {
+    try { return JSON.parse(sessionStorage.getItem('vd_ls') || '{}')[id] || 0; } catch { return 0; }
+  }
+  function bumpLoseStreak(id, win) {
+    try {
+      const m = JSON.parse(sessionStorage.getItem('vd_ls') || '{}');
+      m[id] = win ? 0 : (m[id] || 0) + 1;
+      sessionStorage.setItem('vd_ls', JSON.stringify(m));
+    } catch { /* 忽略 */ }
+  }
+
+  /* DDA 橡皮筋：電腦有效命中率隨玩家近期正確率微調（夾在 −0.12 ~ +0.08） */
+  function effAcc() {
+    const rAcc = ((typeof VDStore.recentAcc === 'function') && VDStore.recentAcc(20)) || 0.7;
+    let a = Math.min(opp.acc + 0.08, Math.max(opp.acc - 0.12, opp.acc + (rAcc - 0.7) * 0.3));
+    if (loseStreak(opp.id) >= 2) a -= 0.05;          // 同對手連敗 2 場，暗中再放水
+    if (state && state.easy) a -= 0.2;                // 新手第一戰：安徒生放水版
+    return a;
+  }
+
   /* 作家頭像：3D Pixel Q版圖，載入失敗自動退回 emoji */
   function face(o, big) {
     const cls = 'bt-portrait' + (big ? ' big' : '');
-    return `<img src="img/authors/${o.id}.png" alt="${o.name}" class="${cls}"
+    return `<img loading="lazy" decoding="async" src="img/authors/${o.id}.webp" alt="${o.name}" class="${cls}"
       onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${o.emoji}',className:'bt-face-emoji${big ? ' big' : ''}'}))">`;
   }
 
@@ -112,9 +141,11 @@ const VDBattle = (() => {
   }
 
   function chooseOpponent() {
+    const champ = weekChampion();
     el.innerHTML = `${rankStrip()}<div class="bt-oppgrid">${OPPONENTS.map(o => {
       const open = VDGame.tierUnlocked(o.tier);
-      return `<button class="bt-oppcard ${open ? '' : 'locked'}" data-id="${o.id}" data-open="${open ? 1 : 0}">
+      return `<button class="bt-oppcard ${open ? '' : 'locked'}${champ === o.id ? ' champ' : ''}" data-id="${o.id}" data-open="${open ? 1 : 0}">
+        ${champ === o.id ? '<div class="bt-champ">👑 本週擂主・段位分×2</div>' : ''}
         <div class="bt-face">${open ? face(o) : '<span class="bt-face-emoji">🔒</span>'}</div>
         <div class="bt-name">${o.name}</div>
         <div class="bt-tier t-${o.tier}">${o.tier}</div>
@@ -141,7 +172,9 @@ const VDBattle = (() => {
   function startCpu(o) {
     opp = o;
     words = scopedWords(o.levels);
-    state = { pHp: MAX_HP, oHp: MAX_HP, combo: 0, round: 0, log: opp.taunt, comeback: false };
+    // 新手第一戰旗標：只對入門安徒生生效（放水 −0.2），打完清除
+    const easy = sessionStorage.getItem('vd_firstBattle') === '1' && o.id === 'andersen';
+    state = { pHp: MAX_HP, oHp: MAX_HP, combo: 0, round: 0, log: opp.taunt, comeback: false, easy };
     locked = false;
     if (window.VDPets) VDPets.init(); // 助戰詞靈資料，首回合前就緒
     VDGame.onBattleStart();
@@ -195,7 +228,7 @@ const VDBattle = (() => {
     setTimeout(() => {
       if (state.oHp <= 0) return finish(true);
       if (state.pHp <= 0) return finish(false);
-      const hit = Math.random() < opp.acc;
+      const hit = Math.random() < effAcc();
       if (hit) {
         const dmg = 8 + Math.round(opp.acc * 8);
         state.pHp = Math.max(0, state.pHp - dmg);
@@ -279,16 +312,24 @@ const VDBattle = (() => {
 
   function reallyFinish(win) {
     localStorage.removeItem('vd_pendingBattle'); // 已結算，清逃跑標記
+    sessionStorage.removeItem('vd_firstBattle'); // 新手放水只給一場
+    bumpLoseStreak(opp.id, win);                 // 連敗計數：贏了歸零
     VDGame.onBattleFinish();  // 每日對戰任務：結算才計數
     const firstBeat = win && !VDGame.isBeaten(opp.id);
     if (win) VDGame.onBattleWin(opp.id, state.comeback);
-    const rk = win ? VDGame.rankWin() : VDGame.rankLose();
+    const isChamp = weekChampion() === opp.id;
+    let rk = win ? VDGame.rankWin() : VDGame.rankLose();
+    if (win && isChamp) { // 擊敗本週擂主：段位分雙倍（再結算一次勝場分）
+      const rk2 = VDGame.rankWin();
+      rk = { ...rk2, delta: rk.delta + rk2.delta };
+    }
     const qd = QUOTES[opp.id];
     el.innerHTML = `<div class="card-done">
       <div class="big">${win ? '🏆' : '💀'}</div>
       <p>${win ? `擊敗 ${opp.name}！` : `不敵 ${opp.name}……`}</p>
       <div class="bt-quote">「${win ? opp.lose : opp.win}」</div>
       ${firstBeat && qd ? `<div class="qt-unlock">📜 解鎖名言卡：「${qd.q}」—— ${opp.name}</div>` : ''}
+      ${win && isChamp ? '<div class="qt-unlock">👑 擊敗本週擂主——段位分雙倍入帳！</div>' : ''}
       <div class="bt-rankdelta ${win ? 'up' : 'down'}">${rk.ico} ${rk.name}　${rk.delta > 0 ? '+' : ''}${rk.delta} 分（${rk.pts}）</div>
       ${VDGame.milestoneHtml()}
       <button class="btn" onclick="VDApp.go('battle')">再戰</button>

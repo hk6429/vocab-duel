@@ -8,7 +8,7 @@ const VDTownUI = (() => {
   /* 後端只在 Vercel：CF／Netlify 前端自動指回 vercel API */
   const API = location.hostname.includes('vercel.app') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
     ? '' : 'https://vocab-duel.vercel.app';
-  const img = (n) => `img/town/${n}.png`;
+  const img = (n) => `img/town/${n}.webp`;
   const stageOf = (lv) => lv >= 4 ? 3 : lv >= 2 ? 2 : 1;
   let wmap = null;
   const words = () => {
@@ -24,14 +24,13 @@ const VDTownUI = (() => {
     paint();
   }
 
-  /* ── 主畫面（2.5D 等角紙劇場：地面斜置、建築立牌直立） ── */
-  function paint() {
-    VDTown.tickUpgrades();
-    const th = VDTown.thLevel();
-    if (th > lastTh) epicShow(th);   // 不論時間到／代幣／答題加速完工都會慶祝
-    lastTh = th;
+  /* ── 局部更新：資源列／資源補給卡各自可重繪，高頻操作不整頁 paint ── */
+  let gridCache = { key: '', html: '' };   // 建築格只在 grid 資料真的變動時重建
+  function gridHtml() {
     const g = VDTown.raw;
     const B = VDTown.buildings();
+    const cacheKey = JSON.stringify(g.grid) + '|' + (moving || '');
+    if (gridCache.key === cacheKey) return gridCache.html;
     const grid = [];
     for (let r = 0; r < VDTown.GRID; r++) for (let c = 0; c < VDTown.GRID; c++) {
       const k = `${r},${c}`;
@@ -39,28 +38,105 @@ const VDTownUI = (() => {
       grid.push(cell
         ? `<button class="tw-cell has ${moving === k ? 'mv' : ''}" data-k="${k}" aria-label="${B[cell.b].name} Lv${cell.lv}">
             <span class="tw-b3d">
-              <img src="${VDGame.esc(img(cell.b + '_s' + stageOf(cell.lv)))}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${B[cell.b].ico}',className:'tw-emoji'}))">
+              <img src="${VDGame.esc(img(cell.b + '_s' + stageOf(cell.lv)))}" alt="" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${B[cell.b].ico}',className:'tw-emoji'}))">
               <i class="tw-lv">Lv${cell.lv}</i>${cell.up ? '<i class="tw-up">🔨</i>' : ''}
             </span>
           </button>`
         : `<button class="tw-cell ${moving ? 'mvtarget' : ''}" data-k="${k}" aria-label="${moving ? '空地（可搬遷至此）' : '空地'}"></button>`);
     }
-    const res = VDTown.RES.map(r => `<span class="tw-res">${VDTown.RES_META[r].ico} ${g.res[r] || 0}</span>`).join('');
+    gridCache = { key: cacheKey, html: grid.join('') };
+    return gridCache.html;
+  }
+  const resbarHtml = () =>
+    VDTown.RES.map(r => `<span class="tw-res">${VDTown.RES_META[r].ico} ${VDTown.raw.res[r] || 0}</span>`).join('') +
+    `<span class="tw-res">🪙 ${VDTown.raw.tokens} 代幣</span><span class="tw-res">💰 ${VDGame.raw.coins}</span>`;
+  function refreshRes() { const b = el && el.querySelector('#tw-resbar'); if (b) b.innerHTML = resbarHtml(); }
+  function supplyHtml() {
+    const g = VDTown.raw;
     const q = VDTown.questInfo();
     const pk = VDTown.packInfo();
     const tk = VDTown.tokenInfo();
+    const cp = VDTown.coinPackInfo();
+    return `<div class="hero-sec">📦 資源補給</div>
+      <div class="shop-item"><span class="shop-body">
+        <span class="shop-name">📖 學習換資源</span>
+        <span class="shop-desc">今日答對 ${pk.correct} 題 → 可領 ${pk.avail} 包（每 5 題 1 包，上限 ${pk.cap}；每包配方隨機，偶爾出 ✨ 金色雙倍包）</span></span>
+        <button class="btn sm" id="twPacks" ${pk.avail ? '' : 'disabled'}>領取</button>
+      </div>
+      <div class="shop-item"><span class="shop-body">
+        <span class="shop-name">🪙 城邦代幣</span>
+        <span class="shop-desc">累計勝分 ${tk.rating}・可兌 ${tk.avail} 枚（每 ${tk.per} 分 1 枚）；代幣可加速升級或換 20 資源</span></span>
+        <button class="btn sm" id="twRedeem" ${tk.avail ? '' : 'disabled'}>兌換</button>
+      </div>
+      <div class="shop-item"><span class="shop-body">
+        <span class="shop-name">💰 字幣換補給</span>
+        <span class="shop-desc">${cp.cost} 字幣＝1 補給包（今日還可 ${cp.todayLeft} 包）</span></span>
+        <button class="btn sm" id="twCoinPack" ${cp.todayLeft > 0 && VDGame.raw.coins >= cp.cost ? '' : 'disabled'}>🪙 50 字幣換補給包</button>
+      </div>
+      ${g.tokens ? `<div class="pet-actrow">${VDTown.RES.map(r =>
+        `<button class="btn small ghost tw-t2r" data-r="${r}">🪙→${VDTown.RES_META[r].ico}×20</button>`).join('')}</div>` : ''}
+      ${q ? `<div class="tw-quest ${q.done ? 'done' : ''}">
+        <img src="${img('res_mayor')}" alt="" loading="lazy" decoding="async" onerror="this.remove()">
+        <span><b>${VDGame.esc(q.giver)}</b>：“${VDGame.esc(q.text)}”${q.done ? '　✅ Done!' : `　<i>(交 ${VDTown.RES_META[q.res].ico}×${q.n} 得 🪙×${q.rewardTokens})</i>`}</span>
+        ${q.done ? '' : '<button class="btn small" id="twQuest">交付</button>'}
+      </div>` : ''}`;
+  }
+  function refreshSupply() {
+    const b = el && el.querySelector('#tw-supply');
+    if (b) { b.innerHTML = supplyHtml(); bindSupply(); }
+  }
+  function bindSupply() {
+    const box = el.querySelector('#tw-supply');
+    if (!box) return;
+    const $ = s => box.querySelector(s);
+    const after = () => { refreshRes(); refreshSupply(); };   // 只重寫資源列＋補給卡
+    if ($('#twPacks')) $('#twPacks').onclick = () => {
+      const r = VDTown.claimPacks();
+      if (!r.ok) return VDGame.toast(r.msg);
+      VDGame.toast(`📦 領了 ${r.n} 包補給！${r.golden ? `其中 ${r.golden} 包是 ✨ 金色補給包（內容雙倍）！` : ''}`);
+      after();
+    };
+    if ($('#twRedeem')) $('#twRedeem').onclick = () => {
+      const r = VDTown.redeemTokens();
+      VDGame.toast(r.ok ? `🪙 兌換 ${r.n} 枚城邦代幣！` : r.msg);
+      if (r.ok) after();
+    };
+    if ($('#twCoinPack')) $('#twCoinPack').onclick = () => {
+      const r = VDTown.coinToRes();
+      VDGame.toast(r.ok ? '📦 50 字幣換到 1 包補給！' : r.msg);
+      if (r.ok) after();
+    };
+    box.querySelectorAll('.tw-t2r').forEach(b => b.onclick = () => {
+      const r = VDTown.tokenToRes(b.dataset.r);
+      VDGame.toast(r.ok ? '已兌換' : r.msg);
+      if (r.ok) after();
+    });
+    if ($('#twQuest')) $('#twQuest').onclick = () => {
+      const r = VDTown.fulfillQuest();
+      VDGame.toast(r.ok ? `✅ Well done! 委託完成 +🪙${r.tokens}` : r.msg);
+      if (r.ok) after();
+    };
+  }
+
+  /* ── 主畫面（2.5D 等角紙劇場：地面斜置、建築立牌直立） ── */
+  function paint() {
+    VDTown.tickUpgrades();
+    const th = VDTown.thLevel();
+    if (th > lastTh) epicShow(th);   // 不論時間到／代幣／答題加速完工都會慶祝
+    lastTh = th;
+    const g = VDTown.raw;
     const mv = VDTown.moveinInfo();
     const era = ERA[VDTown.thLevel()] || '無名荒地';
     el.innerHTML = `
       <div class="wc-card">
-        <img class="wc-card-img" src="img/ui/h_town.png" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_town.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <p class="pg-hint">🏛️ <b>${VDGame.esc(g.name || '（點此為城命名）')}</b>・${era}・市政廳 Lv${VDTown.thLevel()}
             <button class="btn sm ghost" id="twName">✏️</button><br>
             👥 ${g.pop.length}/${VDTown.popCap()} 人・📚 精熟 ${VDTown.mastered()} 字（城的高度＝你的單字量）</p>
-          <div class="tw-resbar">${res}<span class="tw-res">🪙 ${VDTown.raw.tokens} 代幣</span><span class="tw-res">💰 ${VDGame.raw.coins}</span></div>
+          <div class="tw-resbar" id="tw-resbar">${resbarHtml()}</div>
           ${moving ? '<div class="pg-hint">🚚 搬移中——點一塊空地放下，或再點原建築取消</div>' : ''}
-          <div class="tw-iso"><div class="tw-grid" style="background-image:url(${img('base')})">${grid.join('')}</div></div>
+          <div class="tw-iso"><div class="tw-grid" style="background-image:url(${img('base')})">${gridHtml()}</div></div>
           <div id="tw-panel"></div>
         </div>
       </div>
@@ -71,7 +147,7 @@ const VDTownUI = (() => {
           const job = VDTown.jobs()[p.job];
           const av = p.job ? `res_${p.job}` : (p.id % 2 ? 'res_villager_m' : 'res_villager_f');
           return `<button class="tw-npc ${p.rare ? 'rare' : ''}" data-id="${p.id}">
-            <img src="${img(av)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${job ? job.ico : '🙂'}',className:'tw-emoji'}))">
+            <img loading="lazy" decoding="async" src="${img(av)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${job ? job.ico : '🙂'}',className:'tw-emoji'}))">
             <b>${p.rare ? '✨' : ''}${VDGame.esc(p.name)}</b><i>${job ? job.ico + job.name : '閒置'}${p.rare ? '・產量×2' : ''}</i>
           </button>`;
         }).join('')}</div>
@@ -82,26 +158,9 @@ const VDTownUI = (() => {
         <div id="tw-say"></div>
       </div></div>
 
-      <div class="wc-card"><div class="wc-card-body">
-        <div class="hero-sec">📦 資源補給</div>
-        <div class="shop-item"><span class="shop-body">
-          <span class="shop-name">📖 學習換資源</span>
-          <span class="shop-desc">今日答對 ${pk.correct} 題 → 可領 ${pk.avail} 包（每 5 題 1 包，上限 ${pk.cap}）</span></span>
-          <button class="btn sm" id="twPacks" ${pk.avail ? '' : 'disabled'}>領取</button>
-        </div>
-        <div class="shop-item"><span class="shop-body">
-          <span class="shop-name">🪙 城邦代幣</span>
-          <span class="shop-desc">競技積分 ${tk.rating}・可兌 ${tk.avail} 枚（每 ${tk.per} 分 1 枚）；代幣可加速升級或換 20 資源</span></span>
-          <button class="btn sm" id="twRedeem" ${tk.avail ? '' : 'disabled'}>兌換</button>
-        </div>
-        ${g.tokens ? `<div class="pet-actrow">${VDTown.RES.map(r =>
-          `<button class="btn small ghost tw-t2r" data-r="${r}">🪙→${VDTown.RES_META[r].ico}×20</button>`).join('')}</div>` : ''}
-        ${q ? `<div class="tw-quest ${q.done ? 'done' : ''}">
-          <img src="${img('res_mayor')}" alt="" onerror="this.remove()">
-          <span><b>${VDGame.esc(q.giver)}</b>：“${VDGame.esc(q.text)}”${q.done ? '　✅ Done!' : `　<i>(交 ${VDTown.RES_META[q.res].ico}×${q.n} 得 🪙×${q.rewardTokens})</i>`}</span>
-          ${q.done ? '' : '<button class="btn small" id="twQuest">交付</button>'}
-        </div>` : ''}
-      </div></div>
+      <div class="wc-card"><div class="wc-card-body" id="tw-supply">${supplyHtml()}</div></div>
+
+      <div class="wc-card" id="tw-guestbook" hidden></div>
 
       ${(g.log || []).length ? `<div class="wc-card"><div class="wc-card-body">
         <div class="hero-sec">📜 城史紀年</div>
@@ -120,18 +179,43 @@ const VDTownUI = (() => {
 
       <div class="wc-card"><div class="wc-card-body">
         <div class="hero-sec">☁️ 雲端綁定・參觀好友城</div>
-        <div class="pg-hint">把城綁到你的同步碼跨裝置繼續蓋；輸入好友的同步碼可以去他的城參觀。</div>
+        <div class="pg-hint">把城綁到你的同步碼跨裝置繼續蓋；輸入好友的「參觀碼」可以去他的城參觀（只能看不能改）。</div>
         <div class="pet-actrow">
           <input class="rt-join-in" id="twCode" placeholder="同步碼" style="width:150px;letter-spacing:normal">
           <button class="btn small" id="twSave">上傳</button>
           <button class="btn small ghost" id="twLoad">下載</button>
-          <button class="btn small ghost" id="twVisit">👀 參觀</button>
+        </div>
+        ${g.visitCode ? `<div class="pg-hint">你的參觀碼（可安心分享，別人只能看不能改）：<b>${VDGame.esc(g.visitCode)}</b></div>` : ''}
+        <div class="pet-actrow">
+          <input class="rt-join-in" id="twVCode" placeholder="好友參觀碼" style="width:150px;letter-spacing:normal">
+          <button class="btn small ghost" id="twVisit">👀 參觀好友城</button>
         </div>
         <div id="tw-visit"></div>
       </div></div>
       ${VDGame.milestoneHtml()}
       <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>`;
     bind();
+    loadGuestbook();   // 訪客簿非同步載入，沒資料或沒後端就保持隱藏
+  }
+
+  /* ── 訪客簿：誰來我的城打氣（op:guestbook；空或失敗一律不顯示） ── */
+  async function loadGuestbook() {
+    const box = el && el.querySelector('#tw-guestbook');
+    const code = VDTown.raw.visitCode;
+    if (!box || !code) return;
+    try {
+      const r = await fetch(API + '/api/town', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: 'guestbook', code })
+      }).then(x => x.json());
+      if (!r.ok || !Array.isArray(r.list) || !r.list.length) return;
+      box.hidden = false;
+      box.innerHTML = `<div class="wc-card-body">
+        <div class="hero-sec">📬 訪客簿</div>
+        <div class="tw-log">${r.list.slice(0, 8).map(v =>
+          `<div>${VDGame.esc(v.emoji || '👍')} <b>${VDGame.esc(v.nick || '路人')}</b> 來打氣${v.ts ? `　<i>${VDGame.esc(new Date(v.ts).toLocaleDateString())}</i>` : ''}</div>`).join('')}</div>
+      </div>`;
+    } catch { /* 沒後端就靜靜不顯示 */ }
   }
 
   /* ── 建城史詩：市政廳升級的收官慶典卡 ── */
@@ -164,16 +248,16 @@ const VDTownUI = (() => {
     };
   }
 
-  /* ── 參觀好友城（唯讀） ── */
+  /* ── 參觀好友城（唯讀，吃參觀碼 visitCode） ── */
   async function visitTown(code) {
     const box = el.querySelector('#tw-visit');
     box.innerHTML = '<div class="loading">出發參觀…</div>';
     try {
       const r = await fetch(API + '/api/town', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ op: 'load', code })
+        body: JSON.stringify({ op: 'visit', visitCode: code })
       }).then(x => x.json());
-      if (!r.ok) { box.innerHTML = ''; return VDGame.toast(r.error || '找不到這座城'); }
+      if (!r.ok || !r.town) { box.innerHTML = ''; return VDGame.toast(r.error || '找不到這座城（確認一下參觀碼）'); }
       const t = r.town, B = VDTown.buildings();
       let n = 0;
       const mini = [];
@@ -181,15 +265,28 @@ const VDTownUI = (() => {
         const cell = (t.grid || {})[`${rr},${cc}`];
         if (cell) n++;
         mini.push(cell
-          ? `<span class="tw-vcell"><img src="${VDGame.esc(img(cell.b + '_s' + stageOf(cell.lv)))}" alt="" onerror="this.replaceWith(document.createTextNode('${(B[cell.b] || {}).ico || '🏠'}'))"></span>`
+          ? `<span class="tw-vcell"><img loading="lazy" decoding="async" src="${VDGame.esc(img(cell.b + '_s' + stageOf(cell.lv)))}" alt="" onerror="this.replaceWith(document.createTextNode('${(B[cell.b] || {}).ico || '🏠'}'))"></span>`
           : '<span class="tw-vcell"></span>');
       }
       const thlv = ((t.grid || {})['3,3'] || { lv: 1 }).lv;
       box.innerHTML = `<div class="pg-fam">
         <b>👀 ${VDGame.esc(t.name || '好友')}的城</b>　市政廳 Lv${thlv}・${n} 棟建築・${(t.pop || []).length} 位居民
         <div class="tw-vgrid">${mini.join('')}</div>
+        <div class="pet-actrow">${['👍', '🔥', '🏗️'].map(e =>
+          `<button class="btn small ghost tw-cheer" data-e="${e}">${e} 打氣</button>`).join('')}</div>
         <div class="pg-hint">觀摩完回自己的城，把它蓋得更高吧！</div>
       </div>`;
+      box.querySelectorAll('.tw-cheer').forEach(b => b.onclick = async () => {
+        b.disabled = true;
+        try {
+          const rr = await fetch(API + '/api/town', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ op: 'cheer', visitCode: code, nick: VDGame.raw.nick || '路人', emoji: b.dataset.e })
+          }).then(x => x.json());
+          VDGame.toast(rr.ok ? `${b.dataset.e} 打氣送出，城主會在訪客簿看到你！` : (rr.error || '打氣沒送出去'));
+          if (!rr.ok) b.disabled = false;
+        } catch { b.disabled = false; VDGame.toast('連不上雲端，打氣沒送出去'); }
+      });
     } catch { box.innerHTML = ''; VDGame.toast('連不上雲端（本機模式沒有後端）'); }
   }
 
@@ -228,23 +325,21 @@ const VDTownUI = (() => {
       let msg = '🧺 收成：' + Object.entries(r.out).filter(([, v]) => v).map(([k, v]) => `${VDTown.RES_META[k].ico}+${v}`).join(' ');
       if (r.lazy) msg += '（今天還沒練功，居民只交一半——去答幾題吧！）';
       VDGame.toast(msg);
-      if (r.event) setTimeout(() => VDGame.toast(`🎁 奇遇！${r.event.t} “${r.event.en}” ` +
-        Object.entries(r.event.gain).map(([k, v]) => `${VDTown.RES_META[k].ico}+${v}`).join(' ')), 1400);
-      paint();
+      if (r.event) setTimeout(() => {
+        const parts = Object.entries(r.event.gain || {}).map(([k, v]) => `${VDTown.RES_META[k].ico}+${v}`);
+        if (r.event.tokens) parts.push(`🪙+${r.event.tokens}`);
+        VDGame.toast(`${r.event.tokens ? '🌟 大奇遇！' : '🎁 奇遇！'}${r.event.t} “${r.event.en}” ${parts.join(' ')}`);
+      }, 1400);
+      const hb = $('#twHarvest');
+      if (hb) hb.remove();       // 今天收完了，按鈕直接收走
+      refreshRes();              // 高頻操作只更新資源列，不整頁 paint
     };
-    if ($('#twPacks')) $('#twPacks').onclick = () => { const r = VDTown.claimPacks(); VDGame.toast(r.ok ? `📦 領了 ${r.n} 包補給！` : r.msg); if (r.ok) paint(); };
-    if ($('#twRedeem')) $('#twRedeem').onclick = () => { const r = VDTown.redeemTokens(); VDGame.toast(r.ok ? `🪙 兌換 ${r.n} 枚城邦代幣！` : r.msg); if (r.ok) paint(); };
-    el.querySelectorAll('.tw-t2r').forEach(b => b.onclick = () => { const r = VDTown.tokenToRes(b.dataset.r); VDGame.toast(r.ok ? '已兌換' : r.msg); if (r.ok) paint(); });
-    if ($('#twQuest')) $('#twQuest').onclick = () => {
-      const r = VDTown.fulfillQuest();
-      VDGame.toast(r.ok ? `✅ Well done! 委託完成 +🪙${r.tokens}` : r.msg);
-      if (r.ok) paint();
-    };
+    bindSupply();
     $('#twSave').onclick = () => cloudOp('save');
     $('#twLoad').onclick = () => cloudOp('load');
     $('#twVisit').onclick = () => {
-      const code = el.querySelector('#twCode').value.trim();
-      if (code.length < 4) return VDGame.toast('先輸入好友的同步碼（至少 4 碼）');
+      const code = el.querySelector('#twVCode').value.trim();
+      if (code.length < 4) return VDGame.toast('先輸入好友的參觀碼（至少 4 碼）');
       visitTown(code);
     };
     $('#twClassGo').onclick = () => {
@@ -271,10 +366,24 @@ const VDTownUI = (() => {
       let i = 0; while (i + 1 < CLASS_ERA.length && total >= CLASS_ERA[i + 1].at) i++;
       const cur = CLASS_ERA[i], next = CLASS_ERA[i + 1];
       const pct = next ? Math.round((total - cur.at) / (next.at - cur.at) * 100) : 100;
+      /* 本週全班目標：feature-detect API 的 weekMastered 欄位，沒有就只顯示總量 */
+      let weekHtml = '';
+      if (r.rows.some(x => typeof x.weekMastered === 'number')) {
+        const weekTotal = r.rows.reduce((s, x) => s + (x.weekMastered || 0), 0);
+        const goal = r.rows.length * 10;
+        const wpct = Math.min(100, Math.round(weekTotal / goal * 100));
+        const hit = weekTotal >= goal;
+        const top = r.rows.slice().sort((a, b) => (b.weekMastered || 0) - (a.weekMastered || 0))
+          .slice(0, 3).filter(x => (x.weekMastered || 0) > 0);
+        weekHtml = `<div class="pg-hint ${hit ? 'tw-week-hit' : ''}">🎯 本週全班目標：<b>${weekTotal}</b>/${goal} 字（每人 10 字）${hit ? '　🎉 達標！' : ''}</div>
+          <span class="vg-q-bar ${hit ? 'tw-week-hit' : ''}" style="display:block;margin:6px 0"><span style="width:${wpct}%"></span></span>
+          ${top.length ? `<div class="pg-hint">⚡ 本週衝字王：${top.map((x, k) => `${['🥇', '🥈', '🥉'][k]}${VDGame.esc(x.name)}(${x.weekMastered})`).join('　')}</div>` : ''}`;
+      }
       box.innerHTML = `<div class="pg-fam">
         <b>${cur.ico} 班城「${cur.name}」</b>　全班 ${r.rows.length} 人・共精熟 <b>${total}</b> 字
         <span class="vg-q-bar" style="display:block;margin:6px 0"><span style="width:${pct}%"></span></span>
         <div class="pg-hint">${next ? `再 ${next.at - total} 字，全班晉升「${next.ico} ${next.name}」！` : '已是最高時代——班上是傳說！'}</div>
+        ${weekHtml}
         <div class="pg-hint">🏗️ 頭號工程師：${r.rows.slice(0, 3).map((x, k) => `${['🥇', '🥈', '🥉'][k]}${VDGame.esc(x.name)}(${x.mastered})`).join('　')}</div>
       </div>`;
     } catch { box.innerHTML = ''; VDGame.toast('連不上雲端（本機模式沒有後端）'); }
@@ -289,7 +398,13 @@ const VDTownUI = (() => {
         body: JSON.stringify(op === 'save' ? { op: 'save', code, town: VDTown.exportState() } : { op: 'load', code })
       }).then(x => x.json());
       if (!r.ok) return VDGame.toast(r.error || '雲端出錯');
-      if (op === 'save') VDGame.toast('☁️ 城鎮已上傳綁定！');
+      if (op === 'save') {
+        if (r.visitCode) {
+          VDTown.setVisitCode(r.visitCode);
+          VDGame.toast(`☁️ 已上傳！你的參觀碼：${r.visitCode}（可安心分享，別人只能看不能改）`);
+          paint();   // 讓雲端卡立刻顯示參觀碼
+        } else VDGame.toast('☁️ 城鎮已上傳綁定！');
+      }
       else if (VDTown.importState(r.town)) { VDGame.toast('☁️ 城鎮已下載！'); paint(); }
       else VDGame.toast('雲端沒有這個同步碼的城');
     } catch { VDGame.toast('連不上雲端（本機模式沒有後端）'); }
@@ -305,7 +420,7 @@ const VDTownUI = (() => {
       box.innerHTML = `<div class="pg-fam"><b>🌱 空地</b>　要蓋什麼？
         <div class="tw-buildmenu">${Object.keys(B).filter(b => b !== 'townhall').map(b => {
           const chk = VDTown.canBuild(b);
-          const cost = Object.entries(B[b].cost).map(([r, v]) => `${VDTown.RES_META[r].ico}${v}`).join(' ');
+          const cost = Object.entries(VDTown.buildCost(b)).map(([r, v]) => `${VDTown.RES_META[r].ico}${v}`).join(' ');
           return `<button class="tw-bopt ${chk.ok ? '' : 'no'}" data-b="${b}" data-k="${key}" title="${chk.ok ? '' : chk.msg}">
             ${B[b].ico} ${B[b].name}<i>${cost || '免費'}</i>${chk.ok ? '' : `<u>${chk.msg}</u>`}
           </button>`;

@@ -25,16 +25,16 @@ const VDPetBattle = (() => {
     const floor = VDPets.wildFloor;
     el.innerHTML = `
       <div class="wc-card">
-        <img class="wc-card-img" src="img/ui/h_arena.png" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_arena.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <p class="pg-hint">出戰：${p.ico} <b>${p.name}</b>　Lv.${p.lv}　⚔️${p.atk}　❤️${p.hp}　詞源之力 +${Math.round(p.power * 100)}%　<button class="btn small ghost" onclick="VDApp.go('pets')">換寵</button></p>
-          <div class="pg-sub">🌿 野生試煉（過一層開一層，越深掉越好的裝備）・重打已通關層今日全額獎勵剩 ${wildFullLeft()} 次</div>
-          <div class="pb-floors">${wild.map((f, i) => {
-            const n = i + 1, open = n <= floor;
-            return `<button class="pb-floor ${open ? '' : 'locked'} t-${f.dropTier}" data-f="${i}" ${open ? '' : 'disabled'}>
+          <div class="pg-sub">🌿 野生試煉（過一層開一層，10 層後無限輪迴，越深掉越好的裝備）・重打已通關層今日全額獎勵剩 ${wildFullLeft()} 次</div>
+          <div class="pb-floors">${Array.from({ length: Math.max(wild.length, floor) }, (_, i) => {
+            const n = i + 1, open = n <= floor, f = floorDef(n);
+            return `<button class="pb-floor ${open ? '' : 'locked'} t-${f.dropTier}" data-f="${n}" ${open ? '' : 'disabled'}>
               <span class="pb-fico">${open ? f.ico : '🔒'}</span>
               <b>第 ${n} 層</b><i>${f.name}・Lv.${f.lv}</i>
-              <span class="pb-drop">${{ common: '🎁 普通', rare: '💠 稀有', legendary: '👑 傳說' }[f.dropTier]}</span>
+              <span class="pb-drop">${{ common: '🎁 普通', rare: '💠 稀有', legendary: '👑 傳說' }[f.dropTier]}${f.legBonus ? '↑' : ''}</span>
             </button>`;
           }).join('')}</div>
           <div class="pg-sub">👤 影子對戰（挑戰其他玩家的詞靈快照）</div>
@@ -49,6 +49,11 @@ const VDPetBattle = (() => {
             <button class="btn" id="rtCreate">⚡ 開房（拿 4 位數房號）</button>
             <input class="rt-join-in" id="rtCode" maxlength="4" inputmode="numeric" placeholder="輸入房號">
             <button class="btn ghost" id="rtJoin">加入</button>
+          </div>
+          <div class="pg-sub">📮 挑戰書（收到同學的 6 碼挑戰碼？打同一組題，比比誰的輸出高）</div>
+          <div class="pb-shadowrow">
+            <input class="rt-join-in" id="chCode" maxlength="6" placeholder="輸入挑戰碼">
+            <button class="btn ghost" id="chAccept">應戰</button>
           </div>
           ${VDGame.weekVaultReady() ? `
           <div class="pb-vault">
@@ -70,6 +75,11 @@ const VDPetBattle = (() => {
       const code = el.querySelector('#rtCode').value.trim();
       if (!/^\d{4}$/.test(code)) return VDGame.toast('房號是 4 位數字');
       VDRT.join(el, code);
+    };
+    el.querySelector('#chAccept').onclick = () => {
+      const code = el.querySelector('#chCode').value.trim().toUpperCase();
+      if (!/^[A-Z0-9]{6}$/.test(code)) return VDGame.toast('挑戰碼是 6 碼英數字');
+      VDRT.accept(el, code);
     };
     const vault = el.querySelector('#doVault');
     if (vault) vault.onclick = () => {
@@ -132,9 +142,28 @@ const VDPetBattle = (() => {
   function nextRound() {
     if (state.oHp <= 0) return finish(true);
     if (state.pHp <= 0) return finish(false);
-    state.q = VDQuiz.randomQuestion(words);
+    state.q = pickQuestion();
     locked = false;
     draw();
+  }
+
+  /* 第 11 層起出題強制混入錯題本字與 box≤1 低盒字各佔 30%（抓不到就 fallback 隨機）
+     ——讓「打不過」的解法回到「去學字」 */
+  function pickQuestion() {
+    if (state.mode === 'wild' && state.foe.floorNo > 10) {
+      const r = Math.random();
+      let cand = null;
+      if (r < 0.3) {
+        const ws = VDStore.wrongWords(words);
+        if (ws.length) cand = ws[Math.floor(Math.random() * ws.length)];
+      } else if (r < 0.6) {
+        const low = words.filter(w => { const b = VDStore.box(w.word); return b >= 0 && b <= 1; });
+        if (low.length) cand = low[Math.floor(Math.random() * low.length)];
+      }
+      // 加權池：目標字灌 9 倍權重確保被抽中，誘答仍取自完整字表（重複字會被誘答挑選去重）
+      if (cand) return VDQuiz.randomQuestion(new Array(words.length * 9).fill(cand).concat(words));
+    }
+    return VDQuiz.randomQuestion(words);
   }
 
   const hpBar = (hp, max, cls) => `<div class="bt-hp ${hp <= max * 0.3 ? 'low' : ''} ${cls}">
@@ -148,14 +177,14 @@ const VDPetBattle = (() => {
     el.innerHTML = `
       <div class="bt-arena">
         <div class="bt-side foe">
-          <div class="pb-face">${f.img ? `<img src="${f.img}" alt="" class="${f.hue ? 'pb-hue' : ''}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${f.ico}',style:'font-size:44px'}))">` : `<span style="font-size:44px">${f.ico}</span>`}</div>
+          <div class="pb-face">${f.img ? `<img loading="lazy" decoding="async" src="${f.img}" alt="" class="${f.hue ? 'pb-hue' : ''}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${f.ico}',style:'font-size:44px'}))">` : `<span style="font-size:44px">${f.ico}</span>`}</div>
           <div class="bt-name">${f.name}<span class="bt-tier">Lv.${f.lv}</span></div>
           ${hpBar(state.oHp, state.oMax, 'foe')}
         </div>
         <div class="bt-log">${state.log}</div>
         <div class="bt-side me">
           ${hpBar(state.pHp, state.pMax, 'me')}
-          <div class="pb-face me">${`<img src="img/pets/${m.id}_s${m.stage}.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${m.ico}',style:'font-size:44px'}))">`}</div>
+          <div class="pb-face me">${`<img loading="lazy" decoding="async" src="img/pets/${m.id}_s${m.stage}.webp" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${m.ico}',style:'font-size:44px'}))">`}</div>
           <div class="bt-name">${m.deco || ''}${m.name} ${state.combo >= 2 ? `🔥×${state.combo}` : ''}</div>
         </div>
       </div>
@@ -219,7 +248,9 @@ const VDPetBattle = (() => {
         const loot = VDTown.battleLoot(foe.floorNo);
         VDGame.toast('🏰 城鎮補給：' + Object.entries(loot).map(([k, v]) => `${VDTown.RES_META[k].ico}+${v}`).join(' '));
       }
-      const drop = (full || Math.random() < 0.1) ? VDPets.rollDrop(foe.dropTier) : null;
+      // 高層輪迴：legBonus 機率把掉落升為傳說
+      const tier = foe.legBonus && Math.random() < foe.legBonus ? 'legendary' : foe.dropTier;
+      const drop = (full || Math.random() < 0.1) ? VDPets.rollDrop(tier) : null;
       if (drop) {
         dropHtml = `
         <div class="pb-dropcard t-${drop.tier}">
@@ -235,7 +266,7 @@ const VDPetBattle = (() => {
     let ratingHtml = '';
     if (mode === 'shadow') {
       const pts = win ? VDPets.petWin() : VDPets.petLose();
-      ratingHtml = `<div class="bt-rankdelta ${win ? 'up' : 'down'}">⚔️ 競技積分 ${win ? '+20' : '−10'}（${pts}）</div>`;
+      ratingHtml = `<div class="bt-rankdelta ${win ? 'up' : 'down'}">⚔️ 競技積分 ${win ? '+20' : '−10'}（${pts}）${win ? `・🏛️ lifetime 累計 +20（總 ${VDPets.lifetime()}，城鎮兌換基準）` : ''}</div>`;
       if (win) { VDGame.raw.coins += 25; coins = 25; localStorage.setItem('vd_game', JSON.stringify(VDGame.raw)); }
       submitSnapshot();
     }
@@ -267,15 +298,30 @@ const VDPetBattle = (() => {
     el.querySelector('#doAgain').onclick = chooseMode;
   }
 
-  /* ── 野生 ── */
-  function startWild(i) {
-    const w = VDPets.wild()[i];
-    // 敵人數值以層級推：atk/hp 用同公式（無詞源之力）
-    startFight({
-      name: w.name, ico: w.ico, lv: w.lv, acc: w.acc, dropTier: w.dropTier, floorNo: i + 1,
-      replay: i + 1 < VDPets.wildFloor,   // 已通關層重打
-      atk: 10 + 2 * w.lv, hp: 80 + 6 * w.lv, hue: true
-    }, 'wild');
+  /* ── 野生：無限爬塔敵人公式生成 ──
+     1–10 層照 pets.json；第 11 層起以 10 層一循環（名字加「・輪迴 N」），
+     血/攻按 1 + 0.15*(floor-10) 放大；高層 legendary 掉落權重隨層數提升 */
+  function floorDef(n) {
+    const wild = VDPets.wild();
+    const base = wild[(n - 1) % wild.length];
+    if (n <= wild.length)
+      return { name: base.name, ico: base.ico, lv: base.lv, acc: base.acc, dropTier: base.dropTier, floorNo: n, atk: 10 + 2 * base.lv, hp: 80 + 6 * base.lv };
+    const k = 1 + 0.15 * (n - 10);
+    const cycle = Math.ceil((n - wild.length) / wild.length);
+    return {
+      name: `${base.name}・輪迴 ${cycle}`, ico: base.ico,
+      lv: Math.round(base.lv * k),
+      acc: Math.min(0.92, base.acc + 0.02 * cycle),
+      dropTier: base.dropTier === 'common' ? 'rare' : base.dropTier,
+      legBonus: Math.min(0.5, 0.05 * (n - 10)),   // 掉落時有機會升為傳說
+      floorNo: n,
+      atk: Math.round((10 + 2 * base.lv) * k),
+      hp: Math.round((80 + 6 * base.lv) * k)
+    };
+  }
+  function startWild(n) {
+    const w = floorDef(n);
+    startFight({ ...w, replay: n < VDPets.wildFloor, hue: true }, 'wild'); // replay＝已通關層重打
   }
 
   /* ── 影子對戰（Task 6 接雲端；離線退本機幻影） ── */
@@ -302,7 +348,7 @@ const VDPetBattle = (() => {
       name: `${VDGame.esc(opp.nick)} 的 ${VDGame.esc(opp.petName)}${practice ? '（練習賽）' : ''}`, ico: '👤', lv: opp.lv,
       acc: Math.min(0.9, 0.5 + 0.35 * Math.min(1, opp.atk / Math.max(1, VDPets.atk(VDPets.active())))),
       atk: opp.atk, hp: opp.hp,
-      img: `img/pets/${opp.petId}_s${VDPets.stageOf(opp.lv)}.png`, hue: true
+      img: `img/pets/${opp.petId}_s${VDPets.stageOf(opp.lv)}.webp`, hue: true
     }, practice ? 'practice' : 'shadow');
   }
   async function submitSnapshot() {

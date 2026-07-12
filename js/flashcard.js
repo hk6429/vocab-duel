@@ -7,8 +7,9 @@ const VDFlash = (() => {
   function buildQueue(words) {
     const due = words.filter(w => VDStore.isDue(w.word));
     due.sort((a, b) => VDStore.box(a.word) - VDStore.box(b.word));
-    const fresh = words.filter(w => !VDStore.isSeen(w.word));
-    shuffle(fresh);
+    // 新字不再全庫隨機：按 20 字包（level→字母序）依 meta.unitIdx 順序供牌
+    const unit = VDStore.unitInfo(words);
+    const fresh = unit ? unit.words.filter(w => !VDStore.isSeen(w.word)) : [];
     return due.concat(fresh).slice(0, SESSION_SIZE);
   }
 
@@ -19,10 +20,11 @@ const VDFlash = (() => {
     }
   }
 
-  let curEl = null, curOpts = {};
+  let curEl = null, curOpts = {}, curWords = [];
   function start(words, el, opts) {
     curEl = el;
     curOpts = opts || {};
+    curWords = words;
     // raw=true（錯題複習）：不套到期/新字篩選，直接用傳入的字
     queue = opts && opts.raw ? (shuffle(words = words.slice()), words.slice(0, SESSION_SIZE)) : buildQueue(words);
     idx = 0; doneCount = 0; render._awarded = false;
@@ -46,9 +48,27 @@ const VDFlash = (() => {
     }
     if (idx >= queue.length) {
       if (doneCount > 0 && !render._awarded) { VDGame.onFlashDone(!!curOpts.wrong); render._awarded = true; }
-      el.innerHTML = `<div class="card-done"><div class="big">✅</div><p>本回合完成，共複習 ${doneCount} 張！</p>
-        <button class="btn" onclick="VDApp.go('flash')">再來一回合</button>
+      // 回歸保護：積壓 >40 時不報總量，只說今天的份完成了
+      const dueLeft = curOpts.raw ? 0 : curWords.filter(w => VDStore.isDue(w.word)).length;
+      const doneMsg = dueLeft > 40
+        ? `今天的份完成了，明天見！共複習 ${doneCount} 張 👍`
+        : `本回合完成，共複習 ${doneCount} 張！`;
+      // streak 修復入口（斷 1 天且無護盾，當天或隔天可用字幣接回）
+      const rep = VDStore.streakRepairInfo();
+      el.innerHTML = `<div class="card-done"><div class="big">✅</div><p>${doneMsg}</p>
+        ${rep ? `<div class="pg-hint">🔥 連續 ${rep.was} 天斷掉了！花 ${rep.cost} 字幣可以接回來</div>
+        <button class="btn" id="repairBtn">🛠️ 修復連續紀錄（${rep.cost} 字幣）</button>` : ''}
+        ${doneCount > 0 && queue.length ? `<button class="btn" id="gradBtn">🎓 用自測畢業這批字</button>` : ''}
+        <button class="btn ${doneCount > 0 ? 'ghost' : ''}" onclick="VDApp.go('flash')">再來一回合</button>
         <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button></div>`;
+      const gradBtn = el.querySelector('#gradBtn');
+      if (gradBtn) gradBtn.onclick = () => VDQuiz.startWith(queue.slice(), el, curWords);
+      const repBtn = el.querySelector('#repairBtn');
+      if (repBtn) repBtn.onclick = () => {
+        const s = VDStore.repairStreak();
+        VDGame.toast(s ? `🔥 連續紀錄接回來了！目前 ${s} 天` : '字幣不夠，先去練功賺一點吧');
+        if (s) render(el);
+      };
       return;
     }
     const w = queue[idx];
@@ -58,8 +78,9 @@ const VDFlash = (() => {
     const front = dir === 'e2z'
       ? `<div class="flash-word">${w.word} ${VDSpeak.btn(w.word)}</div><div class="flash-hint">點卡片看中文</div>`
       : `<div class="flash-zh big">${w.zh}</div><div class="flash-pos">${w.pos.join(', ')}</div><div class="flash-hint">點卡片看英文</div>`;
+    const unit = curOpts.raw ? null : VDStore.unitInfo(curWords);
     el.innerHTML = `
-      <div class="flash-progress">${idx + 1} / ${queue.length}　${boxNum >= 0 ? `<span title="盒子越大＝越熟，隔越多天才再考你">盒 ${boxNum}（越大越熟）</span>` : '新字'}</div>
+      <div class="flash-progress">${idx + 1} / ${queue.length}　${boxNum >= 0 ? `<span title="盒子越大＝越熟，隔越多天才再考你">盒 ${boxNum}（越大越熟）</span>` : '新字'}${unit ? `　<span title="新字按 20 字一包依序出牌">📦 第 ${unit.packNo} 包・本包 ${unit.done}/${unit.total}</span>` : ''}</div>
       <div class="flash-ctrl">
         <button class="chip" id="dirBtn">${dir === 'e2z' ? '英→中' : '中→英'} 🔄</button>
         ${acc ? `<button class="chip" id="accBtn">${acc}腔</button>` : ''}
@@ -99,6 +120,11 @@ const VDFlash = (() => {
     VDStore.record(w.word, correct, 'flash'); // 閃卡自評：升盒上限 2，避免自評灌熟練度
     VDGame.onFlash();
     VDGame.onAnswer(correct, 'flash');
+    // 20 字包：本包全部 box≥1 就自動進下一包
+    if (!curOpts.raw) {
+      const finished = VDStore.advanceUnit(curWords);
+      if (finished) VDGame.toast(`📦 第 ${finished} 包完成！`);
+    }
     doneCount++;
     idx++;
     render(el);

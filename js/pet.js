@@ -2,22 +2,22 @@
 const VDPet = (() => {
   let el = null;
 
-  const imgOf = (id, stage) => `img/pets/${id}_s${stage}.png`;
+  const imgOf = (id, stage) => `img/pets/${id}_s${stage}.webp`;
   const KNAME = { p: '字首', s: '字尾', r: '字根' };
 
   /* 裝飾：水彩小圖優先，emoji 只做載入失敗的 fallback（美術規範） */
   const DECO_IMG = { '🎀': 'deco_bow', '👑': 'deco_crown', '🧣': 'deco_scarf', '👓': 'deco_glasses', '🌸': 'deco_flower', '⭐': 'deco_star' };
-  const decoHtml = (d, cls) => d ? `<img class="pet-deco-img ${cls || ''}" src="img/pets/${DECO_IMG[d]}.png" alt=""
+  const decoHtml = (d, cls) => d ? `<img loading="lazy" decoding="async" class="pet-deco-img ${cls || ''}" src="img/pets/${DECO_IMG[d]}.webp" alt=""
     onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${d}',className:'pet-deco ${cls || ''}'}))">` : '';
 
   /* 幼靈圖＝雙親水彩圖 CSS 疊合＋色相偏移（第一版不生新圖） */
   const petImg = (p, stage, cls) => p.parents
     ? `<span class="fu-imgs ${cls || ''}">
-        <img src="${imgOf(p.parents[0], 3)}" alt="" onerror="this.remove()">
-        <img src="${imgOf(p.parents[1], 3)}" class="fu-b" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" src="${imgOf(p.parents[0], 3)}" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" src="${imgOf(p.parents[1], 3)}" class="fu-b" alt="" onerror="this.remove()">
         <b class="fu-egg">🐣</b>
       </span>`
-    : `<img class="${cls || ''}" src="${imgOf(p.id, stage)}" alt=""
+    : `<img loading="lazy" decoding="async" class="${cls || ''}" src="${imgOf(p.id, stage)}" alt=""
         onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">`;
 
   async function render(container) {
@@ -34,7 +34,7 @@ const VDPet = (() => {
     const cost = VDPets.adoptCost();
     el.innerHTML = `
       <div class="wc-card">
-        <img class="wc-card-img" src="img/ui/h_pets.png" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_pets.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <p class="pg-hint">每隻詞靈守護一族字綴——你學會的字越多，牠的「詞源之力」越強。已結緣 <b>${ownedN}</b>/20${ownedN < 20 ? `・下一隻 ${cost === 0 ? '免費！' : cost + ' 字幣'}` : '・全員到齊！'}</p>
           <div class="shop-wallet">💰 ${VDGame.raw.coins} 字幣　⚔️ 競技積分 ${VDPets.rating}</div>
@@ -44,7 +44,7 @@ const VDPet = (() => {
         ${list.map(p => `
           <button class="wc-mcard pet-card ${p.owned ? '' : 'locked'}" data-id="${p.id}">
             ${p.isActive ? '<span class="wc-mcard-badge">出戰中</span>' : ''}
-            ${p.isFusion ? petImg(p, p.stage, 'wc-mcard-img') : `<img class="wc-mcard-img ${p.owned ? '' : 'pet-sil'}" src="${imgOf(p.id, p.stage)}" alt=""
+            ${p.isFusion ? petImg(p, p.stage, 'wc-mcard-img') : `<img loading="lazy" decoding="async" class="wc-mcard-img ${p.owned ? '' : 'pet-sil'}" src="${imgOf(p.id, p.stage)}" alt=""
               onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">`}
             <div class="wc-mcard-cap">
               <div class="wc-mcard-title">${decoHtml(p.deco, 'mini')}${p.name}</div>
@@ -184,7 +184,7 @@ const VDPet = (() => {
       const cost = VDPets.adoptCost();
       el.innerHTML = `
         <div class="wc-card pet-detail">
-          <img class="wc-card-img pet-sil" src="${imgOf(id, 1)}" alt="" onerror="this.remove()">
+          <img loading="lazy" decoding="async" class="wc-card-img pet-sil" src="${imgOf(id, 1)}" alt="" onerror="this.remove()">
           <div class="wc-card-body">
             <h2>${p.ico} ${p.name}</h2>
             <p class="pg-hint">${p.theme}・守護 ${p.affixes.length} 個字綴（已學 ${fs.learned}/${fs.total} 字）</p>
@@ -207,7 +207,7 @@ const VDPet = (() => {
     const nextEvo = p.lv < 10 ? `Lv.10 進化` : p.lv < 25 ? `Lv.25 終階` : '終階型態';
     el.innerHTML = `
       <div class="wc-card pet-detail">
-        ${p.isFusion ? petImg(p, p.stage, 'wc-card-img pet-stage') : `<img class="wc-card-img pet-stage" id="petImg" src="${imgOf(id, p.stage)}" alt=""
+        ${p.isFusion ? petImg(p, p.stage, 'wc-card-img pet-stage') : `<img loading="lazy" decoding="async" class="wc-card-img pet-stage" id="petImg" src="${imgOf(id, p.stage)}" alt=""
           onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">`}
         ${decoHtml(p.deco)}
         <div class="wc-card-body">
@@ -260,7 +260,17 @@ const VDPet = (() => {
     const $ = s => el.querySelector(s);
     if ($('#doLv')) $('#doLv').onclick = () => {
       const r = VDPets.levelUp(id);
-      if (!r.ok) return VDGame.toast(r.msg);
+      if (!r.ok) {
+        VDGame.toast(r.msg);
+        // 學習門檻擋下：升級鈕旁補一顆「學這家族的字」捷徑（複用下方 doTrain 入口）
+        if (r.needStudy && !$('#lvTrain')) {
+          const b = document.createElement('button');
+          b.className = 'btn small'; b.id = 'lvTrain'; b.textContent = '🃏 學這家族的字';
+          b.onclick = () => $('#doTrain').click();
+          $('#doLv').after(b);
+        }
+        return;
+      }
       if (r.evolved) evoAnim(id, r.evolved, () => renderDetail(id));
       else { VDGame.toast(`⬆️ ${p.name} 升到 Lv.${r.lv}！`); renderDetail(id); }
     };
@@ -293,7 +303,7 @@ const VDPet = (() => {
     const ov = document.createElement('div');
     ov.className = 'vg-levelup';
     ov.innerHTML = `<div class="pet-evo">
-      <img src="${imgOf(id, stage)}" alt="" onerror="this.remove()">
+      <img loading="lazy" decoding="async" src="${imgOf(id, stage)}" alt="" onerror="this.remove()">
       <div class="pet-evo-txt">✨ 進化！第 ${stage} 階型態 ✨</div>
       <div class="pg-hint" style="color:#eee">點擊任意處繼續</div>
     </div>`;
@@ -307,7 +317,7 @@ const VDPet = (() => {
     ov.className = 'vg-levelup';
     ov.innerHTML = `<div class="pet-closeup">
       ${decoHtml(p.deco, 'big')}
-      <img src="${imgOf(p.id, p.stage)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">
+      <img loading="lazy" decoding="async" src="${imgOf(p.id, p.stage)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">
       <div class="pet-evo-txt">${p.ico} ${p.name}　Lv.${p.lv}</div>
       <div class="pg-hint" style="color:#eee">⚔️${p.atk}　❤️${p.hp}　詞源之力 +${Math.round(p.power * 100)}%</div>
     </div>`;

@@ -12,9 +12,19 @@ const VDStore = (() => {
   }
   let prog = load(PROG_KEY, {});
   let meta = load(META_KEY, { stage: null, daily: {}, lastDay: null, streak: 0 });
-  if (!meta.wrong) meta.wrong = {};   // 錯題本：word → 最後答錯日期
-  if (!meta.sub) meta.sub = 'all';    // 高中分級篩選：'all' 或 'S1'..'S6'
-  if (!meta.star) meta.star = {};     // 我的收藏：word → 加星日期
+  /* 舊存檔容錯：補齊後來新增的欄位 */
+  function normalize(m) {
+    if (!m.daily) m.daily = {};
+    if (!m.wrong) m.wrong = {};        // 錯題本：word → 最後答錯日期
+    if (!m.sub) m.sub = 'all';         // 高中分級篩選：'all' 或 'S1'..'S6'
+    if (!m.star) m.star = {};          // 我的收藏：word → 加星日期
+    if (!m.hist) m.hist = {};          // 每日精熟快照：'YYYY-MM-DD' → masteredCount
+    if (!m.recent) m.recent = [];      // 近期答題滑動窗（1=對 0=錯，上限 30 筆）
+    if (m.unitIdx == null) m.unitIdx = 0; // 20 字包進度：目前第幾包（0 起算）
+    if (!m.assignments) m.assignments = {}; // 老師字表指派：code → {name, words, ts}
+    return m;
+  }
+  meta = normalize(meta);
 
   const saveProg = () => localStorage.setItem(PROG_KEY, JSON.stringify(prog));
   const saveMeta = () => localStorage.setItem(META_KEY, JSON.stringify(meta));
@@ -25,14 +35,83 @@ const VDStore = (() => {
     return d.toLocaleDateString('sv-SE');
   }
 
+  /* vd_game 讀寫（護盾契約：只碰 shield / coins 欄位，並同步 VDGame 記憶體中的 g） */
+  function readGame() {
+    try { return JSON.parse(localStorage.getItem('vd_game')) || null; }
+    catch { return null; }
+  }
+  function writeGame(g, field) {
+    localStorage.setItem('vd_game', JSON.stringify(g));
+    if (window.VDGame && VDGame.raw) VDGame.raw[field] = g[field]; // 同步記憶體，避免 game.js 之後存檔蓋回舊值
+  }
+
+  function countMastered() {
+    let n = 0;
+    for (const w in prog) if (prog[w].b >= 3) n++;
+    return n;
+  }
+
+  /* 每日精熟快照：當天首次記一筆，保留 90 天滾動 */
+  function snapshotHist(t) {
+    if (meta.hist[t] != null) return;
+    meta.hist[t] = countMastered();
+    const cutoff = addDays(t, -90);
+    for (const d in meta.hist) if (d < cutoff) delete meta.hist[d];
+  }
+
   function bumpDaily() {
     const t = today();
     meta.daily[t] = (meta.daily[t] || 0) + 1;
     if (meta.lastDay !== t) {
-      meta.streak = (meta.lastDay === addDays(t, -1)) ? meta.streak + 1 : 1;
+      // 修復窗口逾期（斷檔日的隔天結束仍沒修）：徹底作廢
+      if (meta.streakBroken && t > addDays(meta.streakBroken.date, 1)) delete meta.streakBroken;
+      if (meta.lastDay === addDays(t, -1)) {
+        meta.streak += 1;
+      } else if (meta.lastDay === addDays(t, -2)) {
+        // 只斷 1 天：先吃護盾；沒護盾則開修復窗口（當天或隔天可用字幣修）
+        const g = readGame();
+        if (g && g.shield > 0) {
+          g.shield -= 1;
+          writeGame(g, 'shield');
+          meta.shieldUsed = 1; // game.js 撿去 toast
+          meta.streak += 1;    // 護盾擋住：連續視為延續
+        } else {
+          meta.streakBroken = { was: meta.streak, date: t };
+          meta.streak = 1;
+        }
+      } else {
+        meta.streak = 1;
+      }
+      snapshotHist(t);
       meta.lastDay = t;
     }
     saveMeta();
+  }
+
+  /* 近期答題滑動窗：record() 時維護，上限 30 筆 */
+  function pushRecent(correct) {
+    meta.recent.push(correct ? 1 : 0);
+    if (meta.recent.length > 30) meta.recent.splice(0, meta.recent.length - 30);
+  }
+
+  /* 本週一的日期字串 */
+  function mondayOf(t) {
+    const d = new Date(t + 'T00:00:00');
+    d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+    return d.toLocaleDateString('sv-SE');
+  }
+
+  /* 20 字包：level → 字母排序後切固定 20 字一包 */
+  function packsOf(words) {
+    const sorted = words.slice().sort((a, b) =>
+      a.level === b.level ? (a.word < b.word ? -1 : 1) : (a.level < b.level ? -1 : 1));
+    const packs = [];
+    for (let i = 0; i < sorted.length; i += 20) packs.push(sorted.slice(i, i + 20));
+    return packs;
+  }
+  function scopeFallback() {
+    // VDApp 是頂層 const，不在 window 上，要用 typeof 偵測
+    return (typeof VDApp !== 'undefined' && VDApp.scopeWords) ? VDApp.scopeWords() : null;
   }
 
   return {
@@ -43,7 +122,9 @@ const VDStore = (() => {
     getWord: w => prog[w] || null,
     /* 答題結果回寫：source 選填 — undefined/'quiz' 完整效果、'flash' 閃卡自評、'battle' 限時競技 */
     record(word, correct, source) {
+      snapshotHist(today()); // 快照要在今天第一題「改動進度前」拍，週增量才不會少算
       const rec = prog[word] || { b: 0, d: today(), s: 0 };
+      pushRecent(correct);
       if (source === 'battle' && !correct) {
         // 競技答錯：只記錯題本，不降盒、不改到期日（限時手滑不懲罰學習進度）
         rec.s += 1;
@@ -91,6 +172,69 @@ const VDStore = (() => {
       saveProg();
       return true;
     },
+    /* 近 n 題正確率 0~1；還沒有答題紀錄回傳 null */
+    recentAcc(n = 20) {
+      const arr = meta.recent.slice(-n);
+      if (!arr.length) return null;
+      return arr.reduce((a, b) => a + b, 0) / arr.length;
+    },
+    /* 本週（週一起）新增精熟數：目前精熟 − 週初快照 */
+    weekMastered() {
+      const cur = countMastered();
+      const mon = mondayOf(today());
+      const dates = Object.keys(meta.hist).sort();
+      // 基準＝週一「以前」最後一筆快照（上週結束時的量）；沒有就取最早那筆（舊檔升級容錯）；再沒有＝0
+      let base = null;
+      for (const d of dates) { if (d < mon) base = meta.hist[d]; else break; }
+      if (base == null) base = dates.length ? meta.hist[dates[0]] : 0;
+      return Math.max(0, cur - base);
+    },
+    /* 目前 20 字包資訊：{packNo(1 起算), done(box≥1 數), total} 或 null */
+    unitInfo(words) {
+      words = words || scopeFallback();
+      if (!words || !words.length) return null;
+      const packs = packsOf(words);
+      const i = Math.min(meta.unitIdx, packs.length - 1);
+      const pack = packs[i];
+      const done = pack.filter(w => (prog[w.word] ? prog[w.word].b : -1) >= 1).length;
+      return { packNo: i + 1, done, total: pack.length, words: pack };
+    },
+    /* 本包全數 box≥1 就進下一包；回傳剛完成的包號（沒完成回傳 0） */
+    advanceUnit(words) {
+      const info = this.unitInfo(words);
+      if (!info || info.done < info.total) return 0;
+      words = words || scopeFallback();
+      if (meta.unitIdx >= packsOf(words).length - 1) return 0; // 已是最後一包
+      meta.unitIdx += 1;
+      saveMeta();
+      return info.packNo;
+    },
+    /* streak 修復窗口：可修回傳 {was, cost, date}，否則 null */
+    streakRepairInfo() {
+      const b = meta.streakBroken;
+      if (!b) return null;
+      if (today() > addDays(b.date, 1)) { delete meta.streakBroken; saveMeta(); return null; } // 逾期真歸 1
+      return { was: b.was, cost: Math.min(b.was * 5, 100), date: b.date };
+    },
+    /* 用字幣修復 streak：成功回傳新 streak，失敗回傳 false */
+    repairStreak() {
+      const info = this.streakRepairInfo();
+      if (!info) return false;
+      const g = readGame();
+      if (!g || (g.coins || 0) < info.cost) return false;
+      g.coins -= info.cost;
+      writeGame(g, 'coins');
+      meta.streak = info.was + meta.streak; // 斷檔前 + 斷檔後累計，接回一條
+      delete meta.streakBroken;
+      saveMeta();
+      return meta.streak;
+    },
+    /* 老師字表指派：存一份 {name, words, ts}，供戰績頁追進度 */
+    addAssignment(code, name, words) {
+      meta.assignments[code] = { name, words, ts: Date.now() };
+      saveMeta();
+    },
+    assignments() { return meta.assignments; },
     isDue: w => prog[w] && prog[w].d <= today(),
     isSeen: w => !!prog[w],
     box: w => (prog[w] ? prog[w].b : -1), // -1 = 未學
@@ -123,12 +267,14 @@ const VDStore = (() => {
     importCode(code) {
       const obj = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
       if (!obj.p || !obj.m) throw new Error('bad code');
-      prog = obj.p; meta = obj.m;
+      prog = obj.p; meta = normalize(obj.m);
       saveProg(); saveMeta();
     },
     resetAll() {
-      prog = {}; meta = { stage: meta.stage, daily: {}, lastDay: null, streak: 0 };
+      prog = {}; meta = normalize({ stage: meta.stage, daily: {}, lastDay: null, streak: 0 });
       saveProg(); saveMeta();
     }
   };
 })();
+
+window.VDStore = VDStore;

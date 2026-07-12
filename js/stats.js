@@ -71,6 +71,22 @@ const VDStats = (() => {
     </div></div>`;
   }
 
+  /* 老師字表指派進度：每份顯示 完成 N/M（box≥1）進度條 */
+  function assignmentCard() {
+    const asg = VDStore.assignments();
+    const codes = Object.keys(asg).sort((a, b) => asg[b].ts - asg[a].ts);
+    if (!codes.length) return '';
+    const rows = codes.map(c => {
+      const a = asg[c];
+      const done = a.words.filter(w => VDStore.box(w) >= 1).length;
+      return bar(Math.round(done / a.words.length * 100), `${VDGame.esc(a.name)}（${c}）：完成 ${done}/${a.words.length}`);
+    }).join('');
+    return `<div class="wc-card"><div class="wc-card-body">
+      <div class="hero-sec">📋 老師指派字表</div>${rows}
+      <div class="pg-hint">「完成」= 該字熟悉度達第 1 盒以上</div>
+    </div></div>`;
+  }
+
   function render(allWords, el) {
     const eWords = allWords.filter(w => w.level === 'E');
     const jWords = allWords.filter(w => w.level === 'E' || w.level === 'J');
@@ -79,10 +95,12 @@ const VDStats = (() => {
     const sE = VDStore.stats(eWords);
     const sJ = VDStore.stats(jWords);
     const sAll = VDStore.stats(allWords);
-    const pct = (m, t) => Math.round(m / t * 100);
+    const pct = (m, t) => +(m / t * 100).toFixed(1); // 一位小數：前幾週才不會永遠卡在 0%
+    const unit = VDStore.unitInfo(scope);
+    const rep = VDStore.streakRepairInfo();
     el.innerHTML = `
       <div class="wc-card">
-        <img class="wc-card-img" src="img/ui/h_stats.png" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_stats.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <div class="stat-grid">
             <div class="stat-tile"><div class="stat-num">${sAll.mastered}</div><div class="stat-cap">已掌握單字</div></div>
@@ -90,10 +108,12 @@ const VDStats = (() => {
             <div class="stat-tile"><div class="stat-num">${s.todayCount}</div><div class="stat-cap">今日複習</div></div>
             <div class="stat-tile"><div class="stat-num">${s.streak}</div><div class="stat-cap">連續天數</div></div>
           </div>
+          ${rep ? `<div class="pg-hint">🔥 連續 ${rep.was} 天斷掉了！<button class="btn small" id="btnRepair">🛠️ 花 ${rep.cost} 字幣接回</button></div>` : ''}
           ${bar(pct(sE.mastered, eWords.length), `國小 1200 字（${sE.mastered}/${eWords.length}）`)}
           ${bar(pct(sJ.mastered, jWords.length), `國中 2000 字（${sJ.mastered}/${jWords.length}）`)}
           ${bar(pct(sAll.mastered, allWords.length), `高中 6000 字（${sAll.mastered}/${allWords.length}）`)}
-          <div class="stat-note">「已掌握」= 熟悉度達第 3 盒以上；目前學段待複習 ${s.due} 字</div>
+          ${unit ? bar(Math.round(unit.done / unit.total * 100), `本包進度：第 ${unit.packNo} 包（${unit.done}/${unit.total}）`) : ''}
+          <div class="stat-note">「已掌握」= 熟悉度達第 3 盒以上；目前學段待複習 ${s.due} 字${s.due > 40 ? '——別擔心，每天 20 字慢慢清' : ''}</div>
         </div>
       </div>
       ${weekCard()}
@@ -104,6 +124,7 @@ const VDStats = (() => {
           <div id="stat-affix"></div>
         </div>
       </div>
+      ${assignmentCard()}
       <div class="wc-card">
         <div class="wc-card-body">
           <div class="hero-sec">進度備份</div>
@@ -127,20 +148,34 @@ const VDStats = (() => {
       } catch { alert('進度碼格式不對，請確認後再試。'); }
     };
     // 批次匯入字表：按行拆字 → 比對字庫 → enroll ＋ 加星
+    // 首行可寫 #assignment:代碼,名稱 → 存成「老師指派字表」，戰績頁追蹤完成進度
     el.querySelector('#btnWords').onclick = () => {
-      const lines = el.querySelector('#ioText').value.split(/\r?\n/).map(s => s.trim().toLowerCase()).filter(Boolean);
+      let lines = el.querySelector('#ioText').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      let asg = null;
+      const m = lines.length && lines[0].match(/^#assignment:\s*([^,，]+)[,，]\s*(.+)$/i);
+      if (m) { asg = { code: m[1].trim(), name: m[2].trim() }; lines = lines.slice(1); }
+      lines = lines.map(s => s.toLowerCase());
       if (!lines.length) { alert('請先把單字清單（一行一個字）貼進上面的文字框。'); return; }
       const dict = new Map(allWords.map(w => [w.word.toLowerCase(), w.word]));
       let n = 0, miss = 0;
+      const hit = [];
       for (const lw of new Set(lines)) {
         const word = dict.get(lw);
         if (!word) { miss++; continue; }
         VDStore.enroll(word);
         if (!VDStore.isStar(word)) VDStore.toggleStar(word);
+        hit.push(word);
         n++;
       }
-      alert(`匯入 ${n} 字（已加入複習佇列並加星）${miss ? `、${miss} 字不在字庫` : ''}`);
+      if (asg && hit.length) VDStore.addAssignment(asg.code, asg.name, hit);
+      alert(`匯入 ${n} 字（已加入複習佇列並加星）${miss ? `、${miss} 字不在字庫` : ''}${asg && hit.length ? `\n已建立指派「${asg.name}」（${asg.code}），戰績頁可追進度` : ''}`);
       VDApp.go('stats');
+    };
+    const repBtn = el.querySelector('#btnRepair');
+    if (repBtn) repBtn.onclick = () => {
+      const ns = VDStore.repairStreak();
+      VDGame.toast(ns ? `🔥 連續紀錄接回來了！目前 ${ns} 天` : '字幣不夠，先去練功賺一點吧');
+      if (ns) VDApp.go('stats');
     };
     affixWeak(el);
   }

@@ -102,7 +102,8 @@ body {
 .dash-empty { color: var(--muted); font-size: 13px; text-align: center; }
 
 .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
-.topbar .back { background: none; border: none; color: var(--accent2); font-size: 26px; cursor: pointer; }
+.topbar .back { background: none; border: none; color: var(--accent2); font-size: 26px; cursor: pointer;
+  padding: 10px 14px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
 .topbar h2 { font-size: 20px; font-weight: 600; }
 
 .flash-progress { text-align: center; color: var(--muted); margin-bottom: 14px; font-size: 14px; }
@@ -474,7 +475,7 @@ body {
 .vg-cal-note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 6px; } .vg-cal-note b { color: #6f9fc9; }
 
 /* ── 加星鈕 ── */
-.mini-star { background: none; border: none; cursor: pointer; font-size: 18px; padding: 0 2px; vertical-align: middle; }
+.mini-star { background: none; border: none; cursor: pointer; font-size: 18px; padding: 8px; vertical-align: middle; }
 .mini-star.on { filter: drop-shadow(0 0 4px rgba(111,159,201,.6)); }
 /* 觸控目標擴大：透明偽元素向外延伸 8px 命中區（不改視覺） */
 .spk, .mini-star, .chip, .lvl-chip, .vg-q-claim { position: relative; }
@@ -619,6 +620,43 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
   .wc-mgrid .wc-mcard:last-child:nth-child(3n+1):not(.feature) { grid-column: 1 / -1; }
   .wc-mgrid .wc-mcard:last-child:nth-child(3n+1):not(.feature) .wc-mcard-img { aspect-ratio: 16/6; }
 }
+/* 未解鎖灰卡：灰階、鎖住不可點，解鎖本身是獎勵 */
+.menu-card.locked {
+  filter: grayscale(1); opacity: .55; cursor: default; pointer-events: none;
+  border-style: dashed; box-shadow: none;
+}
+.menu-card.locked .wc-mcard-ph { font-size: 38px; }
+.menu-card.locked .wc-mcard-sub { font-weight: 700; color: var(--muted); }
+/* 更多工具：摺疊卡，點開才展開題庫工具群 */
+.tools-fold summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px;
+  background: #fff; border: 1px solid var(--line); border-radius: 18px;
+  padding: 14px 16px; box-shadow: 0 8px 22px rgba(43,43,43,.07);
+  font-family: var(--font-serif); font-weight: 700; font-size: 17px; color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+.tools-fold summary::-webkit-details-marker { display: none; }
+.tools-fold summary::after { content: '▾'; margin-left: auto; color: var(--muted); transition: transform .15s; }
+.tools-fold[open] summary::after { transform: rotate(180deg); }
+.tools-fold summary .tf-ico { font-size: 22px; }
+.tools-fold summary .tf-sub { font-family: var(--font-sans, system-ui); font-weight: 400; font-size: 12px; color: var(--muted); }
+/* 首頁到期複習入口 */
+.dash-due {
+  display: block; width: 100%; margin-top: 12px; padding: 12px 14px; cursor: pointer;
+  border: 1px solid rgba(111,159,201,.4); border-radius: 12px;
+  background: rgba(111,159,201,.12); color: var(--accent2, #4a7ba6);
+  font-size: 14px; font-weight: 700; text-align: center;
+}
+.dash-due:hover { background: rgba(111,159,201,.2); }
+/* 本週擂主 banner（對手卡上緣） */
+.bt-oppcard.champ { border: 2px solid #e8a020; padding-top: 32px; }
+.bt-champ {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 1;
+  background: linear-gradient(90deg, #e8a020, #f0c060); color: #4a3200;
+  font-size: 11px; font-weight: 800; padding: 3px 6px; text-align: center;
+  border-radius: 12px 12px 0 0; letter-spacing: .5px;
+}
+.bt-oppcard { position: relative; }
 /* 全寬特色卡（單一項目，如文學家對戰、英雄檔案） */
 .wc-mcard.feature { grid-column: 1 / -1; }
 .wc-mcard.feature .wc-mcard-img { aspect-ratio: 16/6; object-position: 50% 42%; }

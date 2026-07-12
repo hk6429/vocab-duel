@@ -18,7 +18,7 @@ const VDGraph = (() => {
     build();
     el.innerHTML = `
       <div class="wc-card">
-        <img class="wc-card-img" src="img/ui/h_graph.png" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_graph.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <p class="pg-hint">每顆星是一個字綴，越亮越大＝你越熟。20 隻詞靈守在外圈——點詞靈看領地，點字綴看家族單字。拖曳移動、滾輪縮放。</p>
           <canvas id="pg-canvas"></canvas>
@@ -61,7 +61,7 @@ const VDGraph = (() => {
     for (const n of petNodes) {
       if (petImgs[n.pet.id]) continue;
       const im = new Image();
-      im.src = `img/pets/${n.pet.id}_s1.png`;
+      im.src = `img/pets/${n.pet.id}_s1.webp`;
       im.onload = () => { petImgs[n.pet.id] = im; wake(); };
     }
   }

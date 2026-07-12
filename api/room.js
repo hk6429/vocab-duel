@@ -3,6 +3,10 @@
 // POST { op:'join', code, snap }                → 加入，回 { seed, opp }
 // POST { op:'push', code, role, state }         → 寫入自己的對戰狀態
 // POST { op:'poll', code, role }                → 讀對方狀態（附房間 meta）
+// —— 非同步挑戰書（不用同時在線）——
+// POST { op:'challenge', seed, scope, nick, score }   → 發戰帖，回 { code }（6 碼，7 天有效）
+// POST { op:'accept', code }                          → 領戰帖，回 { seed, scope, challenger, score }
+// POST { op:'challengeResult', code, nick, score }    → 回報應戰成績，回 { ok, challenger, accepter }
 import { Redis } from "@upstash/redis";
 
 const redis = new Redis({
@@ -11,7 +15,16 @@ const redis = new Redis({
 });
 
 const TTL = 600; // 房間 10 分鐘
+const CH_TTL = 7 * 86400; // 挑戰書 7 天
 const keyOf = (code) => `vd:room:${code}`;
+const chKey = (code) => `vd:room:ch:${code}`;
+const okChCode = (c) => typeof c === "string" && /^[A-Z0-9]{6}$/.test(String(c).trim().toUpperCase());
+const genChCode = () => {
+  const cs = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // 避開易混淆字元
+  let s = "";
+  for (let i = 0; i < 6; i++) s += cs[Math.floor(Math.random() * cs.length)];
+  return s;
+};
 const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
 const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12;
 const okCode = (c) => typeof c === "string" && /^\d{4}$/.test(c);
@@ -128,6 +141,56 @@ export default async function handler(req, res) {
         ok: 1,
         opp: o ? { snap: o.snap, state: o.state, hb: o.hb } : null,
         now: Date.now(),
+      });
+    }
+
+    if (op === "challenge") {
+      if (await rateLimited(req, "room")) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
+      const { seed, scope, nick, score } = req.body;
+      if (!okNick(nick)) return res.status(400).json({ error: "bad req" });
+      const rec = {
+        seed: clamp(seed, 1e9),
+        scope: typeof scope === "string" ? stripBad(scope).slice(0, 4) : "E",
+        nick: stripBad(nick).trim().slice(0, 12),
+        score: clamp(score, 999999),
+        ts: Date.now(),
+      };
+      if (!rec.nick) return res.status(400).json({ error: "bad req" });
+      // 找一個沒人用的 6 碼戰帖號（最多試 8 次）
+      let code = "";
+      for (let i = 0; i < 8; i++) {
+        const c = genChCode();
+        if (!(await redis.exists(chKey(c)))) { code = c; break; }
+      }
+      if (!code) return res.status(500).json({ error: "no code" });
+      await redis.set(chKey(code), JSON.stringify(rec), { ex: CH_TTL });
+      return res.status(200).json({ ok: 1, code });
+    }
+
+    if (op === "accept") {
+      const code = String(req.body.code || "").trim().toUpperCase();
+      if (!okChCode(code)) return res.status(200).json({ ok: 0, error: "戰帖碼格式不對" });
+      const raw = await redis.get(chKey(code));
+      if (!raw) return res.status(200).json({ ok: 0, error: "戰帖不存在或已過期" });
+      const c = typeof raw === "string" ? JSON.parse(raw) : raw;
+      return res.status(200).json({ ok: 1, seed: c.seed, scope: c.scope, challenger: c.nick, score: c.score });
+    }
+
+    if (op === "challengeResult") {
+      if (await rateLimited(req, "room")) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
+      const code = String(req.body.code || "").trim().toUpperCase();
+      const { nick, score } = req.body;
+      if (!okChCode(code) || !okNick(nick)) return res.status(200).json({ ok: 0, error: "資料不完整" });
+      const raw = await redis.get(chKey(code));
+      if (!raw) return res.status(200).json({ ok: 0, error: "戰帖不存在或已過期" });
+      const c = typeof raw === "string" ? JSON.parse(raw) : raw;
+      const accepter = { nick: stripBad(nick).trim().slice(0, 12), score: clamp(score, 999999), ts: Date.now() };
+      c.accepter = accepter; // 保留最近一次應戰結果
+      await redis.set(chKey(code), JSON.stringify(c), { ex: CH_TTL });
+      return res.status(200).json({
+        ok: 1,
+        challenger: { nick: c.nick, score: c.score },
+        accepter: { nick: accepter.nick, score: accepter.score },
       });
     }
 

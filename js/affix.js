@@ -26,14 +26,32 @@ const VDAffix = (() => {
     renderList();
   }
 
+  /* 本週主題家族：讀 VDGame.weekInfo().affixIdx（別組提供；沒有就不顯示週主題） */
+  function weekTheme() {
+    if (!(window.VDGame && typeof VDGame.weekInfo === 'function')) return null;
+    try {
+      const wi = VDGame.weekInfo();
+      if (!wi || wi.affixIdx == null) return null;
+      const all = [];
+      for (const t of TABS) for (const a of (data[t.key] || [])) all.push({ tab: t.key, a });
+      if (!all.length) return null;
+      return all[((wi.affixIdx % all.length) + all.length) % all.length];
+    } catch { return null; }
+  }
+
   function renderList() {
-    const list = data[tab] || [];
+    let list = (data[tab] || []).slice();
+    const theme = weekTheme();
+    if (theme && theme.tab === tab) {
+      list = [theme.a].concat(list.filter(a => a !== theme.a)); // 本週主題置頂
+    }
     el.innerHTML = `
       <div class="af-tabs">${TABS.map(t =>
         `<button class="af-tab ${t.key === tab ? 'on' : ''}" data-k="${t.key}">${t.label}<span>${(data[t.key] || []).length}</span></button>`).join('')}</div>
       <div class="af-hint">點任一字綴，看它的單字家族心智圖</div>
       <div class="af-grid">${list.map((a, i) => `
         <button class="af-card" data-i="${i}">
+          ${theme && a === theme.a ? '<span class="af-week">⭐ 本週主題</span>' : ''}
           <span class="af-form">${a.form}</span>
           <span class="af-mean">${a.meaning}</span>
           <span class="af-count">${a.members.length} 字</span>

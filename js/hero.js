@@ -8,7 +8,7 @@ const VDHero = (() => {
     const badges = g.badges();
     el.innerHTML = `
       <div class="wc-card">
-        <img class="wc-card-img tall" src="img/ui/h_hero.png" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" class="wc-card-img tall" src="img/ui/h_hero.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <div class="hero-card">
             <button class="hero-av" id="avPick">${g.avHtml('big')}</button>
@@ -31,7 +31,7 @@ const VDHero = (() => {
       </div>
 
       <div class="wc-card">
-        <img class="wc-card-img" src="img/ui/h_badges.png" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_badges.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <div class="hero-sec">成就徽章　<b>${bc.got}/${bc.total}</b></div>
           <div class="badge-grid">
@@ -57,12 +57,13 @@ const VDHero = (() => {
       </div>
 
       <div class="wc-card">
-        <img class="wc-card-img" src="img/ui/h_share.png" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_share.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <div class="hero-sec">分享與挑戰</div>
           <div class="hero-share">
-            <button class="btn" id="shareBtn">📋 複製戰績卡</button>
-            <button class="btn ghost" id="chalBtn">⚔️ 產生挑戰碼</button>
+            <button class="btn" id="shareBtn">🖼️ 分享戰績卡</button>
+            <button class="btn ghost" id="txtBtn">📋 複製文字版</button>
+            <button class="btn ghost" id="chalBtn">⚔️ 產生挑戰連結</button>
           </div>
           <textarea id="shareBox" class="share-box" placeholder="複製的戰績卡／挑戰碼會出現在這裡，貼給同學 PK！"></textarea>
         </div>
@@ -90,8 +91,87 @@ const VDHero = (() => {
       render(el);
     };
     // 分享
-    el.querySelector('#shareBtn').onclick = () => copyOut(VDGame.bragText(), '戰績卡已複製，貼給同學！');
-    el.querySelector('#chalBtn').onclick = () => copyOut('CHALLENGE:' + VDGame.challengeCode(), '挑戰碼已複製，同學在限時衝刺輸入即可 PK！');
+    el.querySelector('#shareBtn').onclick = () => shareCard();
+    el.querySelector('#txtBtn').onclick = () => copyOut(VDGame.bragText(), '戰績卡文字已複製，貼給同學！');
+    el.querySelector('#chalBtn').onclick = () => {
+      const code = VDGame.challengeCode();
+      const url = location.origin + location.pathname + '?ch=' + encodeURIComponent(code);
+      copyOut(url, '⚔️ 挑戰連結已複製——同學點開就能應戰！');
+      el.querySelector('#shareBox').value = url + '\nCHALLENGE:' + code;
+    };
+  }
+
+  /* 戰績卡出圖：純 canvas 文字＋色塊，優先系統分享，退而下載 PNG，再退複製文字 */
+  function drawCard() {
+    const g = VDGame, lp = g.levelProgress(), bc = g.badgeCount(), rk = g.rankInfo();
+    const streak = VDStore.stats([]).streak, mastered = g.masteredAll();
+    const c = document.createElement('canvas');
+    c.width = 800; c.height = 480;
+    const x = c.getContext('2d');
+    // 舊瀏覽器沒有 roundRect：退方角矩形
+    if (!x.roundRect) x.roundRect = function (rx, ry, rw, rh) { this.rect(rx, ry, rw, rh); };
+    // 底：靛藍→水藍漸層＋米白面板
+    const bg = x.createLinearGradient(0, 0, 800, 480);
+    bg.addColorStop(0, '#2c3e6b'); bg.addColorStop(1, '#6f9fc9');
+    x.fillStyle = bg; x.fillRect(0, 0, 800, 480);
+    x.fillStyle = 'rgba(255,250,240,.95)';
+    x.beginPath(); x.roundRect(36, 36, 728, 408, 22); x.fill();
+    // 標頭
+    x.fillStyle = '#2c3e6b';
+    x.font = '700 26px system-ui, sans-serif';
+    x.fillText('⚔️ 字鬥英雄・戰績卡', 64, 92);
+    x.strokeStyle = 'rgba(111,159,201,.5)'; x.lineWidth = 2;
+    x.beginPath(); x.moveTo(64, 110); x.lineTo(736, 110); x.stroke();
+    // 頭像＋名字
+    x.font = '64px system-ui, sans-serif';
+    x.fillText(g.avatar, 64, 196);
+    x.fillStyle = '#2b2b2b';
+    x.font = '800 40px system-ui, sans-serif';
+    x.fillText(g.heroName(), 160, 176);
+    x.fillStyle = '#6f6a60';
+    x.font = '600 24px system-ui, sans-serif';
+    x.fillText(`Lv${lp.L}　${lp.title}`, 160, 212);
+    // 四格戰績
+    const cells = [
+      ['📚 已掌握', `${mastered} 字`], [`${rk.ico} 段位`, `${rk.name}`],
+      ['🔥 連續', `${streak} 天`], ['🎖️ 徽章', `${bc.got}/${bc.total}`]
+    ];
+    cells.forEach(([lab, val], i) => {
+      const cx = 64 + (i % 2) * 344, cy = 244 + Math.floor(i / 2) * 92;
+      x.fillStyle = 'rgba(111,159,201,.12)';
+      x.beginPath(); x.roundRect(cx, cy, 328, 76, 14); x.fill();
+      x.fillStyle = '#6f6a60'; x.font = '600 20px system-ui, sans-serif';
+      x.fillText(lab, cx + 20, cy + 32);
+      x.fillStyle = '#2c3e6b'; x.font = '800 28px system-ui, sans-serif';
+      x.fillText(val, cx + 20, cy + 64);
+    });
+    x.fillStyle = '#9a948a'; x.font = '500 18px system-ui, sans-serif';
+    x.fillText('你也來字鬥吧！— vocab-duel', 64, 428);
+    return c;
+  }
+
+  function shareCard() {
+    try {
+      const c = drawCard();
+      c.toBlob(async blob => {
+        if (!blob) return copyOut(VDGame.bragText(), '出圖失敗，改複製文字版！');
+        const file = new File([blob], 'vocab-duel-card.png', { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: '字鬥英雄戰績卡' });
+            return;
+          } catch (e) { if (e && e.name === 'AbortError') return; /* 不支援就往下走 */ }
+        }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'vocab-duel-card.png';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        VDGame.toast('🖼️ 戰績卡 PNG 已下載，傳給同學吧！');
+      }, 'image/png');
+    } catch {
+      copyOut(VDGame.bragText(), '出圖失敗，改複製文字版！');
+    }
   }
 
   function pickAvatar() {

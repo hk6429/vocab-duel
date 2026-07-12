@@ -10,6 +10,18 @@ const VDMarket = (() => {
   const claims = () => { try { return JSON.parse(localStorage.getItem(CKEY)) || []; } catch { return []; } };
   const saveClaims = (c) => localStorage.setItem(CKEY, JSON.stringify(c));
 
+  /* 每日限購本地計數（伺服器也有硬限制，這裡先擋、少打一次 API） */
+  const BKEY = 'vd_market_buys';
+  const DAILY_CAP = 3;
+  const todayStr = () => new Date().toLocaleDateString('sv-SE');
+  function buysToday() {
+    try {
+      const b = JSON.parse(localStorage.getItem(BKEY)) || {};
+      return b.date === todayStr() ? (b.n || 0) : 0;
+    } catch { return 0; }
+  }
+  const bumpBuys = () => localStorage.setItem(BKEY, JSON.stringify({ date: todayStr(), n: buysToday() + 1 }));
+
   async function api(body) {
     try {
       const r = await fetch('api/market', {
@@ -42,8 +54,8 @@ const VDMarket = (() => {
           ${list.length ? `<div class="mk-list">${list.map(x => `
             <div class="shop-item">
               <span class="shop-body">
-                <span class="shop-name">${itemLine(x.item)}</span>
-                <span class="shop-desc">賣家：${VDGame.esc(x.seller)}</span>
+                <span class="shop-name">${itemLine(x.item)}${x.reserveFor ? '　🔒' : ''}</span>
+                <span class="shop-desc">賣家：${VDGame.esc(x.seller)}${x.reserveFor ? `・🔒 保留給 ${VDGame.esc(x.reserveFor)}` : ''}</span>
               </span>
               <button class="btn sm" data-buy="${x.id}" data-p="${x.price}">🪙 ${x.price}</button>
             </div>`).join('')}</div>` : '<div class="pg-hint">市場空空——當第一個上架的人！</div>'}
@@ -78,6 +90,7 @@ const VDMarket = (() => {
       <div class="pet-actrow" id="mk-price-row" hidden>
         <span class="pg-hint" id="mk-band"></span>
         <input class="rt-join-in" id="mk-price" inputmode="numeric" placeholder="定價">
+        <input class="rt-join-in" id="mk-reserve" maxlength="12" placeholder="保留給（同學暱稱，選填）">
         <button class="btn small" id="mk-post">上架</button>
       </div>`;
     let picked = -1;
@@ -98,11 +111,14 @@ const VDMarket = (() => {
       if (picked < 0) return;
       const it = VDPets.bag()[picked];
       const price = Math.round(+box.querySelector('#mk-price').value || 0);
-      const r = await api({ op: 'post', item: it, price, seller: VDGame.heroName() });
+      const reserveFor = box.querySelector('#mk-reserve').value.trim().slice(0, 12);
+      const body = { op: 'post', item: it, price, seller: VDGame.heroName() };
+      if (reserveFor) body.reserveFor = reserveFor;
+      const r = await api(body);
       if (!r || !r.ok) return VDGame.toast(r ? r.error : '連線失敗');
       VDPets.dropBag(picked);
       const c = claims(); c.push({ id: r.id, claimKey: r.claimKey, item: it, price }); saveClaims(c);
-      VDGame.toast('📤 已上架！賣出後回來領貨款');
+      VDGame.toast(reserveFor ? `📤 已上架（🔒 保留給 ${reserveFor}）！賣出後回來領貨款` : '📤 已上架！賣出後回來領貨款');
       render(el);
     });
   }
@@ -111,9 +127,11 @@ const VDMarket = (() => {
     el.querySelectorAll('[data-buy]').forEach(b => {
       b.onclick = async () => {
         const price = +b.dataset.p;
+        if (buysToday() >= DAILY_CAP) return VDGame.toast('每日限購 3 件，明天再來（保護自己打寶的樂趣）');
         if (VDGame.raw.coins < price) return VDGame.toast(`字幣不足，還差 ${price - VDGame.raw.coins}`);
         const r = await api({ op: 'buy', id: b.dataset.buy, nick: VDGame.heroName(), haggle: 1 });
         if (!r || !r.ok) return VDGame.toast(r ? r.error : '連線失敗');
+        bumpBuys();
         VDGame.raw.coins -= r.price;
         localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
         const add = VDPets.addToBag(r.item);
@@ -133,7 +151,7 @@ const VDMarket = (() => {
           VDGame.raw.coins += r.coins;
           localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
           const cs = claims(); cs.splice(i, 1); saveClaims(cs);
-          VDGame.toast(`💰 賣出！扣稅後入帳 ${r.coins} 字幣`);
+          VDGame.toast(r.buyer ? `💰 被 ${r.buyer} 買走了！扣稅後入帳 ${r.coins} 字幣` : `💰 賣出！扣稅後入帳 ${r.coins} 字幣`);
           render(el);
         } else if (r.sold === 0) {
           st.textContent = '還沒賣出';

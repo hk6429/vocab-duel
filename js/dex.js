@@ -43,7 +43,7 @@ const VDDex = (() => {
     const totals = groupStats(all);
     el.innerHTML = `
       <div class="wc-card">
-        <img class="wc-card-img" src="img/ui/h_dex.png" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_dex.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <div class="hero-sec">單字圖鑑　<b>${totals.seen}</b> / ${totals.total} 點亮</div>
           <div class="dex-legend">

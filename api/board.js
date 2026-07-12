@@ -1,5 +1,6 @@
 // 班級排行榜 — 老師派班級碼、學生上傳戰績。Upstash Redis REST（字鬥專用 DB，key 前綴 vd:board:）
 // GET  ?code=班級碼                    → 該班排行（依已掌握字數、等級排序）
+// GET  ?code=班級碼&sort=week          → 依本週新掌握字數（weekMastered）排序
 // POST { action:'sync', code, name, ... } → 學生上傳自己的戰績
 import { Redis } from "@upstash/redis";
 
@@ -43,8 +44,10 @@ export default async function handler(req, res) {
       const all = (await redis.hgetall(key(code))) || {};
       const rows = Object.entries(all).map(([name, v]) => {
         const d = typeof v === "string" ? JSON.parse(v) : v;
-        return { name, mastered: d.mastered, level: d.level, streak: d.streak, badges: d.badges, ts: d.ts };
-      }).sort((a, b) => b.mastered - a.mastered || b.level - a.level || b.streak - a.streak);
+        return { name, mastered: d.mastered, level: d.level, streak: d.streak, badges: d.badges, weekMastered: d.weekMastered || 0, ts: d.ts };
+      });
+      if (req.query.sort === "week") rows.sort((a, b) => b.weekMastered - a.weekMastered || b.mastered - a.mastered);
+      else rows.sort((a, b) => b.mastered - a.mastered || b.level - a.level || b.streak - a.streak);
       return res.status(200).json({ code, rows });
     }
     if (req.method === "POST") {
@@ -63,6 +66,7 @@ export default async function handler(req, res) {
           level: clamp(req.body.level, 99),
           streak: clamp(req.body.streak, 3650),
           badges: clamp(req.body.badges, 100),
+          weekMastered: clamp(req.body.weekMastered, 6205),
           ts: Date.now(),
         };
         await redis.hset(k, { [nm]: JSON.stringify(rec) });

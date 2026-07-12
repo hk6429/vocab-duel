@@ -3,7 +3,8 @@
    CD5 分享戰績/挑戰碼/本機榜　CD6 每日任務/神秘字/解鎖/限時　CD7 寶箱隨機獎　CD8 護盾/斷線警告/衝刺倒數 */
 const VDGame = (() => {
   const KEY = 'vd_game';
-  const TITLES = ['字鬥學徒', '見習字使', '字鬥劍客', '字鬥遊俠', '字鬥豪傑', '字鬥宗師', '字鬥聖手', '字鬥賢者', '字鬥仙師', '字鬥神帝'];
+  const TITLES = ['字鬥學徒', '見習字使', '字鬥劍客', '字鬥遊俠', '字鬥豪傑', '字鬥宗師', '字鬥聖手', '字鬥賢者', '字鬥仙師', '字鬥神帝',
+    '字鬥真君', '字鬥天尊', '字鬥劍仙', '字鬥文曲', '字鬥星主', '字鬥道尊', '字鬥聖尊', '字鬥帝尊', '字鬥天帝', '字鬥造化'];
   const AVATARS = ['🦸', '🥷', '🧙', '🦉', '🐉', '🦊', '🐯', '🦅', '🐺', '🦁', '👑', '⚔️'];
   const TIER_LV = { 入門: 1, 進階: 2, 高手: 4, 宗師: 6 };
   const SHIELD_COST = 100;
@@ -55,20 +56,73 @@ const VDGame = (() => {
     rollWeekly();
   }
 
-  /* ── 每週任務（週一起算）：本週累計答對 100 題 → 傳說寶箱 ── */
-  const WEEK_GOAL = 100;
+  /* ── 每週任務（週一起算）：目標池依週序輪選 → 傳說寶箱 ── */
+  const WEEK_GOALS = [
+    { key: 'correct',   label: '本週答對 100 題', n: 100 },
+    { key: 'spell',     label: '本週拼寫答對 30 題', n: 30 },
+    { key: 'newwords',  label: '本週點亮 40 個新字', n: 40 },
+    { key: 'champion',  label: '本週擊敗擂主 3 次', n: 3 },
+    { key: 'days',      label: '本週連續練習 7 天', n: 7 },
+    { key: 'battlewin', label: '本週對戰勝利 10 場', n: 10 },
+    { key: 'review',    label: '本週複習閃卡 60 張', n: 60 },
+    { key: 'sprint',    label: '本週限時衝刺破紀錄 1 次', n: 1 }
+  ];
+  const CHAMPIONS = ['andersen', 'aesop', 'twain', 'austen', 'hemingway', 'dickens', 'shakespeare', 'tolstoy'];
   function weekKey() {
     const d = new Date(VDStore.today() + 'T00:00:00');
     d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // 回推到本週一
     return d.toLocaleDateString('sv-SE');
   }
+  function weekIdxNum() {
+    let h = 0;
+    for (const c of weekKey()) h = (h * 31 + c.charCodeAt(0)) % 1000000007;
+    return h;
+  }
+  const weekGoal = () => WEEK_GOALS[weekIdxNum() % WEEK_GOALS.length];
+  function weekInfo() {
+    const wi = weekIdxNum(), gl = weekGoal();
+    return { weekIdx: wi, championId: CHAMPIONS[wi % CHAMPIONS.length], affixIdx: wi, goal: { key: gl.key, label: gl.label, n: gl.n } };
+  }
   function rollWeekly() {
-    const k = weekKey();
-    if (g.week.key !== k) g.week = { key: k, prog: 0, claimed: false };
+    const k = weekKey(), gl = weekGoal();
+    if (g.week.key !== k) g.week = { key: k, prog: 0, claimed: false, gk: gl.key };
+    else if (g.week.gk !== gl.key) { g.week.gk = gl.key; g.week.prog = 0; delete g.week.base; } // 舊存檔沒 gk：換制歸零重計
+  }
+  /* 週目標進度累計：各事件對號入座（champion 需打中本週擂主） */
+  function weekTick(ev, oppId) {
+    rollWeekly();
+    const gk = g.week.gk;
+    if ((gk === 'correct' && ev === 'correct')
+      || (gk === 'spell' && ev === 'spell')
+      || (gk === 'battlewin' && ev === 'battlewin')
+      || (gk === 'champion' && ev === 'battlewin' && oppId === weekInfo().championId)
+      || (gk === 'review' && ev === 'flash')
+      || (gk === 'sprint' && ev === 'sprint')) g.week.prog++;
+  }
+  /* 本週活躍天數（days 目標用）：讀 vd_meta.daily 計本週一以來有練的天數 */
+  function weekActiveDays() {
+    try {
+      const daily = (JSON.parse(localStorage.getItem('vd_meta') || '{}').daily) || {};
+      const mon = weekKey(), t = VDStore.today();
+      return Object.keys(daily).filter(d => d >= mon && d <= t && daily[d] > 0).length;
+    } catch { return 0; }
+  }
+  /* 本週新點亮字數（newwords 目標用）：以週初 seen 數為基準線 */
+  function newWordsThisWeek() {
+    try {
+      const seen = VDStore.stats(VDApp.words()).seen;
+      if (typeof g.week.base !== 'number') { g.week.base = seen; save(); }
+      return Math.max(0, seen - g.week.base);
+    } catch { return g.week.prog; }
   }
   function weekQuest() {
     rollWeekly();
-    return { cur: Math.min(g.week.prog, WEEK_GOAL), goal: WEEK_GOAL, done: g.week.prog >= WEEK_GOAL, claimed: g.week.claimed };
+    const gl = weekGoal();
+    let cur = g.week.prog;
+    if (gl.key === 'days') cur = weekActiveDays();
+    else if (gl.key === 'newwords') cur = newWordsThisWeek();
+    cur = Math.min(cur, gl.n);
+    return { cur, goal: gl.n, label: gl.label, done: cur >= gl.n, claimed: g.week.claimed };
   }
   function claimWeek() {
     const w = weekQuest();
@@ -99,7 +153,11 @@ const VDGame = (() => {
     g.xp += xp; g.coins += coins;
     save();
     const after = level();
-    if (after > before) celebrate(after);
+    if (after > before) {
+      celebrate(after);
+      // Lv10 起每次升級送稀有保底箱：高等級升級慢，補上即時甜頭
+      if (after >= 10) setTimeout(() => openChest(80, 'rare'), 800);
+    }
     else if (xp >= 20 || coins >= 10) toast(`+${xp} XP　+${coins} 字幣 ${reason || ''}${bonus}`);
     return after > before;
   }
@@ -115,14 +173,16 @@ const VDGame = (() => {
       if (window.VDSound) (combo >= 2 ? VDSound.combo(combo) : VDSound.correct());
       g.ss.correct++;
       g.quests.prog.correct++;
-      g.week.prog++;
-      if (kind === 'spell') g.ss.spell++;
+      weekTick('correct');
+      if (kind === 'spell') { g.ss.spell++; weekTick('spell'); }
       if (kind === 'exam') g.ss.exam++;
       if (combo && combo > g.ss.maxCombo) g.ss.maxCombo = combo;
       let xp = kind === 'spell' ? 15 : kind === 'battle' ? 12 : 10;
       let coins = kind === 'spell' ? 4 : 2;
-      // 新手祝福：前 10 題答對獎勵 ×3，先建立多巴胺迴路
+      // 新手祝福漸退：1-10 題 ×3、11-20 ×2、21-30 ×1.5，慢慢放手不斷崖
       if (g.ss.correct <= 10) { xp *= 3; coins *= 3; toast(`🌟 新手祝福 ×3！（第 ${g.ss.correct}/10 題）`); }
+      else if (g.ss.correct <= 20) { xp *= 2; coins *= 2; toast(`🌟 新手祝福 ×2！（第 ${g.ss.correct}/20 題）`); }
+      else if (g.ss.correct <= 30) { xp = Math.round(xp * 1.5); coins = Math.round(coins * 1.5); toast(`🌟 新手祝福 ×1.5！（第 ${g.ss.correct}/30 題）`); }
       award(xp, coins);
       // 連擊大場面：×5、×10、×15… 全螢幕墨潑
       if (combo && combo >= 5 && combo % 5 === 0) comboSplash(combo);
@@ -140,7 +200,7 @@ const VDGame = (() => {
     }
     checkBadges();
   }
-  function onFlash() { rollDaily(); g.quests.prog.flash++; save(); checkBadges(); }
+  function onFlash() { rollDaily(); g.quests.prog.flash++; weekTick('flash'); save(); checkBadges(); }
   function onFlashDone(wrongReview) {
     const xp = window.VDPets && VDPets.hasPerk('xp10') ? 17 : 15; // 學習詞條：閃卡 XP +10%
     const coins = wrongReview && window.VDPets && VDPets.hasPerk('wrong2') ? 10 : 5;
@@ -152,6 +212,7 @@ const VDGame = (() => {
   function onBattleFinish() { rollDaily(); g.quests.prog.battle++; save(); checkBadges(); }
   function onBattleWin(oppId, comeback) {
     g.ss.battleWon++;
+    weekTick('battlewin', oppId);
     if (!g.unlocked.includes('beat_' + oppId)) g.unlocked.push('beat_' + oppId);
     g.best.battleWins = Math.max(g.best.battleWins, g.ss.battleWon);
     if (comeback && !g.badges.comeback) earn('comeback');
@@ -242,21 +303,26 @@ const VDGame = (() => {
     return chest;
   }
 
-  /* ── 寶箱：稀有度隨機獎（CD7）——傳說5%/稀有25%/普通70%，開箱動畫 ── */
+  /* ── 寶箱：稀有度隨機獎（CD7）——傳說5%/稀有25%/普通70%，開箱動畫；20 箱保底傳說 ── */
+  const PITY_MAX = 20;
   function openChest(baseCoins, forceRarity) {
+    if (typeof g.pity !== 'number') g.pity = 0; // 舊存檔補欄位
+    g.pity++;
     const r = Math.floor(seededRand() * 100);
-    const rarity = forceRarity || (r < 5 ? 'legendary' : r < 30 ? 'rare' : 'common');
+    let rarity = forceRarity || (r < 5 ? 'legendary' : r < 30 ? 'rare' : 'common');
+    if (!forceRarity && g.pity >= PITY_MAX) rarity = 'legendary'; // 保底：連 20 箱沒傳說必出
+    if (rarity === 'legendary') g.pity = 0;
     const mul = { legendary: 4, rare: 2, common: 1 }[rarity];
     let coins = baseCoins * mul, xp = baseCoins * mul, extra = '';
     if (rarity === 'legendary') { g.shield++; g.revive++; extra = '傳說寶箱！四倍獎勵＋護盾＋復活羽毛'; }
     else if (rarity === 'rare') { if (seededRand() < 0.5) { g.shield++; extra = '稀有寶箱！雙倍獎勵＋護盾'; } else extra = '稀有寶箱！雙倍獎勵'; }
     else extra = '普通寶箱';
     g.coins += coins; g.xp += xp; save();
-    chestAnim(rarity, coins, xp, extra);
+    chestAnim(rarity, coins, xp, extra, PITY_MAX - g.pity);
     return { coins, xp, extra, rarity };
   }
   /* 開箱動畫：全螢幕水彩寶箱卡，稀有度分色 */
-  function chestAnim(rarity, coins, xp, extra) {
+  function chestAnim(rarity, coins, xp, extra, pityLeft) {
     const ICO = { legendary: '👑', rare: '💎', common: '🎁' };
     const NAME = { legendary: '傳說', rare: '稀有', common: '普通' };
     if (window.VDSound) VDSound.coin();
@@ -267,6 +333,8 @@ const VDGame = (() => {
       <div class="vg-chest-loot">+${coins} 字幣　+${xp} XP</div>
       <div class="vg-chest-extra">${extra}</div>
       <div class="vg-lu-sub">機率：傳說 5%・稀有 25%・普通 70%</div>
+      ${rarity === 'legendary' ? '<div class="vg-lu-sub">✨ 保底已重新計數</div>'
+        : typeof pityLeft === 'number' ? `<div class="vg-lu-sub">距傳說保底還差 ${pityLeft} 箱</div>` : ''}
       <div class="vg-lu-sub">點一下繼續</div></div>`;
     ov.onclick = () => ov.remove();
     document.body.appendChild(ov);
@@ -450,24 +518,36 @@ const VDGame = (() => {
   }
 
   /* ── 限時衝刺最佳 ── */
-  function setSprintBest(n) { if (n > g.best.sprint) { g.best.sprint = n; save(); return true; } return false; }
+  function setSprintBest(n) { if (n > g.best.sprint) { g.best.sprint = n; weekTick('sprint'); save(); return true; } return false; }
 
   /* ── HTML 轉義（城鎮/市場等模組共用） ── */
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-  /* ── 使用時間提醒：答題/操作滿 30 分鐘吐一次溫和提示，每 session 最多 2 次 ── */
-  const _sessStart = Date.now();
-  let _restShown = 0;
+  /* ── 使用時間提醒：每日累計答題時間持久化（跨重整不歸零），滿 30 分鐘吐提示，每日最多 2 次 ── */
+  let _lastAct = Date.now();
   function restCheck() {
-    if (_restShown >= 2) return;
-    const mins = Math.floor((Date.now() - _sessStart) / 60000);
-    if (mins < 30 * (_restShown + 1)) return;
-    _restShown++;
+    const t = VDStore.today();
+    if (!g.rest || g.rest.day !== t) g.rest = { day: t, mins: 0, shown: 0 }; // 舊存檔沒 rest 欄位：容錯補上
+    const now = Date.now();
+    const gap = (now - _lastAct) / 60000;
+    _lastAct = now;
+    if (gap > 0) g.rest.mins += Math.min(gap, 5); // 掛機發呆超過 5 分鐘不計入
+    if ((g.rest.shown || 0) >= 2) return;
+    if (g.rest.mins < 30 * (g.rest.shown + 1)) return;
+    g.rest.shown++;
+    save();
+    const mins = Math.round(g.rest.mins);
     const ov = document.createElement('div'); ov.className = 'vg-levelup';
     ov.innerHTML = `<div class="vg-lu-card"><div class="vg-lu-ico">🍵</div>
-      <div class="vg-lu-t">練了 ${mins} 分鐘囉</div><div class="vg-lu-title">起來喝口水休息一下 🍵</div>
-      <div class="vg-lu-sub">點一下繼續</div></div>`;
-    ov.onclick = () => ov.remove();
+      <div class="vg-lu-t">今天累計練了 ${mins} 分鐘囉</div><div class="vg-lu-title">起來喝口水休息一下 🍵</div>
+      <div class="vg-lu-sub" id="vg-rest-sub">休息一下……（5 秒後可關閉）</div></div>`;
+    let closable = false;
+    setTimeout(() => {
+      closable = true;
+      const sub = ov.querySelector('#vg-rest-sub');
+      if (sub) sub.textContent = '點一下繼續';
+    }, 5000);
+    ov.onclick = () => { if (closable) ov.remove(); };
     document.body.appendChild(ov);
   }
 
@@ -495,7 +575,7 @@ const VDGame = (() => {
   function avHtml(cls) {
     const fr = g.shop.frame ? ` fr-${g.shop.frame}` : '';
     if (g.avatar === '🦸') {
-      return `<img class="vg-av-img ${cls || ''}${fr}" src="img/ui/h_avatar.png" alt=""
+      return `<img loading="lazy" decoding="async" class="vg-av-img ${cls || ''}${fr}" src="img/ui/h_avatar.webp" alt=""
         onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🦸',className:'vg-av ${cls || ''}${fr}'}))">`;
     }
     return `<span class="vg-av paper ${cls || ''}${fr}">${g.avatar}</span>`;
@@ -511,7 +591,7 @@ const VDGame = (() => {
       if (pg.active && pg.owned && pg.owned[pg.active]) {
         const lv = pg.owned[pg.active].lv || 1;
         const st = lv >= 25 ? 3 : lv >= 10 ? 2 : 1;
-        petAv = `<img class="vg-petav" src="img/pets/${pg.active}_s${st}.png" alt="" onerror="this.remove()">`;
+        petAv = `<img loading="lazy" decoding="async" class="vg-petav" src="img/pets/${pg.active}_s${st}.webp" alt="" onerror="this.remove()">`;
       }
     } catch { /* 無詞靈 */ }
     return `<button class="vg-strip" onclick="VDApp.go('hero')">
@@ -542,54 +622,92 @@ const VDGame = (() => {
       const isToday = c.d === VDStore.today();
       return `<span class="vg-cal-day ${c.active ? 'on' : ''} ${isToday ? 'today' : ''}"><i>${wd}</i>${c.active ? '🔥' : '·'}</span>`;
     }).join('');
-    // FOMO：連續 2 天以上且今天還沒練 → 首屏警示，別讓火斷在今天
+    shieldNotice(); // 護盾若剛頂過一天，進首頁就告訴玩家
+    // 今日功課完成 = 三軌都達「易」檔：頂部收尾儀式卡，家長一眼看到「夠了，可以休息」
+    const easyDone = qs.length > 0 && qs.every(q => q.tiers[0].done);
+    // FOMO：連續 2 天以上且今天還沒練 → 首屏警示，別讓火斷在今天（達標日不催）
     const st = VDStore.stats([]);
-    const fomo = (streak >= 2 && st.todayCount === 0)
+    const fomo = (!easyDone && streak >= 2 && st.todayCount === 0)
       ? `<div class="vg-fomo">🔥 連續 <b>${streak}</b> 天——今天還沒練，別斷在這裡！</div>` : '';
+    const doneCard = easyDone
+      ? `<div class="vg-fomo" style="background:#e8f5e9;border-color:#66bb6a">✅ 今天的功課完成了，明天見！</div>` : '';
     const wq = weekQuest();
     const weekHtml = `
       <div class="vg-quest week ${wq.done ? 'done' : ''}">
         <span class="vg-q-ico">👑</span>
-        <span class="vg-q-body"><span class="vg-q-name">週任務：本週答對 ${wq.goal} 題（保底傳說寶箱）</span>
+        <span class="vg-q-body"><span class="vg-q-name">本週挑戰：${wq.label}（保底傳說寶箱）</span>
           <span class="vg-q-bar"><span style="width:${wq.cur / wq.goal * 100}%"></span></span></span>
         ${wq.claimed ? '<span class="vg-q-claimed">已領</span>'
         : wq.done ? `<button class="vg-q-claim" onclick="VDGame.claimWeekUI()">開箱</button>`
           : `<span class="vg-q-prog">${wq.cur}/${wq.goal}</span>`}
       </div>`;
+    // 城鎮待辦聚合：收成／補給包／委託一行看完，點了直達城鎮
+    let townHtml = '';
+    if (window.VDTown) {
+      try {
+        const todo = [];
+        if (VDTown.harvestReady()) todo.push('🧺 收成');
+        const pk = VDTown.packInfo();
+        if (pk && pk.avail > 0) todo.push(`📦 補給包×${pk.avail}`);
+        const tq = VDTown.questInfo();
+        if (tq && !tq.done) todo.push('📜 委託');
+        if (todo.length) townHtml = `<div class="vg-quest" style="cursor:pointer" onclick="VDApp.go('town')">
+          <span class="vg-q-ico">🏘️</span>
+          <span class="vg-q-body"><span class="vg-q-name">城鎮待辦：${todo.join('　')}</span></span>
+          <span class="vg-q-prog">前往 ›</span></div>`;
+      } catch { /* 城鎮模組異常不擋面板 */ }
+    }
+    // 達標日里程碑只留明日預告，不再往前催
+    const msHtml = easyDone
+      ? `<div class="vg-milestone"><span class="vg-ms-ico">🌅</span>
+          <span class="vg-ms-body"><span class="vg-ms-text">明天回來：首勝+30・神秘字・城鎮收成・招募×2</span></span></div>`
+      : milestoneHtml();
     return `<div class="vg-daily wc-card">
-      <img class="wc-card-img" src="img/ui/h_daily.png" alt="" onerror="this.remove()">
-      ${fomo}
+      <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_daily.webp" alt="" onerror="this.remove()">
+      ${doneCard}${fomo}
       <div class="vg-cal">
         <div class="vg-cal-strip">${calHtml}</div>
-        <div class="vg-cal-note">連續 <b>${streak}</b> 天　明天再來 +30 XP 首勝獎</div>
+        <div class="vg-cal-note">連續 <b>${streak}</b> 天　明天回來：首勝+30・神秘字・城鎮收成・招募×2</div>
       </div>
       <div class="vg-daily-head">每日任務 <i class="vg-daily-sub">挑難度・領積分：易→中→難可疊領</i> ${allClaimed ? '<b class="ok">✓ 全清</b>' : ''}</div>
-      ${qs.map(q => {
+      <div id="vg-questlist">${questRowsHtml(qs)}</div>
+      ${weekHtml}
+      ${townHtml}
+      <button class="vg-mystery ${g.mystery.opened ? 'opened' : ''}" onclick="VDGame.openMysteryUI()">
+        ${g.mystery.opened ? `🔓 今日神秘字：<b>${mw ? mw.word : ''}</b>（已開啟）` : '🎁 開啟今日神秘字'}
+      </button>
+      <div id="vg-ms-slot">${msHtml}</div>
+    </div>`;
+  }
+  /* 三軌任務列（獨立函式：領獎後就地重繪用）；整列可點直達對應模式 */
+  const QUEST_GO = ['quiz', 'battle', 'flash'];
+  function questRowsHtml(qs) {
+    qs = qs || quests();
+    return qs.map(q => {
       const hasReady = q.tiers.some(t => t.done && !t.claimed);
       return `
-        <div class="vg-quest elastic ${hasReady ? 'done' : ''}">
+        <div class="vg-quest elastic ${hasReady ? 'done' : ''}" style="cursor:pointer" onclick="VDApp.go('${QUEST_GO[q.i] || 'menu'}')">
           <span class="vg-q-ico">${q.ico}</span>
           <span class="vg-q-body">
             <span class="vg-q-name">${q.name}<i class="vg-q-cur">${q.cur} ${q.unit}</i></span>
             <span class="vg-q-bar"><span style="width:${Math.min(100, q.cur / q.tiers[2].goal * 100)}%"></span></span>
             <span class="vg-q-tiers">${q.tiers.map(t =>
         t.claimed ? `<span class="vg-tier claimed">${t.label} ✓</span>`
-          : t.done ? `<button class="vg-tier claim" onclick="VDGame.claimAndRefresh(${q.i},${t.t})">${t.label}｜領 +${t.reward}</button>`
+          : t.done ? `<button class="vg-tier claim" onclick="event.stopPropagation();VDGame.claimAndRefresh(${q.i},${t.t})">${t.label}｜領 +${t.reward}</button>`
             : `<span class="vg-tier">${t.label} ${t.goal}${q.unit}・+${t.reward}</span>`).join('')}</span>
           </span>
         </div>`;
-    }).join('')}
-      ${weekHtml}
-      <button class="vg-mystery ${g.mystery.opened ? 'opened' : ''}" onclick="VDGame.openMysteryUI()">
-        ${g.mystery.opened ? `🔓 今日神秘字：<b>${mw ? mw.word : ''}</b>（已開啟）` : '🎁 開啟今日神秘字'}
-      </button>
-      ${milestoneHtml()}
-    </div>`;
+    }).join('');
   }
-  // 供 onclick 呼叫並重繪選單（開箱動畫由 openChest 內建，不再另吐 toast）
+  // 供 onclick 呼叫：領獎後只就地重繪任務列（開箱動畫由 openChest 內建），不再整頁重載打斷心流
   function claimAndRefresh(i, t) {
     claimQuest(i, t);
-    VDApp.go('menu');
+    const box = document.getElementById('vg-questlist');
+    if (box) {
+      box.innerHTML = questRowsHtml();
+      const slot = document.getElementById('vg-ms-slot');
+      if (slot) slot.innerHTML = milestoneHtml();
+    } else VDApp.go('menu'); // 容錯：找不到容器就退回整頁重繪
   }
   function claimWeekUI() { claimWeek(); VDApp.go('menu'); }
   function openMysteryUI() {
@@ -614,14 +732,48 @@ const VDGame = (() => {
     toast('上一場中途離開，視同敗北');
   }
 
-  function init() { load(); checkEscaped(); }
+  /* ── 回歸補償：離開 ≥3 天回來 → 歡迎回城卡＋免費稀有寶箱，先給糖再談功課 ── */
+  function welcomeBack() {
+    try {
+      const meta = JSON.parse(localStorage.getItem('vd_meta') || '{}');
+      if (!meta.lastDay) return; // 全新玩家不觸發
+      const t = VDStore.today();
+      if (g.welcome === t) return; // 今天已發過
+      const diff = Math.round((new Date(t + 'T00:00:00') - new Date(meta.lastDay + 'T00:00:00')) / 86400000);
+      if (diff < 3) return;
+      g.welcome = t; save();
+      const ov = document.createElement('div'); ov.className = 'vg-levelup';
+      ov.innerHTML = `<div class="vg-lu-card"><div class="vg-lu-ico">🏮</div>
+        <div class="vg-lu-t">歡迎回城！</div>
+        <div class="vg-lu-title">${diff} 天不見，送你一個稀有寶箱</div>
+        <div class="vg-lu-sub">先從今天的 20 字開始就好</div>
+        <div class="vg-lu-sub">點一下開箱</div></div>`;
+      ov.onclick = () => { ov.remove(); openChest(40, 'rare'); };
+      document.body.appendChild(ov);
+    } catch { /* vd_meta 壞資料不擋主流程 */ }
+  }
+
+  /* ── 護盾生效通知：store.js 消耗護盾後在 vd_meta 記 shieldUsed=1，這裡吐 toast 並清 flag ── */
+  function shieldNotice() {
+    try {
+      const live = (window.VDStore && VDStore.raw) ? VDStore.raw : null;
+      const meta = live || JSON.parse(localStorage.getItem('vd_meta') || '{}');
+      if (!meta || !meta.shieldUsed) return;
+      delete meta.shieldUsed;
+      if (live) VDStore.sub = VDStore.sub; // 觸發 store 內部 saveMeta 落盤
+      else localStorage.setItem('vd_meta', JSON.stringify(meta));
+      toast(`🛡️ 護盾頂住了！連續 ${meta.streak || 0} 天保住`);
+    } catch { /* 壞資料略過 */ }
+  }
+
+  function init() { load(); checkEscaped(); welcomeBack(); shieldNotice(); }
 
   return {
     init, level, title, levelProgress, get coins() { return g.coins; }, get avatar() { return g.avatar; },
     get shield() { return g.shield; }, get revive() { return g.revive; }, heroName, get raw() { return g; },
     onAnswer, onFlash, onFlashDone, onQuizDone, onBattleStart, onBattleFinish, onBattleWin, esc,
     quests, claimQuest, claimAndRefresh, openMystery, openMysteryUI, mysteryWord,
-    weekQuest, claimWeek, claimWeekUI, weekVaultReady, openWeekVault,
+    weekQuest, claimWeek, claimWeekUI, weekVaultReady, openWeekVault, weekInfo,
     SHOP, buy, setFrame, get frame() { return g.shop.frame; }, get owned() { return g.shop.owned.slice(); },
     rankInfo, rankWin, rankLose, useRevive,
     nextMilestone, milestoneHtml,

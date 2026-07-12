@@ -18,7 +18,7 @@ const VDWordGraph = (() => {
     build();
     el.innerHTML = `
       <div class="wc-card">
-        <img class="wc-card-img" src="img/ui/h_graph.png" alt="" onerror="this.remove()">
+        <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_graph.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
           <p class="pg-hint">你學過的每個字都是一顆星——連著它的詞頭、詞尾或字根。金色＝精熟、藍色＝已學；外圈灰點是還沒掛上字綴的字。點中樞看整個家族，點小點看字義。拖曳移動、滾輪縮放。</p>
           <div class="wg-stats">${statsLine()}</div>

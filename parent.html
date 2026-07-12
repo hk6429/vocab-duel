@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>字鬥英雄・家長成果頁</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --ink:#2b2b2b; --sub:#6b7280; --line:#e5e7eb; --green:#3a7d44; --bg:#f6f7f9; --card:#ffffff; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; background:var(--bg); color:var(--ink); line-height:1.6; }
+  .wrap { max-width:720px; margin:0 auto; padding:24px 16px 48px; }
+  header h1 { font-size:22px; font-weight:700; }
+  header p { color:var(--sub); font-size:14px; margin-top:4px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-top:16px; }
+  .card h2 { font-size:15px; font-weight:700; margin-bottom:12px; color:var(--ink); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; }
+  input[type=text] { flex:1; min-width:180px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:16px; }
+  button { padding:10px 20px; border:0; border-radius:8px; background:var(--green); color:#fff; font-size:15px; cursor:pointer; }
+  button:hover { opacity:.9; }
+  .msg { font-size:14px; color:var(--sub); margin-top:8px; min-height:1.4em; }
+  .msg.err { color:#b91c1c; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; }
+  .tile { border:1px solid var(--line); border-radius:10px; padding:14px; text-align:center; }
+  .tile b { display:block; font-size:26px; color:var(--green); }
+  .tile span { font-size:13px; color:var(--sub); }
+  .weekrow { display:flex; gap:8px; margin-top:4px; }
+  .weekrow .d { flex:1; text-align:center; font-size:12px; color:var(--sub); }
+  .weekrow .dot { width:100%; max-width:34px; height:28px; border-radius:6px; margin:4px auto 0; background:var(--line); }
+  .weekrow .on .dot { background:var(--green); }
+  svg { display:block; width:100%; height:auto; }
+  .weak { display:flex; flex-wrap:wrap; gap:8px; }
+  .weak span { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:999px; padding:2px 12px; font-size:14px; }
+  footer { margin-top:24px; font-size:13px; color:var(--sub); }
+  footer h3 { font-size:14px; color:var(--ink); margin-bottom:6px; }
+  #report { display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>字鬥英雄・家長成果頁</h1>
+    <p>免登入、唯讀。請孩子到遊戲「雲端／班級榜」上傳進度並提供同步碼，即可查看學習成果。</p>
+  </header>
+
+  <div class="card">
+    <h2>輸入孩子的同步碼</h2>
+    <div class="row">
+      <input type="text" id="code" maxlength="12" placeholder="同步碼（6–12 位英數字）" autocomplete="off">
+      <button id="go">查看成果</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="report">
+    <div class="card">
+      <h2>學習總覽</h2>
+      <div class="grid">
+        <div class="tile"><b id="tMastered">–</b><span>累積掌握單字</span></div>
+        <div class="tile"><b id="tLevel">–</b><span>目前等級</span></div>
+        <div class="tile"><b id="tStreak">–</b><span>連續學習天數</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>累積掌握字數曲線</h2>
+      <div id="histBox"></div>
+    </div>
+
+    <div class="card">
+      <h2>本週練習（週一起算）</h2>
+      <div class="grid" style="margin-bottom:12px">
+        <div class="tile"><b id="tWeekDays">–</b><span>本週練習天數</span></div>
+        <div class="tile"><b id="tWeekAns">–</b><span>本週答題數</span></div>
+      </div>
+      <div class="weekrow" id="weekRow"></div>
+    </div>
+
+    <div class="card">
+      <h2>還在努力中的字（弱點字前 10）</h2>
+      <div class="weak" id="weakBox"></div>
+    </div>
+  </div>
+
+  <footer class="card">
+    <h3>給家長的話</h3>
+    <p>「字鬥英雄」是一款免費的英文單字學習遊戲：<b>零內購</b>——遊戲內的「字幣」「寶箱」全部靠答題獲得，不涉及任何真實金錢；所有獎勵機率固定且透明，沒有轉蛋式的隱藏機制。學習核心採用<b>間隔複習</b>（Leitner 盒）原理：答對的字會隔 1、3、8、21、60 天再出現，答錯的字提前重練——這是認知科學驗證最有效的長期記憶方法。孩子每天穩定練 10–15 分鐘，勝過考前突擊一小時。</p>
+  </footer>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  // 與遊戲端 cloud.js 相同的 API 基底判斷：Vercel／本機同源，其餘平台打 Vercel
+  const API = location.hostname.includes('vercel.app') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? '' : 'https://vocab-duel.vercel.app';
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const today = () => new Date().toLocaleDateString('sv-SE');
+
+  // 等級公式與遊戲端一致：xpForLevel(L) = 50·L·(L−1)
+  function levelOf(xp) {
+    let L = 1;
+    while (xp >= 50 * (L + 1) * L) L++;
+    return L;
+  }
+
+  /* m.hist 容錯解析：支援 [{d,n}] / [[d,n]] / {date:count} 三種形態；沒有就回 null */
+  function histPoints(hist) {
+    let pts = [];
+    if (Array.isArray(hist)) {
+      pts = hist.map((h) => Array.isArray(h) ? { d: h[0], n: +h[1] } : { d: h.d || h.date, n: +(h.n ?? h.v ?? h.count) })
+        .filter((p) => p.d && isFinite(p.n));
+    } else if (hist && typeof hist === 'object') {
+      pts = Object.entries(hist).map(([d, n]) => ({ d, n: +n })).filter((p) => isFinite(p.n));
+    }
+    pts.sort((a, b) => String(a.d).localeCompare(String(b.d)));
+    return pts.length >= 2 ? pts : null;
+  }
+
+  /* 純 SVG 手畫折線圖 */
+  function drawCurve(pts) {
+    const W = 640, H = 220, PX = 44, PY = 20;
+    const ys = pts.map((p) => p.n);
+    const yMax = Math.max(...ys, 1), yMin = 0;
+    const x = (i) => PX + (W - PX - 12) * (pts.length === 1 ? 0 : i / (pts.length - 1));
+    const y = (v) => H - PY - (H - PY * 2) * ((v - yMin) / (yMax - yMin));
+    const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.n).toFixed(1)}`).join(' ');
+    // 4 條水平格線＋刻度
+    let grid = '';
+    for (let g = 0; g <= 4; g++) {
+      const v = Math.round(yMax * g / 4), gy = y(v).toFixed(1);
+      grid += `<line x1="${PX}" y1="${gy}" x2="${W - 12}" y2="${gy}" stroke="#e5e7eb" stroke-width="1"/>` +
+              `<text x="${PX - 6}" y="${+gy + 4}" text-anchor="end" font-size="11" fill="#9ca3af">${v}</text>`;
+    }
+    const first = pts[0], last = pts[pts.length - 1];
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="累積掌握字數曲線">
+      ${grid}
+      <polyline points="${line}" fill="none" stroke="#3a7d44" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(last.n).toFixed(1)}" r="4" fill="#3a7d44"/>
+      <text x="${PX}" y="${H - 4}" font-size="11" fill="#9ca3af">${esc(first.d)}</text>
+      <text x="${W - 12}" y="${H - 4}" text-anchor="end" font-size="11" fill="#9ca3af">${esc(last.d)}</text>
+    </svg>`;
+  }
+
+  function render(blob) {
+    const p = blob.p || {}, m = blob.m || {}, g = blob.g || {};
+    // 累積掌握＝熟悉度達第 3 盒以上
+    let mastered = 0;
+    for (const w in p) if ((p[w].b || 0) >= 3) mastered++;
+    $('tMastered').textContent = mastered;
+    $('tLevel').textContent = 'Lv' + levelOf(+g.xp || 0);
+    $('tStreak').textContent = (m.streak || 0) + ' 天';
+
+    // 曲線：讀 m.hist；舊存檔沒有就顯示說明
+    const pts = histPoints(m.hist);
+    $('histBox').innerHTML = pts ? drawCurve(pts)
+      : `<p style="font-size:14px;color:#6b7280">此存檔尚無歷史曲線資料（新版遊戲會每天記錄一點，累積幾天後再回來看）。目前累積掌握 <b>${mastered}</b> 字。</p>`;
+
+    // 本週（週一起）
+    const daily = m.daily || {};
+    const t = today();
+    const base = new Date(t + 'T00:00:00');
+    base.setDate(base.getDate() - (base.getDay() + 6) % 7);
+    const W = ['一', '二', '三', '四', '五', '六', '日'];
+    let days = 0, total = 0, cells = '';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(base); d.setDate(d.getDate() + i);
+      const ds = d.toLocaleDateString('sv-SE');
+      const n = daily[ds] || 0;
+      if (n > 0) { days++; total += n; }
+      cells += `<div class="d ${n > 0 ? 'on' : ''}" title="${ds}：${n} 題">${W[i]}<div class="dot" style="${ds > t ? 'opacity:.35' : ''}"></div></div>`;
+    }
+    $('tWeekDays').textContent = days + ' 天';
+    $('tWeekAns').textContent = total + ' 題';
+    $('weekRow').innerHTML = cells;
+
+    // 弱點字前 10：錯題本依最後答錯日期新→舊
+    const wrong = Object.entries(m.wrong || {}).sort((a, b) => String(b[1]).localeCompare(String(a[1]))).slice(0, 10);
+    $('weakBox').innerHTML = wrong.length
+      ? wrong.map(([w]) => `<span>${esc(w)}</span>`).join('')
+      : '<p style="font-size:14px;color:#6b7280">目前沒有掛在錯題本上的字，很棒！</p>';
+
+    $('report').style.display = 'block';
+  }
+
+  async function load() {
+    const code = $('code').value.trim();
+    const msg = $('msg');
+    if (!/^[A-Za-z0-9]{6,12}$/.test(code)) { msg.textContent = '同步碼須為 6–12 位英數字'; msg.className = 'msg err'; return; }
+    msg.textContent = '載入中…'; msg.className = 'msg';
+    try {
+      const r = await fetch(API + '/api/sync?code=' + encodeURIComponent(code));
+      const body = await r.json().catch(() => null);
+      if (!r.ok) throw new Error((body && body.error) || ('HTTP ' + r.status));
+      render(body.blob || {});
+      msg.textContent = '';
+    } catch (e) {
+      $('report').style.display = 'none';
+      msg.textContent = String(e.message).includes('no save')
+        ? '這組同步碼還沒有存檔——請孩子先在遊戲裡「上傳這台的進度」。'
+        : '讀取失敗：' + e.message;
+      msg.className = 'msg err';
+    }
+  }
+  $('go').onclick = load;
+  $('code').addEventListener('keydown', (e) => { if (e.key === 'Enter') load(); });
+})();
+</script>
+</body>
+</html>

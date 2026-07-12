@@ -22,12 +22,14 @@ const VDTown = (() => {
     grid: { '3,3': { b: 'townhall', lv: 1 } },
     res: { wood: 20, stone: 10, ore: 0, rice: 5 },
     tokens: 0, redeemedRating: 0,
+    visitCode: '',
     log: [],
     pop: [],
     movein: { date: '', count: 0 },
     rush: { date: '', count: 0 },
     harvest: { date: '' },
     packs: { date: '', claimed: 0 },
+    coinPacks: { date: '', count: 0 },
     quest: null,        // { text, res, n, rewardTokens, giver }
     questDate: '',
     seq: 1
@@ -65,7 +67,7 @@ const VDTown = (() => {
   const cells = () => Object.entries(g.grid).map(([k, v]) => ({ key: k, r: +k.split(',')[0], c: +k.split(',')[1], ...v }));
   const countOf = (b) => cells().filter(x => x.b === b).length;
   const thLevel = () => (cells().find(x => x.b === 'townhall') || { lv: 1 }).lv;
-  const resCap = () => 200 + 100 * thLevel();
+  const resCap = () => 300 + 200 * thLevel() + 2 * countOf('statue');
   const popCap = () => countOf('house') * HOUSE_CAP;
   const profCount = (job) => g.pop.filter(p => p.job === job).length;
   const idle = () => g.pop.filter(p => !p.job);
@@ -97,6 +99,16 @@ const VDTown = (() => {
   }
 
   /* ── 建造 ── */
+  /* 可重複建築（scaleCost）：造價隨已建數量遞增（如雕像每多一座 ×1.3） */
+  function buildCost(b) {
+    const def = data.buildings[b];
+    const base = def ? (def.cost || {}) : {};
+    if (!def || !def.scaleCost) return base;
+    const mult = Math.pow(def.scaleCost, countOf(b));
+    const cost = {};
+    for (const r in base) cost[r] = Math.ceil(base[r] * mult);
+    return cost;
+  }
   function canBuild(b) {
     const def = data.buildings[b];
     if (!def) return { ok: false, msg: '沒有這種建築' };
@@ -104,7 +116,7 @@ const VDTown = (() => {
     if (countOf(b) >= def.max) return { ok: false, msg: `${def.name} 最多 ${def.max} 座` };
     const lack = needProfOk(def.needProf);
     if (lack) return { ok: false, msg: `需要職業居民：${lack}` };
-    const short = costOk(def.cost);
+    const short = costOk(buildCost(b));
     if (short) return { ok: false, msg: short };
     return { ok: true };
   }
@@ -114,7 +126,7 @@ const VDTown = (() => {
     if (g.grid[key]) return { ok: false, msg: '這格已有建築' };
     const chk = canBuild(b);
     if (!chk.ok) return chk;
-    payCost(data.buildings[b].cost);
+    payCost(buildCost(b));
     g.grid[key] = { b, lv: 1 };
     logEvt(`🏗️ ${data.buildings[b].name} 落成`);
     save();
@@ -301,13 +313,25 @@ const VDTown = (() => {
     if (g.harvest.date === today()) return { ok: false, msg: '今天收過了——明天再來' };
     const out = dailyOutput();
     if (!Object.values(out).some(v => v)) return { ok: false, msg: '沒有工人在工作' };
+    /* 收成變異：每項 ×0.7–1.4，天天有點不一樣 */
+    for (const r of RES) if (out[r]) out[r] = Math.max(1, Math.round(out[r] * (0.7 + Math.random() * 0.7)));
     const lazy = todayCorrect() === 0;   // 城主今天沒練功 → 居民只交一半（想看你讀書）
     if (lazy) for (const r of RES) out[r] = Math.floor(out[r] / 2);
     gainRes(out);
     g.harvest.date = today();
-    /* 奇遇：25% 收成時發生一件好事 */
+    /* 奇遇：大奇遇 5%（代幣或稀有資源大包）＋小奇遇 30%（日常好事） */
     let event = null;
-    if (Math.random() < 0.25) {
+    const roll = Math.random();
+    if (roll < 0.05) {
+      const bigs = [
+        { t: '🐉 天降祥龍，留下一枚城邦古幣', en: 'A dragon left an ancient coin!', gain: {}, tokens: 1 },
+        { t: '🏺 挖地基挖出前朝寶庫', en: 'We found an ancient treasure vault!', gain: { wood: 10, stone: 10, ore: 8 } }
+      ];
+      event = bigs[Math.floor(Math.random() * bigs.length)];
+      if (event.tokens) g.tokens += event.tokens;
+      gainRes(event.gain);
+      logEvt(`🌟 大奇遇！${event.t}`);
+    } else if (roll < 0.35) {
       const evs = [
         { t: '🐫 商隊路過，留下謝禮', en: 'A caravan passed by!', gain: { wood: 6 } },
         { t: '🎣 河裡撈到沉木與奇石', en: 'Treasure from the river!', gain: { wood: 4, stone: 4 } },
@@ -330,13 +354,50 @@ const VDTown = (() => {
     const earned = Math.min(cap, Math.floor(correct / PACK_PER));
     return { correct, earned, claimed: g.packs.claimed, avail: Math.max(0, earned - g.packs.claimed), cap };
   }
+  /* 每包從 3 種配方隨機抽；5% 出「✨ 金色補給包」內容雙倍 */
+  const PACK_RECIPES = [
+    { wood: 5, stone: 1, rice: 1 },          // 林業包
+    PACK,                                    // 均衡包
+    { stone: 4, ore: 2, rice: 1 }            // 礦石包
+  ];
   function claimPacks() {
     const info = packInfo();
     if (!info.avail) return { ok: false, msg: `再答對 ${PACK_PER - (info.correct % PACK_PER)} 題就有下一包` };
-    for (let i = 0; i < info.avail; i++) gainRes(PACK);
+    const got = { wood: 0, stone: 0, ore: 0, rice: 0 };
+    let golden = 0;
+    for (let i = 0; i < info.avail; i++) {
+      const recipe = PACK_RECIPES[Math.floor(Math.random() * PACK_RECIPES.length)];
+      const mult = Math.random() < 0.05 ? 2 : 1;
+      if (mult === 2) golden++;
+      for (const r in recipe) got[r] += recipe[r] * mult;
+    }
+    gainRes(got);
     g.packs.claimed += info.avail;
     save();
-    return { ok: true, n: info.avail, pack: PACK };
+    return { ok: true, n: info.avail, got, golden };
+  }
+
+  /* ── 金幣資源包：50 字幣＝1 補給包（每日上限 4 包，避免打爆城鎮經濟） ── */
+  const COIN_PACK_COST = 50, COIN_PACK_PER_DAY = 4;
+  function spendCoins(n) {
+    if (window.VDGame && typeof VDGame.spend === 'function') return VDGame.spend(n);
+    if (!window.VDGame || (VDGame.raw.coins || 0) < n) return false;
+    VDGame.raw.coins -= n;
+    localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
+    return true;
+  }
+  function coinPackInfo() {
+    if (!g.coinPacks || g.coinPacks.date !== today()) { g.coinPacks = { date: today(), count: 0 }; save(); }
+    return { todayLeft: Math.max(0, COIN_PACK_PER_DAY - g.coinPacks.count), cost: COIN_PACK_COST };
+  }
+  function coinToRes() {
+    const info = coinPackInfo();
+    if (info.todayLeft <= 0) return { ok: false, msg: `字幣換補給每日上限 ${COIN_PACK_PER_DAY} 包，明天再來！` };
+    if (!spendCoins(COIN_PACK_COST)) return { ok: false, msg: `字幣不足，需要 ${COIN_PACK_COST} 枚` };
+    g.coinPacks.count++;
+    gainRes(PACK);
+    save();
+    return { ok: true, pack: PACK };
   }
 
   /* ── 徵戰掉資源（petbattle 野生勝利呼叫） ── */
@@ -349,15 +410,17 @@ const VDTown = (() => {
     return loot;
   }
 
-  /* ── WordToken：競技積分兌代幣（遊戲內記帳，非真金錢） ── */
+  /* ── WordToken：累計勝分（lifetime，只增不減）兌代幣（遊戲內記帳，非真金錢） ── */
   function tokenInfo() {
-    const rating = (window.VDPets && VDPets.rating) || 0;
+    const rating = (window.VDPets && typeof VDPets.lifetime === 'function')
+      ? VDPets.lifetime()
+      : ((window.VDPets && VDPets.rating) || 0);
     const avail = Math.floor(Math.max(0, rating - g.redeemedRating) / TOKEN_RATING);
     return { tokens: g.tokens, rating, avail, per: TOKEN_RATING };
   }
   function redeemTokens() {
     const t = tokenInfo();
-    if (!t.avail) return { ok: false, msg: `再拿 ${TOKEN_RATING - (t.rating - g.redeemedRating) % TOKEN_RATING} 競技積分兌 1 枚` };
+    if (!t.avail) return { ok: false, msg: `再拿 ${TOKEN_RATING - Math.max(0, t.rating - g.redeemedRating) % TOKEN_RATING} 競技積分兌 1 枚` };
     g.tokens += t.avail;
     g.redeemedRating += t.avail * TOKEN_RATING;
     save();
@@ -407,7 +470,8 @@ const VDTown = (() => {
     return { text: lines[Math.floor(Math.random() * lines.length)].replace('{w}', `<b class="npc-w" data-w="${w}">${w}</b>`), word: w };
   }
 
-  /* ── 雲端綁定（同步碼） ── */
+  /* ── 雲端綁定（同步碼／唯讀參觀碼） ── */
+  function setVisitCode(v) { g.visitCode = String(v || ''); save(); }
   function exportState() { return JSON.parse(JSON.stringify(g)); }
   function importState(obj) {
     if (!obj || !obj.grid || !obj.res) return false;
@@ -420,11 +484,11 @@ const VDTown = (() => {
     init, GRID, RES, RES_META, MAX_LV,
     get raw() { return g; },
     cells, countOf, thLevel, resCap, popCap, profCount, idle, mastered, nearMastered,
-    canBuild, build, demolish, move, upgradeReq, upgrade, tickUpgrades, rushUpgrade, quizRush, rushInfo,
-    setName,
+    canBuild, buildCost, build, demolish, move, upgradeReq, upgrade, tickUpgrades, rushUpgrade, quizRush, rushInfo,
+    setName, setVisitCode,
     moveinInfo, tryMovein, assignJob, train,
     dailyOutput, harvestReady, harvest,
-    packInfo, claimPacks, battleLoot,
+    packInfo, claimPacks, coinPackInfo, coinToRes, battleLoot,
     tokenInfo, redeemTokens, tokenToRes,
     questInfo, fulfillQuest, npcLine,
     exportState, importState,

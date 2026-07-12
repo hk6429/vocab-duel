@@ -28,11 +28,11 @@ try {
   await page.goto(`http://localhost:${port}/`);
   // 1. 學段選擇
   await page.click('button[data-s="E"]');
-  await page.waitForSelector('.menu-btns');
+  await page.waitForSelector('.wc-mgrid');
   console.log('✅ 學段選擇 → 主選單');
 
   // 2. 閃卡翻 5 張
-  await page.click('text=🃏 閃卡練功');
+  await page.click('.wc-mcard-title:has-text("閃卡練功")');
   for (let i = 0; i < 5; i++) {
     await page.waitForSelector('.flash-card');
     await page.click('.flash-card');
@@ -43,11 +43,15 @@ try {
 
   // 3. 自測 1 輪（10 題亂點）
   await page.click('.topbar .back');
-  await page.click('text=⚔️ 單字自測');
+  await page.waitForSelector('.wc-mgrid');
+  await page.click('.wc-mcard-title:has-text("單字自測")');
   for (let i = 0; i < 10; i++) {
     await page.waitForSelector('.opt:not([disabled])');
     await page.click('.quiz-opts .opt');
     await page.waitForSelector('.opt[disabled]');
+    // 答錯要手動按「下一題」；答對 1.2 秒自動前進
+    const nextBtn = await page.$('.qz-next');
+    if (nextBtn) await nextBtn.click();
     await page.waitForFunction(() => !document.querySelector('.opt[disabled]') || document.querySelector('.card-done'));
   }
   await page.waitForSelector('.card-done');
