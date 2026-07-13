@@ -270,7 +270,7 @@ const VDPetBattle = (() => {
       if (win) { VDGame.raw.coins += 25; coins = 25; localStorage.setItem('vd_game', JSON.stringify(VDGame.raw)); }
       submitSnapshot();
     }
-    if (mode === 'practice') ratingHtml = `<div class="pg-hint">🎈 練習賽無獎勵——連上雲端再打影子對戰拿積分！</div>`;
+    if (mode === 'practice') ratingHtml = `<div class="pg-hint">🎈 練習賽無獎勵——你的詞靈已存入配對池，等有其他玩家上線就配得到真對手，再打一次影子對戰試試！</div>`;
     el.innerHTML = `<div class="card-done">
       <div class="big">${win ? '🏆' : '💀'}</div>
       <p>${win ? `${me.name} 擊敗了 ${foe.name}！` : `${me.name} 不敵 ${foe.name}……多學幾個家族字再來！`}</p>
@@ -306,19 +306,23 @@ const VDPetBattle = (() => {
     const base = wild[(n - 1) % wild.length];
     if (n <= wild.length)
       return { name: base.name, ico: base.ico, lv: base.lv, acc: base.acc, dropTier: base.dropTier, floorNo: n, atk: 10 + 2 * base.lv, hp: 80 + 6 * base.lv };
-    const k = 1 + 0.15 * (n - 10);
+    // 40 層前線性 +15%/層（原手感）；40 層後怪也走幾何成長，追上裝備每 30 層升 1 階（數值×1.8）的曲線，
+    // 否則深層會被一擊秒殺。血 ×1.65/30層＝耐打但磨得死；攻 ×1.5/30層＝容錯隨深度緩慢回升
+    const lin = 1 + 0.15 * (Math.min(n, 40) - 10);
+    const kHp = lin * Math.pow(1.65, Math.max(0, n - 40) / 30);
+    const kAtk = lin * Math.pow(1.5, Math.max(0, n - 40) / 30);
     const cycle = Math.ceil((n - wild.length) / wild.length);
     const baseIdx = VDPets.tierIdx(base.dropTier === 'common' ? 'rare' : base.dropTier);
     const dropTier = VDPets.TIERS[Math.min(VDPets.TIERS.length - 1, baseIdx + Math.floor(cycle / 3))];
     return {
       name: `${base.name}・輪迴 ${cycle}`, ico: base.ico,
-      lv: Math.round(base.lv * k),
+      lv: Math.round(base.lv * kAtk),
       acc: Math.min(0.92, base.acc + 0.02 * cycle),
       dropTier,
       legBonus: Math.min(0.5, 0.05 * (n - 10)),   // 掉落時有機會再升一階
       floorNo: n,
-      atk: Math.round((10 + 2 * base.lv) * k),
-      hp: Math.round((80 + 6 * base.lv) * k)
+      atk: Math.round((10 + 2 * base.lv) * kAtk),
+      hp: Math.round((80 + 6 * base.lv) * kHp)
     };
   }
   function startWild(n) {
@@ -329,22 +333,23 @@ const VDPetBattle = (() => {
   /* ── 影子對戰（Task 6 接雲端；離線退本機幻影） ── */
   async function startShadow() {
     el.innerHTML = '<div class="loading">連線中……尋找影子對手</div>';
-    let opp = null;
+    submitSnapshot();   // 先把自己丟進池子——否則池子空了永遠配不到人、大家都卡在練習賽
+    let opp = null, connected = false;
     try {
       const r = await fetch('api/pets', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ op: 'opponent', rating: VDPets.rating })
       });
-      if (r.ok) opp = (await r.json()).opponent;
+      if (r.ok) { connected = true; opp = (await r.json()).opponent; }
     } catch { /* 離線 */ }
     let practice = false;
     if (!opp) {
-      // 幻影對手：以自己為藍本 ±20%——離線打的是練習賽，不發積分與字幣
+      // 幻影對手：以自己為藍本 ±20%——沒對手可配時打的是練習賽，不發積分與字幣
       practice = true;
       const me = VDPets.list().find(x => x.id === VDPets.active());
       const k = 0.85 + Math.random() * 0.35;
       opp = { nick: '迷霧幻影', petId: me.id, petName: me.name, lv: me.lv, atk: Math.max(5, Math.round(me.atk * k)), hp: Math.round(me.hp * k), skills: [] };
-      VDGame.toast('沒連上雲端，先跟幻影打場練習賽（無獎勵）！');
+      VDGame.toast(connected ? '目前還沒有其他玩家可配對，先打場練習賽（無獎勵），你的紀錄已存入配對池，之後就配得到人！' : '沒連上雲端，先跟幻影打場練習賽（無獎勵）！');
     }
     startFight({
       name: `${VDGame.esc(opp.nick)} 的 ${VDGame.esc(opp.petName)}${practice ? '（練習賽）' : ''}`, ico: '👤', lv: opp.lv,

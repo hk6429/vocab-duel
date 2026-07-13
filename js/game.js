@@ -202,8 +202,10 @@ const VDGame = (() => {
   }
   function onFlash() { rollDaily(); g.quests.prog.flash++; weekTick('flash'); save(); checkBadges(); }
   function onFlashDone(wrongReview) {
-    const xp = window.VDPets && VDPets.hasPerk('xp10') ? 17 : 15; // 學習詞條：閃卡 XP +10%
-    const coins = wrongReview && window.VDPets && VDPets.hasPerk('wrong2') ? 10 : 5;
+    const xp10 = window.VDPets && VDPets.hasPerk('xp10');
+    // 錯題複習比一般閃卡耗神，基礎獎勵就比照加成，有 wrong2 天賦再疊一次
+    const xp = wrongReview ? (xp10 ? 20 : 18) : (xp10 ? 17 : 15);
+    const coins = wrongReview ? (window.VDPets && VDPets.hasPerk('wrong2') ? 15 : 10) : 5;
     award(xp, coins, wrongReview ? '錯題複習完成' : '閃卡回合完成');
   }
   function onQuizDone(score) { award(15 + score * 2, 5 + score, '自測完成'); }
