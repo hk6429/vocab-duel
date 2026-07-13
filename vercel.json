@@ -7,7 +7,7 @@
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://vocab-duel.vercel.app https://vocab-duel.pages.dev https://vocab-duel.netlify.app; frame-ancestors 'none'; base-uri 'self'; object-src 'none'" }
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://naicheng-counter.vercel.app; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://naicheng-counter.vercel.app https://vocab-duel.vercel.app https://vocab-duel.pages.dev https://vocab-duel.netlify.app; frame-ancestors 'none'; base-uri 'self'; object-src 'none'" }
       ]
     },
     {
