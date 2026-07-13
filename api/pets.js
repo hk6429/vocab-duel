@@ -10,7 +10,8 @@ const redis = new Redis({
 });
 
 const POOL = "vd:petpool";               // LPUSH 快照池，LTRIM 保留 200
-const BOARD = "vd:petboard:global";      // ZSET nick → rating，取 Top 50
+const BOARD = "vd:petboard:global";      // ZSET member=nick → rating，取 Top 50（每人唯一一列）
+const BOARDMETA = "vd:petboard:meta";    // HASH nick → {petName,lv}，配合 BOARD 顯示
 const POOL_MAX = 200;
 const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
 const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12;
@@ -51,8 +52,10 @@ export default async function handler(req, res) {
       if (!snap) return res.status(400).json({ error: "bad snap" });
       await redis.lpush(POOL, JSON.stringify(snap));
       await redis.ltrim(POOL, 0, POOL_MAX - 1);
-      await redis.zadd(BOARD, { score: snap.rating, member: JSON.stringify({ nick: snap.nick, petName: snap.petName, lv: snap.lv }) });
-      await redis.zremrangebyrank(BOARD, 0, -101);   // 榜只留前 100 筆原始資料
+      // 以暱稱為唯一 key：同一玩家只佔一列，積分隨最新戰績覆寫（過去用 {nick,lv} 當 key 會讓升等後多出殭屍列）
+      await redis.zadd(BOARD, { score: snap.rating, member: snap.nick });
+      await redis.hset(BOARDMETA, { [snap.nick]: JSON.stringify({ petName: snap.petName, lv: snap.lv }) });
+      await redis.zremrangebyrank(BOARD, 0, -101);   // 榜只留前 100 名
       return res.status(200).json({ ok: 1 });
     }
 
@@ -71,14 +74,32 @@ export default async function handler(req, res) {
     }
 
     if (op === "board") {
-      const raw = await redis.zrange(BOARD, 0, 49, { rev: true, withScores: true });
-      const board = [];
+      // 多抓一些（含新舊格式殭屍列），依暱稱去重留最高分後再取 Top 50
+      const raw = await redis.zrange(BOARD, 0, 99, { rev: true, withScores: true });
+      const rows = [];
       for (let i = 0; i < raw.length; i += 2) {
+        const member = raw[i];
+        const rating = Math.round(Number(raw[i + 1]) || 0);
+        // 舊資料 member 是 JSON {nick,petName,lv}；新資料 member 就是暱稱、meta 另存 hash
+        if (typeof member === "string" && member[0] === "{") {
+          try { rows.push({ ...JSON.parse(member), rating }); } catch { /* skip */ }
+          continue;
+        }
+        if (member && typeof member === "object") { rows.push({ ...member, rating }); continue; }
+        const nick = String(member);
+        let meta = {};
         try {
-          const m = typeof raw[i] === "string" ? JSON.parse(raw[i]) : raw[i];
-          board.push({ ...m, rating: Math.round(Number(raw[i + 1]) || 0) });
-        } catch { /* skip */ }
+          const m = await redis.hget(BOARDMETA, nick);
+          meta = m ? (typeof m === "string" ? JSON.parse(m) : m) : {};
+        } catch { /* 無 meta 就只顯示暱稱 */ }
+        rows.push({ nick, petName: meta.petName || "詞靈", lv: meta.lv || 1, rating });
       }
+      const best = new Map();   // 同暱稱只留最高分那列，清掉升等/舊格式造成的殭屍重複
+      for (const r of rows) {
+        const cur = best.get(r.nick);
+        if (!cur || r.rating > cur.rating) best.set(r.nick, r);
+      }
+      const board = [...best.values()].sort((a, b) => b.rating - a.rating).slice(0, 50);
       return res.status(200).json({ ok: 1, board });
     }
 

@@ -96,8 +96,9 @@ const VDMarket = (() => {
       <div class="pet-actrow" id="mk-price-row" hidden>
         <span class="pg-hint" id="mk-band"></span>
         <input class="rt-join-in" id="mk-price" inputmode="numeric" placeholder="定價">
-        <input class="rt-join-in" id="mk-reserve" maxlength="12" placeholder="保留給（同學暱稱，選填）">
+        <input class="rt-join-in" id="mk-reserve" maxlength="12" placeholder="選填：保留給誰">
         <button class="btn small" id="mk-post">上架</button>
+        <span class="pg-hint">👆「保留給」留空也能上架，公開讓大家搶購</span>
       </div>`;
     let picked = -1;
     box.querySelectorAll('.mk-pick').forEach(b => {

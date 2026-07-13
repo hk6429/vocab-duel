@@ -358,16 +358,7 @@ const VDPetBattle = (() => {
       img: `img/pets/${opp.petId}_s${VDPets.stageOf(opp.lv)}.webp`, hue: true
     }, practice ? 'practice' : 'shadow');
   }
-  async function submitSnapshot() {
-    const snap = VDPets.snapshot();
-    if (!snap) return;
-    try {
-      await fetch('api/pets', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ op: 'submit', snap })
-      });
-    } catch { /* 離線不阻斷 */ }
-  }
+  const submitSnapshot = () => VDPets.submitBoard();
 
   /* ── 排行榜 ── */
   async function showBoard() {

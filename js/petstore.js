@@ -378,6 +378,19 @@ const VDPets = (() => {
     };
   }
 
+  /* 把目前出戰寵快照＋積分推上配對池與全站排行榜（離線不阻斷）。
+     所有會動到 rating 的對戰模式（影子／即時）結算後都該呼叫，否則積分只留在本機、上不了榜。 */
+  async function submitBoard() {
+    const snap = snapshot();
+    if (!snap) return;
+    try {
+      await fetch('api/pets', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: 'submit', snap })
+      });
+    } catch { /* 離線不阻斷 */ }
+  }
+
   return {
     init, list, adopt, adoptCost, levelUp, levelCost, power, familyStats, atk, hp, stageOf, lvOf,
     rollDrop, equip, unequip, skillsOf, setDeco, setActive, active, DECOS, SLOTS, SLOT_NAME,
@@ -387,7 +400,7 @@ const VDPets = (() => {
     affixStats, topAffixes, weakAffixes,
     petWin, petLose, get rating() { return g.rating; }, get wildFloor() { return g.wildFloor; }, clearWild,
     lifetime: () => g.lifetime || 0,
-    snapshot, wordsOf: id => wordsOfPet[id] || new Set(),
+    snapshot, submitBoard, wordsOf: id => wordsOfPet[id] || new Set(),
     def: petDef, canFuse, fuse, FUSE_COST, FUSE_MAX,
     fusions: () => g.fusions.slice(),
     wild: () => data.wild, MAX_LV

@@ -256,6 +256,7 @@ const VDRT = (() => {
     let ratingHtml = '';
     if (win === true) { const pts = VDPets.petWin(); VDGame.raw.coins += 25; localStorage.setItem('vd_game', JSON.stringify(VDGame.raw)); ratingHtml = `<div class="bt-rankdelta up">⚔️ 競技積分 +20（${pts}）・🏛️ 累計 +20（總 ${VDPets.lifetime()}）・💰 +25 字幣</div>`; }
     else if (win === false) { const pts = VDPets.petLose(); ratingHtml = `<div class="bt-rankdelta down">⚔️ 競技積分 −10（${pts}）</div>`; }
+    if (win !== null) VDPets.submitBoard();   // 積分有變動就刷全站榜——否則即時對戰的積分上不了排行榜
     el.innerHTML = `<div class="card-done">
       <div class="big">${win === true ? '🏆' : win === false ? '💀' : '🤝'}</div>
       <p>${win === true ? `擊敗 ${oppSnap ? VDGame.esc(oppSnap.nick) : '對手'}！` : win === false ? `不敵 ${oppSnap ? VDGame.esc(oppSnap.nick) : '對手'}……` : '平手！'}</p>
