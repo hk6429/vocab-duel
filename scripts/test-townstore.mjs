@@ -58,6 +58,7 @@ T.build('quarry', 2, 4);
 out = T.dailyOutput();
 ok(out.stone === 5, '採石場讓石匠 +2');
 store.vd_game = JSON.stringify({ coins: 1000, quests: { date: TODAY, prog: { correct: 10 } } }); // 今日已練功
+T.raw.res.rice = 20;                       // 喂飽口糧，避開饑荒（饑荒另測）
 const w0 = T.raw.res.wood;
 ok(T.harvest().ok && T.raw.res.wood === w0 + 3, '收成入庫');
 ok(!T.harvest().ok, '一天只能收一次');
@@ -224,5 +225,58 @@ ok(Array.isArray(T.raw.log) && T.raw.log.length > 0, '城史紀年有記錄');
   ok(T.raw.visitCode === 'AB12', 'setVisitCode 寫入');
 }
 
+/* 19. 升級加成：建築等級真的提升能力 */
+{
+  T.raw.grid = {
+    '3,3': { b: 'townhall', lv: 5 },
+    '3,4': { b: 'house', lv: 3 },
+    '4,3': { b: 'farm', lv: 4 },
+    '4,4': { b: 'mine', lv: 3 },
+    '4,5': { b: 'hospital', lv: 2 },
+    '5,3': { b: 'lighthouse', lv: 2 },
+    '5,4': { b: 'statue', lv: 3 }
+  };
+  T.raw.pop = [
+    { id: 1, name: 'F', job: 'farmer', rare: false },
+    { id: 2, name: 'M', job: 'miner', rare: false }
+  ];
+  ok(T.popCap() === 12, '民房 Lv3 → 容量 4×3=12');
+  ok(T.resCap() === 300 + 200 * 5 + 2 * 3, '雕像 Lv3 → 倉儲 +2×3');
+  const o = T.dailyOutput();
+  ok(o.rice === 12, '稻田 Lv4 讓農夫 4→10 米、醫院 Lv2 再 +2 = 12');
+  ok(o.ore === 10, '礦場 Lv3 讓礦工 2→8 礦、醫院 Lv2 再 +2 = 10');
+  ok(T.packInfo().cap === 6 + 2 * 2, '燈塔 Lv2 → 每日包上限 6+4=10');
+}
+
+/* 20. 每日口糧＋饑荒（人口越多吃越多，糧倉見底建材減半） */
+{
+  store.vd_game = JSON.stringify({ coins: 1000, quests: { date: TODAY, prog: { correct: 10 } } });
+  // 米足：pop 3、rice 10
+  T.raw.grid = { '3,3': { b: 'townhall', lv: 1 }, '4,3': { b: 'farm', lv: 1 } };
+  T.raw.pop = [
+    { id: 1, name: 'F', job: 'farmer', rare: false },
+    { id: 2, name: 'B', job: '', rare: false },
+    { id: 3, name: 'C', job: '', rare: false }
+  ];
+  T.raw.res = { wood: 0, stone: 0, ore: 0, rice: 10 };
+  T.raw.harvest.date = '';
+  const h = T.harvest();
+  ok(h.ate === 3 && !h.famine, '口糧：3 人吃 3 米、米足不饑荒');
+  ok(T.raw.res.rice === 11, '收成後米 = 10 − 3(口糧) + 4(農夫) = 11');
+  // 米不足：pop 4、rice 1（無農夫產米）→ 饑荒、糧倉歸零、礦產減半
+  T.raw.grid = { '3,3': { b: 'townhall', lv: 1 }, '5,5': { b: 'mine', lv: 1 } };
+  T.raw.pop = [
+    { id: 1, name: 'M', job: 'miner', rare: false },
+    { id: 2, name: 'B', job: '', rare: false },
+    { id: 3, name: 'C', job: '', rare: false },
+    { id: 4, name: 'D', job: '', rare: false }
+  ];
+  T.raw.res = { wood: 0, stone: 0, ore: 0, rice: 1 };
+  T.raw.harvest.date = '';
+  const h2 = T.harvest();
+  ok(h2.famine && T.raw.res.rice === 0, '米不足 → 饑荒、糧倉歸零');
+  ok(T.raw.res.ore === 2, '饑荒：礦工 4 礦減半 → 2');
+}
+
 if (fail) { console.error(`\n${fail} 個問題`); process.exit(1); }
-console.log('\nALL PASS — townstore 純邏輯 18 組驗證通過');
+console.log('\nALL PASS — townstore 純邏輯 20 組驗證通過');

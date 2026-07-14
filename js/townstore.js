@@ -66,9 +66,10 @@ const VDTown = (() => {
   /* ── 查詢 ── */
   const cells = () => Object.entries(g.grid).map(([k, v]) => ({ key: k, r: +k.split(',')[0], c: +k.split(',')[1], ...v }));
   const countOf = (b) => cells().filter(x => x.b === b).length;
+  const sumLv = (b) => cells().filter(x => x.b === b).reduce((s, x) => s + (x.lv || 1), 0); // 同類建築總等級＝升級加成的計量單位
   const thLevel = () => (cells().find(x => x.b === 'townhall') || { lv: 1 }).lv;
-  const resCap = () => 300 + 200 * thLevel() + 2 * countOf('statue');
-  const popCap = () => countOf('house') * HOUSE_CAP;
+  const resCap = () => 300 + 200 * thLevel() + 2 * sumLv('statue');   // 雕像每級 +2 倉儲
+  const popCap = () => HOUSE_CAP * sumLv('house');                    // 民房每級多住 4 人（Lv5=20）
   const profCount = (job) => g.pop.filter(p => p.job === job).length;
   const idle = () => g.pop.filter(p => !p.job);
   const mastered = () => {
@@ -294,14 +295,19 @@ const VDTown = (() => {
       const def = data.jobs[p.job];
       if (!def) continue;
       if (p.job === 'farmer' && !countOf('farm')) continue;
+      /* 升級加成：加成建築(礦場/採石場)presence 就 +2、每級再 +2；
+         啟用建築(稻田)lv1 維持基準、每升 1 級 +2 */
+      const boost = def.boostBy ? 2 * sumLv(def.boostBy)
+        : def.needBuilding ? 2 * (sumLv(def.needBuilding) - countOf(def.needBuilding))
+          : 0;
       for (const r in def.out) {
-        let v = def.out[r];
-        if (def.boostBy && countOf(def.boostBy)) v += 2;
+        let v = def.out[r] + boost;
         if (p.rare) v *= 2;
         out[r] += v;
       }
     }
-    if (countOf('hospital')) for (const r of RES) if (out[r]) out[r] += 1;
+    const hosp = sumLv('hospital');                       // 醫院每級：全城每項產出 +1
+    if (hosp) for (const r of RES) if (out[r]) out[r] += hosp;
     return out;
   }
   const todayCorrect = () => {
@@ -317,6 +323,15 @@ const VDTown = (() => {
     for (const r of RES) if (out[r]) out[r] = Math.max(1, Math.round(out[r] * (0.7 + Math.random() * 0.7)));
     const lazy = todayCorrect() === 0;   // 城主今天沒練功 → 居民只交一半（想看你讀書）
     if (lazy) for (const r of RES) out[r] = Math.floor(out[r] / 2);
+    /* 每日口糧：全城居民每人吃 1 稻米，糧倉見底就鬧饑荒（建材產出減半） */
+    const ate = g.pop.length;
+    let famine = false;
+    if (g.res.rice >= ate) { g.res.rice -= ate; }
+    else {
+      famine = true; g.res.rice = 0;
+      for (const r of ['wood', 'stone', 'ore']) out[r] = Math.floor(out[r] / 2);
+      logEvt('🍚 糧倉見底，居民鬧饑荒——今日建材產出減半');
+    }
     gainRes(out);
     g.harvest.date = today();
     /* 奇遇：大奇遇 5%（代幣或稀有資源大包）＋小奇遇 30%（日常好事） */
@@ -343,14 +358,14 @@ const VDTown = (() => {
       logEvt(`${event.t}`);
     }
     save();
-    return { ok: true, out, lazy, event };
+    return { ok: true, out, lazy, event, ate, famine };
   }
 
   /* ── 學習換資源：今日答對題數 → 資源包（燈塔 +2 包上限） ── */
   function packInfo() {
     if (g.packs.date !== today()) { g.packs = { date: today(), claimed: 0 }; save(); }
     const correct = todayCorrect();
-    const cap = 6 + (countOf('lighthouse') ? 2 : 0);
+    const cap = 6 + 2 * sumLv('lighthouse');   // 燈塔每級：每日包上限 +2
     const earned = Math.min(cap, Math.floor(correct / PACK_PER));
     return { correct, earned, claimed: g.packs.claimed, avail: Math.max(0, earned - g.packs.claimed), cap };
   }

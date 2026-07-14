@@ -39,7 +39,10 @@ const VDSpeak = (() => {
   function say(text) {
     if (!ok || !text) return;
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(String(text));
+    const raw = String(text).trim();
+    /* 全大寫縮寫（2–5 字母）逐字母唸，避免 MRT/TV/CD 被唸成一團 */
+    const spoken = /^[A-Z]{2,5}$/.test(raw) ? raw.split('').join(' ') : String(text);
+    const u = new SpeechSynthesisUtterance(spoken);
     u.lang = lang; if (voice) u.voice = voice; u.rate = 0.9;
     speechSynthesis.speak(u);
   }

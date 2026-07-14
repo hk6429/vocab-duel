@@ -1,504 +1,504 @@
 {
- "buildings": {
-  "townhall": {
-   "name": "市政廳",
-   "ico": "🏛️",
-   "max": 1,
-   "cost": {},
-   "desc": "全城等級天花板——市政廳幾級，其他建築才能升到幾級。"
+  "buildings": {
+    "townhall": {
+      "name": "市政廳",
+      "ico": "🏛️",
+      "max": 1,
+      "cost": {},
+      "desc": "全城等級天花板——市政廳幾級，其他建築才能升到幾級。"
+    },
+    "house": {
+      "name": "民房",
+      "ico": "🏠",
+      "max": 12,
+      "cost": {
+        "wood": 10
+      },
+      "desc": "每棟住 4 位居民，每升 1 級再 +4（Lv5 住 20 位）。沒有空屋，新居民就不會搬進來。"
+    },
+    "school": {
+      "name": "學校",
+      "ico": "🏫",
+      "max": 2,
+      "cost": {
+        "wood": 20,
+        "stone": 10
+      },
+      "desc": "職業訓練所：閒置居民＋學費＋通過主題單字測驗 → 職業居民。"
+    },
+    "farm": {
+      "name": "稻田",
+      "ico": "🌾",
+      "max": 6,
+      "cost": {
+        "wood": 10,
+        "stone": 5
+      },
+      "desc": "開墾不需農夫；有農夫才會每天長米。稻田每升 1 級讓農夫多產 2 米。稻米是居民每日口糧，人口越多吃越多。"
+    },
+    "hospital": {
+      "name": "醫院",
+      "ico": "🏥",
+      "max": 1,
+      "cost": {
+        "wood": 30,
+        "stone": 20
+      },
+      "needProf": {
+        "doctor": 1,
+        "nurse": 1
+      },
+      "desc": "要有醫生＋護士才能開設。全城每日產出 +1，醫院每升 1 級再 +1。"
+    },
+    "smithy": {
+      "name": "鐵匠鋪",
+      "ico": "⚒️",
+      "max": 1,
+      "cost": {
+        "wood": 20,
+        "stone": 15,
+        "ore": 10
+      },
+      "needProf": {
+        "smith": 1
+      },
+      "desc": "要有鐵匠＋礦石才能建。詞靈裝備鍛造在這裡加持：鍛造成功率故事加成（風味）。"
+    },
+    "carpenter": {
+      "name": "木工坊",
+      "ico": "🪚",
+      "max": 1,
+      "cost": {
+        "wood": 25,
+        "stone": 10
+      },
+      "needProf": {
+        "carpenter": 1
+      },
+      "desc": "要有木工才能開。所有建築升 Lv2 以上都需要木工坊。"
+    },
+    "mine": {
+      "name": "礦場",
+      "ico": "⛏️",
+      "max": 2,
+      "cost": {
+        "wood": 15,
+        "stone": 10
+      },
+      "desc": "礦工每日產出 +2；礦場每升 1 級再 +2，多座等級累加。"
+    },
+    "quarry": {
+      "name": "採石場",
+      "ico": "🪨",
+      "max": 2,
+      "cost": {
+        "wood": 10
+      },
+      "desc": "石匠每日產出 +2；採石場每升 1 級再 +2，多座等級累加。"
+    },
+    "lighthouse": {
+      "name": "燈塔",
+      "ico": "🗼",
+      "max": 1,
+      "cost": {
+        "wood": 40,
+        "stone": 40,
+        "ore": 20
+      },
+      "desc": "全城地標：學習換資源的每日包上限 +2，燈塔每升 1 級再 +2。"
+    },
+    "statue": {
+      "name": "城飾雕像",
+      "ico": "🗿",
+      "max": 20,
+      "cost": {
+        "wood": 5,
+        "stone": 15
+      },
+      "scaleCost": 1.3,
+      "desc": "城市雕像每級 +2 倉庫上限；越蓋越貴（每多一座造價 ×1.3）。"
+    }
   },
-  "house": {
-   "name": "民房",
-   "ico": "🏠",
-   "max": 12,
-   "cost": {
-    "wood": 10
-   },
-   "desc": "每棟住 4 位居民。沒有空屋，新居民就不會搬進來。"
-  },
-  "school": {
-   "name": "學校",
-   "ico": "🏫",
-   "max": 2,
-   "cost": {
-    "wood": 20,
-    "stone": 10
-   },
-   "desc": "職業訓練所：閒置居民＋學費＋通過主題單字測驗 → 職業居民。"
-  },
-  "farm": {
-   "name": "稻田",
-   "ico": "🌾",
-   "max": 6,
-   "cost": {
-    "wood": 10,
-    "stone": 5
-   },
-   "desc": "開墾不需農夫；有農夫才會每天長米。稻米是居民搬入的口糧。"
-  },
-  "hospital": {
-   "name": "醫院",
-   "ico": "🏥",
-   "max": 1,
-   "cost": {
-    "wood": 30,
-    "stone": 20
-   },
-   "needProf": {
-    "doctor": 1,
-    "nurse": 1
-   },
-   "desc": "要有醫生＋護士才能開設。全城每日產出 +1。"
-  },
-  "smithy": {
-   "name": "鐵匠鋪",
-   "ico": "⚒️",
-   "max": 1,
-   "cost": {
-    "wood": 20,
-    "stone": 15,
-    "ore": 10
-   },
-   "needProf": {
-    "smith": 1
-   },
-   "desc": "要有鐵匠＋礦石才能建。詞靈裝備鍛造在這裡加持：鍛造成功率故事加成（風味）。"
-  },
-  "carpenter": {
-   "name": "木工坊",
-   "ico": "🪚",
-   "max": 1,
-   "cost": {
-    "wood": 25,
-    "stone": 10
-   },
-   "needProf": {
-    "carpenter": 1
-   },
-   "desc": "要有木工才能開。所有建築升 Lv2 以上都需要木工坊。"
-  },
-  "mine": {
-   "name": "礦場",
-   "ico": "⛏️",
-   "max": 2,
-   "cost": {
-    "wood": 15,
-    "stone": 10
-   },
-   "desc": "有礦場，礦工每日產出 +2。"
-  },
-  "quarry": {
-   "name": "採石場",
-   "ico": "🪨",
-   "max": 2,
-   "cost": {
-    "wood": 10
-   },
-   "desc": "有採石場，石匠每日產出 +2。"
-  },
-  "lighthouse": {
-   "name": "燈塔",
-   "ico": "🗼",
-   "max": 1,
-   "cost": {
-    "wood": 40,
-    "stone": 40,
-    "ore": 20
-   },
-   "desc": "全城地標：學習換資源的每日包上限 +2。"
-  },
-  "statue": {
-   "name": "城飾雕像",
-   "ico": "🗿",
-   "max": 20,
-   "cost": {
-    "wood": 5,
-    "stone": 15
-   },
-   "scaleCost": 1.3,
-   "desc": "純展示的城市雕像，每座 +2 倉庫上限；越蓋越貴（每多一座造價 ×1.3）。"
-  }
- },
- "thUpgrade": [
-  null,
-  null,
-  {
-   "cost": {
-    "wood": 50,
-    "stone": 30
-   },
-   "mastered": 100
-  },
-  {
-   "cost": {
-    "wood": 120,
-    "stone": 80,
-    "ore": 30
-   },
-   "mastered": 250,
-   "needProf": {
-    "carpenter": 1
-   }
-  },
-  {
-   "cost": {
-    "wood": 250,
-    "stone": 150,
-    "ore": 80,
-    "rice": 50
-   },
-   "mastered": 450,
-   "needProf": {
-    "doctor": 1,
-    "carpenter": 2
-   }
-  },
-  {
-   "cost": {
-    "wood": 400,
-    "stone": 300,
-    "ore": 150,
-    "rice": 100
-   },
-   "mastered": 700,
-   "needProf": {
-    "doctor": 1,
-    "smith": 1,
-    "carpenter": 2
-   }
-  }
- ],
- "jobs": {
-  "lumberjack": {
-   "name": "樵夫",
-   "ico": "🪓",
-   "basic": true,
-   "out": {
-    "wood": 3
-   }
-  },
-  "quarryman": {
-   "name": "石匠",
-   "ico": "🪨",
-   "basic": true,
-   "out": {
-    "stone": 3
-   },
-   "boostBy": "quarry"
-  },
-  "miner": {
-   "name": "礦工",
-   "ico": "⛏️",
-   "basic": true,
-   "out": {
-    "ore": 2
-   },
-   "boostBy": "mine"
-  },
-  "farmer": {
-   "name": "農夫",
-   "ico": "🌾",
-   "basic": false,
-   "out": {
-    "rice": 4
-   },
-   "needBuilding": "farm",
-   "tuition": 60
-  },
-  "doctor": {
-   "name": "醫生",
-   "ico": "🩺",
-   "basic": false,
-   "out": {},
-   "tuition": 120
-  },
-  "nurse": {
-   "name": "護士",
-   "ico": "💉",
-   "basic": false,
-   "out": {},
-   "tuition": 80
-  },
-  "smith": {
-   "name": "鐵匠",
-   "ico": "⚒️",
-   "basic": false,
-   "out": {},
-   "tuition": 100
-  },
-  "carpenter": {
-   "name": "木工",
-   "ico": "🪚",
-   "basic": false,
-   "out": {},
-   "tuition": 100
-  }
- },
- "trainWords": {
-  "farmer": [
-   "farm",
-   "rice",
-   "seed",
-   "plant",
-   "grow",
-   "water",
-   "field",
-   "corn",
-   "fruit",
-   "vegetable",
-   "harvest",
-   "soil"
+  "thUpgrade": [
+    null,
+    null,
+    {
+      "cost": {
+        "wood": 50,
+        "stone": 30
+      },
+      "mastered": 100
+    },
+    {
+      "cost": {
+        "wood": 120,
+        "stone": 80,
+        "ore": 30
+      },
+      "mastered": 250,
+      "needProf": {
+        "carpenter": 1
+      }
+    },
+    {
+      "cost": {
+        "wood": 250,
+        "stone": 150,
+        "ore": 80,
+        "rice": 50
+      },
+      "mastered": 450,
+      "needProf": {
+        "doctor": 1,
+        "carpenter": 2
+      }
+    },
+    {
+      "cost": {
+        "wood": 400,
+        "stone": 300,
+        "ore": 150,
+        "rice": 100
+      },
+      "mastered": 700,
+      "needProf": {
+        "doctor": 1,
+        "smith": 1,
+        "carpenter": 2
+      }
+    }
   ],
-  "doctor": [
-   "doctor",
-   "sick",
-   "medicine",
-   "hospital",
-   "body",
-   "heart",
-   "health",
-   "nurse",
-   "pain",
-   "cold",
-   "fever",
-   "cure"
+  "jobs": {
+    "lumberjack": {
+      "name": "樵夫",
+      "ico": "🪓",
+      "basic": true,
+      "out": {
+        "wood": 3
+      }
+    },
+    "quarryman": {
+      "name": "石匠",
+      "ico": "🪨",
+      "basic": true,
+      "out": {
+        "stone": 3
+      },
+      "boostBy": "quarry"
+    },
+    "miner": {
+      "name": "礦工",
+      "ico": "⛏️",
+      "basic": true,
+      "out": {
+        "ore": 2
+      },
+      "boostBy": "mine"
+    },
+    "farmer": {
+      "name": "農夫",
+      "ico": "🌾",
+      "basic": false,
+      "out": {
+        "rice": 4
+      },
+      "needBuilding": "farm",
+      "tuition": 60
+    },
+    "doctor": {
+      "name": "醫生",
+      "ico": "🩺",
+      "basic": false,
+      "out": {},
+      "tuition": 120
+    },
+    "nurse": {
+      "name": "護士",
+      "ico": "💉",
+      "basic": false,
+      "out": {},
+      "tuition": 80
+    },
+    "smith": {
+      "name": "鐵匠",
+      "ico": "⚒️",
+      "basic": false,
+      "out": {},
+      "tuition": 100
+    },
+    "carpenter": {
+      "name": "木工",
+      "ico": "🪚",
+      "basic": false,
+      "out": {},
+      "tuition": 100
+    }
+  },
+  "trainWords": {
+    "farmer": [
+      "farm",
+      "rice",
+      "seed",
+      "plant",
+      "grow",
+      "water",
+      "field",
+      "corn",
+      "fruit",
+      "vegetable",
+      "harvest",
+      "soil"
+    ],
+    "doctor": [
+      "doctor",
+      "sick",
+      "medicine",
+      "hospital",
+      "body",
+      "heart",
+      "health",
+      "nurse",
+      "pain",
+      "cold",
+      "fever",
+      "cure"
+    ],
+    "nurse": [
+      "nurse",
+      "care",
+      "help",
+      "clean",
+      "warm",
+      "rest",
+      "sleep",
+      "safe",
+      "kind",
+      "gentle",
+      "patient",
+      "bandage"
+    ],
+    "smith": [
+      "fire",
+      "iron",
+      "metal",
+      "tool",
+      "strong",
+      "heat",
+      "hammer",
+      "make",
+      "hard",
+      "sharp",
+      "melt",
+      "steel"
+    ],
+    "carpenter": [
+      "wood",
+      "build",
+      "house",
+      "table",
+      "chair",
+      "cut",
+      "nail",
+      "measure",
+      "straight",
+      "roof",
+      "floor",
+      "door"
+    ]
+  },
+  "npcLines": {
+    "villager": [
+      "Hello! Welcome to our town. Do you know the word {w}?",
+      "What a nice day! Can you teach me the word {w}?",
+      "I am new here. My favorite word is {w}!"
+    ],
+    "lumberjack": [
+      "Timber! I cut a big tree today. Do you know {w}?",
+      "The forest is full of wood. My word of the day is {w}."
+    ],
+    "quarryman": [
+      "These stones are heavy! Do you know the word {w}?",
+      "I cut stone all day. Can you read the word {w}?"
+    ],
+    "miner": [
+      "I found something shiny in the mine! Do you know {w}?",
+      "It is dark down there. My lantern word is {w}."
+    ],
+    "farmer": [
+      "The harvest is ready! Do you know the word {w}?",
+      "My rice is growing well. Today I learned the word {w}."
+    ],
+    "doctor": [
+      "Take this medicine twice a day. Do you know {w}?",
+      "Stay healthy, my friend! My word for you is {w}."
+    ],
+    "nurse": [
+      "Please rest well. Can you read the word {w}?",
+      "I will take care of you. Do you know {w}?"
+    ],
+    "smith": [
+      "The fire is hot today! Do you know the word {w}?",
+      "I made a new sword. My word of the day is {w}."
+    ],
+    "carpenter": [
+      "I am building a new roof. Do you know {w}?",
+      "Measure twice, cut once! Can you read {w}?"
+    ]
+  },
+  "npcWords": {
+    "villager": [
+      "hello",
+      "friend",
+      "town",
+      "happy",
+      "welcome",
+      "morning",
+      "smile",
+      "kind"
+    ],
+    "lumberjack": [
+      "tree",
+      "wood",
+      "forest",
+      "cut",
+      "tall",
+      "green",
+      "leaf",
+      "mountain"
+    ],
+    "quarryman": [
+      "stone",
+      "rock",
+      "heavy",
+      "strong",
+      "wall",
+      "hill",
+      "hard",
+      "gray"
+    ],
+    "miner": [
+      "gold",
+      "silver",
+      "dark",
+      "light",
+      "deep",
+      "shine",
+      "dig",
+      "cave"
+    ],
+    "farmer": [
+      "rice",
+      "farm",
+      "seed",
+      "grow",
+      "rain",
+      "sun",
+      "field",
+      "harvest"
+    ],
+    "doctor": [
+      "medicine",
+      "health",
+      "heart",
+      "body",
+      "sick",
+      "well",
+      "sleep",
+      "water"
+    ],
+    "nurse": [
+      "care",
+      "help",
+      "warm",
+      "clean",
+      "rest",
+      "safe",
+      "smile",
+      "gentle"
+    ],
+    "smith": [
+      "fire",
+      "iron",
+      "tool",
+      "hot",
+      "strong",
+      "metal",
+      "hammer",
+      "sharp"
+    ],
+    "carpenter": [
+      "wood",
+      "build",
+      "house",
+      "door",
+      "table",
+      "roof",
+      "nail",
+      "chair"
+    ]
+  },
+  "questTemplates": [
+    {
+      "text": "Bring me {n} pieces of timber, please!",
+      "res": "wood",
+      "n": [
+        5,
+        15
+      ],
+      "rewardTokens": 1
+    },
+    {
+      "text": "I need {n} blocks of stone for the wall.",
+      "res": "stone",
+      "n": [
+        5,
+        12
+      ],
+      "rewardTokens": 1
+    },
+    {
+      "text": "Can you find {n} pieces of ore for me?",
+      "res": "ore",
+      "n": [
+        3,
+        8
+      ],
+      "rewardTokens": 2
+    },
+    {
+      "text": "We are hungry! Bring {n} bags of rice.",
+      "res": "rice",
+      "n": [
+        4,
+        10
+      ],
+      "rewardTokens": 2
+    }
   ],
-  "nurse": [
-   "nurse",
-   "care",
-   "help",
-   "clean",
-   "warm",
-   "rest",
-   "sleep",
-   "safe",
-   "kind",
-   "gentle",
-   "patient",
-   "bandage"
-  ],
-  "smith": [
-   "fire",
-   "iron",
-   "metal",
-   "tool",
-   "strong",
-   "heat",
-   "hammer",
-   "make",
-   "hard",
-   "sharp",
-   "melt",
-   "steel"
-  ],
-  "carpenter": [
-   "wood",
-   "build",
-   "house",
-   "table",
-   "chair",
-   "cut",
-   "nail",
-   "measure",
-   "straight",
-   "roof",
-   "floor",
-   "door"
+  "names": [
+    "Emma",
+    "Oliver",
+    "Mia",
+    "Leo",
+    "Lily",
+    "Jack",
+    "Zoe",
+    "Henry",
+    "Ruby",
+    "Max",
+    "Ivy",
+    "Sam",
+    "Nora",
+    "Ben",
+    "Ella",
+    "Tom",
+    "Grace",
+    "Finn",
+    "Chloe",
+    "Owen",
+    "Luna",
+    "Eli",
+    "Hazel",
+    "Noah"
   ]
- },
- "npcLines": {
-  "villager": [
-   "Hello! Welcome to our town. Do you know the word {w}?",
-   "What a nice day! Can you teach me the word {w}?",
-   "I am new here. My favorite word is {w}!"
-  ],
-  "lumberjack": [
-   "Timber! I cut a big tree today. Do you know {w}?",
-   "The forest is full of wood. My word of the day is {w}."
-  ],
-  "quarryman": [
-   "These stones are heavy! Do you know the word {w}?",
-   "I cut stone all day. Can you read the word {w}?"
-  ],
-  "miner": [
-   "I found something shiny in the mine! Do you know {w}?",
-   "It is dark down there. My lantern word is {w}."
-  ],
-  "farmer": [
-   "The harvest is ready! Do you know the word {w}?",
-   "My rice is growing well. Today I learned the word {w}."
-  ],
-  "doctor": [
-   "Take this medicine twice a day. Do you know {w}?",
-   "Stay healthy, my friend! My word for you is {w}."
-  ],
-  "nurse": [
-   "Please rest well. Can you read the word {w}?",
-   "I will take care of you. Do you know {w}?"
-  ],
-  "smith": [
-   "The fire is hot today! Do you know the word {w}?",
-   "I made a new sword. My word of the day is {w}."
-  ],
-  "carpenter": [
-   "I am building a new roof. Do you know {w}?",
-   "Measure twice, cut once! Can you read {w}?"
-  ]
- },
- "npcWords": {
-  "villager": [
-   "hello",
-   "friend",
-   "town",
-   "happy",
-   "welcome",
-   "morning",
-   "smile",
-   "kind"
-  ],
-  "lumberjack": [
-   "tree",
-   "wood",
-   "forest",
-   "cut",
-   "tall",
-   "green",
-   "leaf",
-   "mountain"
-  ],
-  "quarryman": [
-   "stone",
-   "rock",
-   "heavy",
-   "strong",
-   "wall",
-   "hill",
-   "hard",
-   "gray"
-  ],
-  "miner": [
-   "gold",
-   "silver",
-   "dark",
-   "light",
-   "deep",
-   "shine",
-   "dig",
-   "cave"
-  ],
-  "farmer": [
-   "rice",
-   "farm",
-   "seed",
-   "grow",
-   "rain",
-   "sun",
-   "field",
-   "harvest"
-  ],
-  "doctor": [
-   "medicine",
-   "health",
-   "heart",
-   "body",
-   "sick",
-   "well",
-   "sleep",
-   "water"
-  ],
-  "nurse": [
-   "care",
-   "help",
-   "warm",
-   "clean",
-   "rest",
-   "safe",
-   "smile",
-   "gentle"
-  ],
-  "smith": [
-   "fire",
-   "iron",
-   "tool",
-   "hot",
-   "strong",
-   "metal",
-   "hammer",
-   "sharp"
-  ],
-  "carpenter": [
-   "wood",
-   "build",
-   "house",
-   "door",
-   "table",
-   "roof",
-   "nail",
-   "chair"
-  ]
- },
- "questTemplates": [
-  {
-   "text": "Bring me {n} pieces of timber, please!",
-   "res": "wood",
-   "n": [
-    5,
-    15
-   ],
-   "rewardTokens": 1
-  },
-  {
-   "text": "I need {n} blocks of stone for the wall.",
-   "res": "stone",
-   "n": [
-    5,
-    12
-   ],
-   "rewardTokens": 1
-  },
-  {
-   "text": "Can you find {n} pieces of ore for me?",
-   "res": "ore",
-   "n": [
-    3,
-    8
-   ],
-   "rewardTokens": 2
-  },
-  {
-   "text": "We are hungry! Bring {n} bags of rice.",
-   "res": "rice",
-   "n": [
-    4,
-    10
-   ],
-   "rewardTokens": 2
-  }
- ],
- "names": [
-  "Emma",
-  "Oliver",
-  "Mia",
-  "Leo",
-  "Lily",
-  "Jack",
-  "Zoe",
-  "Henry",
-  "Ruby",
-  "Max",
-  "Ivy",
-  "Sam",
-  "Nora",
-  "Ben",
-  "Ella",
-  "Tom",
-  "Grace",
-  "Finn",
-  "Chloe",
-  "Owen",
-  "Luna",
-  "Eli",
-  "Hazel",
-  "Noah"
- ]
 }

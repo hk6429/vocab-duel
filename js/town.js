@@ -49,7 +49,7 @@ const VDTownUI = (() => {
   }
   const resbarHtml = () =>
     VDTown.RES.map(r => `<span class="tw-res">${VDTown.RES_META[r].ico} ${VDTown.raw.res[r] || 0}</span>`).join('') +
-    `<span class="tw-res" title="倉庫上限＝300＋市政廳每級200＋雕像每座2，升市政廳或蓋雕像可擴充">📦 上限 ${VDTown.resCap()}</span>` +
+    `<span class="tw-res" title="倉庫上限＝300＋市政廳每級200＋雕像每級2，升市政廳或升雕像可擴充">📦 上限 ${VDTown.resCap()}</span>` +
     `<span class="tw-res">🪙 ${VDTown.raw.tokens} 代幣</span><span class="tw-res">💰 ${VDGame.raw.coins}</span>`;
   function refreshRes() { const b = el && el.querySelector('#tw-resbar'); if (b) b.innerHTML = resbarHtml(); }
   function supplyHtml() {
@@ -324,7 +324,9 @@ const VDTownUI = (() => {
       const r = VDTown.harvest();
       if (!r.ok) return VDGame.toast(r.msg);
       let msg = '🧺 收成：' + Object.entries(r.out).filter(([, v]) => v).map(([k, v]) => `${VDTown.RES_META[k].ico}+${v}`).join(' ');
+      if (r.ate) msg += `　🌾-${r.ate}（居民口糧）`;
       if (r.lazy) msg += '（今天還沒練功，居民只交一半——去答幾題吧！）';
+      if (r.famine) msg += '　⚠️ 糧倉見底！居民鬧饑荒，建材產出減半——快蓋稻田＋訓練農夫';
       VDGame.toast(msg);
       if (r.event) setTimeout(() => {
         const parts = Object.entries(r.event.gain || {}).map(([k, v]) => `${VDTown.RES_META[k].ico}+${v}`);
