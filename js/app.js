@@ -15,7 +15,13 @@ const VDApp = (() => {
   }
 
   function header(title) {
-    return `<div class="topbar"><button class="back" onclick="VDApp.go('menu')">←</button><h2>${title}</h2></div>`;
+    const streak = VDStore.stats([]).streak;
+    const shield = VDGame.shield;
+    const badge = (streak > 0 || shield > 0) ? `<span class="hdr-badge">
+      ${streak > 0 ? `<span class="hdr-badge-i" title="連續 ${streak} 天">🔥${streak}</span>` : ''}
+      ${shield > 0 ? `<span class="hdr-badge-i" title="護盾 ${shield} 枚">🛡️${shield}</span>` : ''}
+    </span>` : '';
+    return `<div class="topbar"><button class="back" onclick="VDApp.go('menu')">←</button><h2>${title}</h2>${badge}</div>`;
   }
 
   /* 星圖／單字關聯圖 頁內分頁 */
@@ -103,14 +109,18 @@ const VDApp = (() => {
       const starN = VDStore.starWords(words).length;
       // 漸進解鎖：依英雄等級分階開放功能，解鎖本身就是獎勵（老玩家等級高，全部照舊開著）
       const lv = VDGame.level();
-      const lockCard = (ico, title, need, feature) => `
+      const lockCard = (ico, title, need, feature) => {
+        const pct = VDGame.progressToLevel(need);
+        return `
         <div class="wc-mcard menu-card locked${feature ? ' feature' : ''}" aria-disabled="true">
           <div class="wc-mcard-ph">${ico}</div>
           <div class="wc-mcard-cap">
             <div class="wc-mcard-title">${title}</div>
-            <span class="wc-mcard-sub">🔒 Lv ${need} 解鎖</span>
+            <span class="wc-mcard-sub">🔒 Lv ${lv}/${need} 解鎖</span>
+            <span class="wc-lock-bar"><span style="width:${pct}%"></span></span>
           </div>
         </div>`;
+      };
       // 新手引導卡：還沒學過任何字（= 尚未入門）就置頂顯示；練過第一個字自動消失
       const intro = VDStore.stats(allWords).seen === 0 ? `
         <div class="wc-card" style="border:2px solid #e8a020;background:linear-gradient(135deg,#fff8ec,#fdefd2)">

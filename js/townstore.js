@@ -450,6 +450,18 @@ const VDTown = (() => {
     return { ok: true };
   }
 
+  /* 世界觀彩蛋：從已擊敗的文豪語錄庫借一句，當委託人的靈感來源（純文字，不影響委託本身邏輯） */
+  function pickLoreQuote() {
+    try {
+      if (!window.VDBattle || !VDBattle.QUOTES || !window.VDGame || !VDGame.isBeaten) return '';
+      const beaten = VDBattle.OPPONENTS.filter(o => VDGame.isBeaten(o.id));
+      if (!beaten.length) return '';
+      const o = beaten[Math.floor(Math.random() * beaten.length)];
+      const qd = VDBattle.QUOTES[o.id];
+      return qd ? `${o.name}：「${qd.q}」` : '';
+    } catch { return ''; }
+  }
+
   /* ── 英文委託（每日一單，居民隨機發） ── */
   function questInfo() {
     if (g.questDate !== today()) {
@@ -458,7 +470,7 @@ const VDTown = (() => {
         const t = data.questTemplates[Math.floor(Math.random() * data.questTemplates.length)];
         const n = t.n[0] + Math.floor(Math.random() * (t.n[1] - t.n[0] + 1));
         const giver = g.pop[Math.floor(Math.random() * g.pop.length)];
-        g.quest = { text: t.text.replace('{n}', n), res: t.res, n, rewardTokens: t.rewardTokens, giver: giver.name, done: false };
+        g.quest = { text: t.text.replace('{n}', n), res: t.res, n, rewardTokens: t.rewardTokens, giver: giver.name, done: false, loreQuote: pickLoreQuote() };
       } else g.quest = null;
       save();
     }

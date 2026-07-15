@@ -360,6 +360,30 @@ const VDPetBattle = (() => {
   }
   const submitSnapshot = () => VDPets.submitBoard();
 
+  /* ── 排行榜（唯讀嵌入版）：供英雄檔案戰績頁 tab 用，不動 module 級 el／不含「回競技場」導覽 ── */
+  async function boardOnly(container) {
+    container.innerHTML = '<div class="loading">讀取排行榜…</div>';
+    let rows = [];
+    try {
+      const r = await fetch('api/pets', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: 'board' })
+      });
+      if (r.ok) rows = (await r.json()).board || [];
+    } catch { /* 離線 */ }
+    container.innerHTML = `
+      <div class="wc-card"><div class="wc-card-body">
+        <div class="hero-sec">🏆 詞靈排行榜</div>
+        ${rows.length ? `<div class="pb-board">${rows.map((b, i) => `
+          <div class="pb-brow ${b.nick === VDGame.heroName() ? 'me' : ''}">
+            <span class="pb-rank">${['🥇', '🥈', '🥉'][i] || i + 1}</span>
+            <span class="pb-bnick">${b.nick}</span>
+            <span class="pb-bpet">${b.petName} Lv.${b.lv}</span>
+            <b>${b.rating}</b>
+          </div>`).join('')}</div>` : '<p class="pg-hint">還沒有人上榜——去打一場影子對戰，你就是第一名！</p>'}
+      </div></div>`;
+  }
+
   /* ── 排行榜 ── */
   async function showBoard() {
     el.innerHTML = '<div class="loading">讀取排行榜…</div>';
@@ -386,6 +410,6 @@ const VDPetBattle = (() => {
     el.querySelector('#backMode').onclick = chooseMode;
   }
 
-  return { render };
+  return { render, boardOnly };
 })();
 window.VDPetBattle = VDPetBattle;

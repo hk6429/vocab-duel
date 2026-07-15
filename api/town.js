@@ -22,6 +22,8 @@ const okVisit = (v) => typeof v === "string" && /^[A-Z0-9]{6}$/.test(String(v).t
 const BAD_WORDS = /笨蛋|白癡|智障|廢物|去死|三小|幹你|靠北|媽的|垃圾|腦殘|fuck|shit|bitch|asshole|idiot|stupid|retard/i;
 const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n) && !BAD_WORDS.test(n); // 拒收危險字元
 const EMOJIS = ["👍", "🎉", "🏰", "💪", "🌟", "❤️", "😆", "👏"]; // 留言表情白名單
+const GIFT_RES = ["wood", "stone", "ore", "rice"]; // 需與 js/townstore.js RES 一致
+const GIFT_N = 10; // 每次贈禮固定數量，別讓贈禮取代自己蓋城的成就感
 const genVisit = () => {
   const c = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // 避開易混淆字元
   let s = "";
@@ -119,6 +121,31 @@ export default async function handler(req, res) {
       await redis.ltrim(gk, 0, 19); // 訪客簿只保最新 20 筆
       await redis.expire(gk, TTL);
       return res.status(200).json({ ok: 1 });
+    }
+
+    if (op === "gift") {
+      // 訪客資源贈禮：城鎮是單一 JSON 快照（非 Redis hash），只能整包讀改寫回，非真正原子操作；
+      // 每訪客每天限贈一次把衝突機率壓到很低，且贈禮只是加成非核心進度，就算極少數情況被城主的下一次
+      // save 覆蓋掉也無傷大雅（比起重寫整個城鎮儲存結構為 hash，這個代價可以接受）
+      if (await rateLimited(req, "towngift")) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
+      const v = String(req.body.visitCode || "").trim().toUpperCase();
+      const resType = req.body.res;
+      if (!okVisit(v)) return res.status(200).json({ ok: 0, error: "參觀碼格式不對" });
+      if (!GIFT_RES.includes(resType)) return res.status(200).json({ ok: 0, error: "資源種類不合法" });
+      const owner = await redis.get(VISIT(v));
+      if (!owner) return res.status(200).json({ ok: 0, error: "找不到這座城" });
+      const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+      const today = new Date().toISOString().slice(0, 10);
+      const giftKey = `vd:town:giftday:${v}:${ip}`;
+      if ((await redis.get(giftKey)) === today) return res.status(200).json({ ok: 0, error: "今天已經贈送過了，明天再來吧" });
+      const raw = await redis.get(KEY(owner));
+      if (!raw) return res.status(200).json({ ok: 0, error: "找不到這座城" });
+      const town = typeof raw === "string" ? JSON.parse(raw) : raw;
+      town.res = town.res || {};
+      town.res[resType] = (town.res[resType] || 0) + GIFT_N;
+      await redis.set(KEY(owner), JSON.stringify(town), { ex: TTL });
+      await redis.set(giftKey, today, { ex: 90000 });
+      return res.status(200).json({ ok: 1, res: resType, n: GIFT_N });
     }
 
     if (op === "guestbook") {

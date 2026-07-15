@@ -310,6 +310,16 @@ const VDBattle = (() => {
     reallyFinish(win);
   }
 
+  /* 世界觀彩蛋：詞靈收藏達門檻時，打贏文豪額外彈一句連結三系統的文案（純文字，不動資料結構） */
+  function loreEasterEgg(o) {
+    try {
+      if (!window.VDPets || !VDPets.list) return '';
+      const owned = VDPets.list().filter(p => p.owned).length;
+      if (owned < 3) return '';
+      return `${o.name}看著你身邊的詞靈，若有所思：「這些字裡的靈氣……原來都聚到你這來了。」`;
+    } catch { return ''; }
+  }
+
   function reallyFinish(win) {
     localStorage.removeItem('vd_pendingBattle'); // 已結算，清逃跑標記
     sessionStorage.removeItem('vd_firstBattle'); // 新手放水只給一場
@@ -324,11 +334,13 @@ const VDBattle = (() => {
       rk = { ...rk2, delta: rk.delta + rk2.delta };
     }
     const qd = QUOTES[opp.id];
+    const loreEgg = win ? loreEasterEgg(opp) : '';
     el.innerHTML = `<div class="card-done">
       <div class="big">${win ? '🏆' : '💀'}</div>
       <p>${win ? `擊敗 ${opp.name}！` : `不敵 ${opp.name}……`}</p>
       <div class="bt-quote">「${win ? opp.lose : opp.win}」</div>
       ${firstBeat && qd ? `<div class="qt-unlock">📜 解鎖名言卡：「${qd.q}」—— ${opp.name}</div>` : ''}
+      ${loreEgg ? `<div class="qt-unlock">✨ ${loreEgg}</div>` : ''}
       ${win && isChamp ? '<div class="qt-unlock">👑 擊敗本週擂主——段位分雙倍入帳！</div>' : ''}
       <div class="bt-rankdelta ${win ? 'up' : 'down'}">${rk.ico} ${rk.name}　${rk.delta > 0 ? '+' : ''}${rk.delta} 分（${rk.pts}）</div>
       ${VDGame.milestoneHtml()}
@@ -418,5 +430,5 @@ const VDBattle = (() => {
     </div>`;
   }
 
-  return { chooseMode };
+  return { chooseMode, QUOTES, OPPONENTS };
 })();

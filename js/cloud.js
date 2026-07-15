@@ -97,6 +97,23 @@ const VDCloud = (() => {
         <div id="boardMsg" class="cloud-msg" aria-live="polite"></div>
         <div id="boardBox"></div>
       </div>
+
+      <div class="cloud-sec">
+        <div class="cloud-h">📝 班級語錄牆（分享你的自編例句／助記口訣）</div>
+        <p class="cloud-tip">用同一組班級碼，把你記單字的小訣竅公開分享給同學——不是只有分數能被看見。</p>
+        <div class="cloud-row">
+          <input id="qwWord" class="cloud-input" maxlength="20" placeholder="單字（例：resilient）">
+        </div>
+        <div class="cloud-row">
+          <input id="qwSentence" class="cloud-input" maxlength="60" placeholder="你的例句或助記口訣（最長 60 字）">
+        </div>
+        <div class="cloud-row">
+          <button class="btn" id="qwPostBtn">📤 發布語錄</button>
+          <button class="btn ghost" id="qwLoadBtn">🔄 重新整理</button>
+        </div>
+        <div id="qwMsg" class="cloud-msg" aria-live="polite"></div>
+        <div id="qwBox"></div>
+      </div>
       <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>`;
 
     const msg = (id, t, ok) => { const m = el.querySelector('#' + id); m.textContent = t; m.className = 'cloud-msg ' + (ok ? 'ok' : 'err'); };
@@ -150,6 +167,50 @@ const VDCloud = (() => {
       localStorage.setItem(LS.ccode, code);
       loadBoard(code, el.querySelector('#cnIn').value.trim());
     };
+
+    el.querySelector('#qwPostBtn').onclick = async () => {
+      const code = el.querySelector('#ccIn').value.trim();
+      const nick = el.querySelector('#cnIn').value.trim();
+      const word = el.querySelector('#qwWord').value.trim();
+      const sentence = el.querySelector('#qwSentence').value.trim();
+      if (!code) return msg('qwMsg', '請先在上方填班級碼', false);
+      if (!nick) return msg('qwMsg', '請先在上方填你的暱稱', false);
+      if (!word || !sentence) return msg('qwMsg', '單字和例句／口訣都要填喔', false);
+      msg('qwMsg', '發布中…', true);
+      try {
+        await api('/api/quotes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'post', code, nick, word, sentence }) });
+        msg('qwMsg', '✅ 已發布！', true);
+        el.querySelector('#qwWord').value = ''; el.querySelector('#qwSentence').value = '';
+        if (window.VDSound) VDSound.coin();
+        loadQuotes(code);
+      } catch (e) { msg('qwMsg', friendly(e), false); }
+    };
+    el.querySelector('#qwLoadBtn').onclick = () => {
+      const code = el.querySelector('#ccIn').value.trim();
+      if (!code) return msg('qwMsg', '請先在上方填班級碼', false);
+      loadQuotes(code);
+    };
+    if (cc) loadQuotes(cc);
+  }
+
+  /* 語錄牆列表：最新在前 */
+  async function loadQuotes(code) {
+    const box = el.querySelector('#qwBox');
+    box.innerHTML = '<div class="cloud-msg">載入中…</div>';
+    try {
+      const r = await api('/api/quotes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'list', code }) });
+      const list = r.list || [];
+      box.innerHTML = list.length
+        ? `<div class="qw-list">${list.map(q => `
+          <div class="qw-row">
+            <div class="qw-word">${esc(q.word)}</div>
+            <div class="qw-sentence">${esc(q.sentence)}</div>
+            <div class="qw-nick">— ${esc(q.nick)}</div>
+          </div>`).join('')}</div>`
+        : '<div class="cloud-msg">還沒有人分享語錄，當第一個吧！</div>';
+    } catch (e) {
+      box.innerHTML = `<div class="cloud-msg err">${friendly(e)}</div>`;
+    }
   }
 
   /* 班級榜三 tab：🏆 總量／⚡ 本週進步（weekMastered）／🔥 連續天數

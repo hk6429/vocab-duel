@@ -1,12 +1,18 @@
 /* 英雄檔案：自訂頭像/暱稱（CD3/4）、等級稱號、徽章牆（CD2）、字幣護盾（CD4/8）、分享挑戰（CD5） */
 const VDHero = (() => {
-  let el = null;
+  let el = null, curTab = 'me';
 
-  function render(container) {
-    el = container;
+  function tabBar() {
+    const tab = (id, label) => `<button class="hero-tab ${curTab === id ? 'on' : ''}" data-htab="${id}">${label}</button>`;
+    return `<div class="hero-tabs">${tab('me', '🦸 本人戰績')}${tab('class', '🏫 班級榜')}${tab('pet', '🐾 詞靈榜')}</div>`;
+  }
+
+  function meTab() {
     const g = VDGame, lp = g.levelProgress(), bc = g.badgeCount();
     const badges = g.badges();
-    el.innerHTML = `
+    const streak = VDStore.stats([]).streak;
+    const rep = VDStore.streakRepairInfo();
+    return `
       <div class="wc-card">
         <img loading="lazy" decoding="async" class="wc-card-img tall" src="img/ui/h_hero.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
@@ -21,11 +27,13 @@ const VDHero = (() => {
           </div>
           <div class="hero-rank">${(r => `${r.ico} 對戰段位：<b>${r.name}</b>　${r.pts} 分${r.next ? `（再 ${r.next.at - r.pts} 分晉升）` : ''}`)(g.rankInfo())}</div>
           <div class="hero-wallet">
+            <span>🔥 連續 ${streak} 天</span>
             <span>🪙 ${g.coins} 字幣</span>
             <span>🛡️ ${g.shield} 護盾</span>
             <span>🪶 ${g.revive} 羽毛</span>
             <button class="btn ghost sm" onclick="VDApp.go('shop')">🏪 去商店</button>
           </div>
+          ${rep ? `<div class="pg-hint">🔥 連續 ${rep.was} 天斷掉了！<button class="btn small" id="btnRepair">🛠️ 花 ${rep.cost} 字幣接回</button></div>` : ''}
           <div class="hero-shieldhint">護盾可在連續天數即將中斷時自動頂上，別讓 🔥 歸零。</div>
         </div>
       </div>
@@ -67,13 +75,21 @@ const VDHero = (() => {
           </div>
           <textarea id="shareBox" class="share-box" placeholder="複製的戰績卡／挑戰碼會出現在這裡，貼給同學 PK！"></textarea>
         </div>
-      </div>
-      <button class="btn ghost wide" onclick="VDApp.go('menu')">回主選單</button>`;
+      </div>`;
+  }
 
+  function bindMeEvents() {
     // 頭像選擇
     el.querySelector('#avPick').onclick = () => pickAvatar();
     // 暱稱即時存
     el.querySelector('#nick').onchange = e => VDGame.setNick(e.target.value);
+    // 連續天數修復
+    const repBtn = el.querySelector('#btnRepair');
+    if (repBtn) repBtn.onclick = () => {
+      const ns = VDStore.repairStreak();
+      VDGame.toast(ns ? `🔥 連續紀錄接回來了！目前 ${ns} 天` : '字幣不夠，先去練功賺一點吧');
+      if (ns) render(el);
+    };
     // 設定
     el.querySelector('#sndToggle').onclick = () => { VDSound.setOn(!VDSound.on); render(el); };
     el.querySelector('#fsToggle').onclick = () => { VDApp.toggleFontScale(); render(el); };
@@ -99,6 +115,24 @@ const VDHero = (() => {
       copyOut(url, '⚔️ 挑戰連結已複製——同學點開就能應戰！');
       el.querySelector('#shareBox').value = url + '\nCHALLENGE:' + code;
     };
+  }
+
+  function render(container) {
+    el = container;
+    el.innerHTML = `${tabBar()}<div id="heroTabBody"></div>
+      <button class="btn ghost wide" onclick="VDApp.go('menu')">回主選單</button>`;
+    el.querySelectorAll('[data-htab]').forEach(b => {
+      b.onclick = () => { curTab = b.dataset.htab; render(el); };
+    });
+    const body = el.querySelector('#heroTabBody');
+    if (curTab === 'me') {
+      body.innerHTML = meTab();
+      bindMeEvents();
+    } else if (curTab === 'class') {
+      VDCloud.start(body);
+    } else if (curTab === 'pet') {
+      VDPetBattle.boardOnly(body);
+    }
   }
 
   /* 戰績卡出圖：純 canvas 文字＋色塊，優先系統分享，退而下載 PNG，再退複製文字 */

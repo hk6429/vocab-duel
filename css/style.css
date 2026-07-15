@@ -105,6 +105,10 @@ body {
 .topbar .back { background: none; border: none; color: var(--accent2); font-size: 26px; cursor: pointer;
   padding: 10px 14px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
 .topbar h2 { font-size: 20px; font-weight: 600; }
+.hdr-badge { margin-left: auto; display: flex; gap: 6px; }
+.hdr-badge-i { font-size: 13px; font-weight: 700; color: var(--text); background: var(--panel);
+  border: 1px solid #dfe4ea; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+body.dark .hdr-badge-i { border-color: #3a4258; }
 
 .flash-progress { text-align: center; color: var(--muted); margin-bottom: 14px; font-size: 14px; }
 .flash-card {
@@ -404,6 +408,9 @@ body {
 /* 每日面板 */
 .vg-daily { background: var(--panel); border: 1px solid rgba(43,43,43,.08); border-radius: 16px; padding: 12px 14px; margin-bottom: 12px; }
 .vg-daily-head { font-weight: 700; margin-bottom: 8px; font-size: 15px; }
+.vg-theme { font-size: 12.5px; padding: 6px 10px; margin: 2px 0 8px; background: rgba(232,160,32,.12);
+  border: 1px dashed #e8a020; border-radius: 10px; color: var(--ink); }
+.vg-theme-desc { color: var(--muted); }
 .vg-quest { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
 .vg-q-ico { font-size: 20px; flex: none; }
 .vg-q-body { flex: 1; min-width: 0; }
@@ -557,6 +564,11 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .board-tbl th { color: var(--muted); font-weight: 700; font-size: 12px; }
 .board-tbl td:nth-child(2) { text-align: left; }
 .board-tbl tr.me { background: rgba(111,159,201,.18); font-weight: 800; }
+.qw-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.qw-row { background: var(--panel); border: 1px solid rgba(43,43,43,.08); border-radius: 12px; padding: 10px 12px; }
+.qw-word { font-family: var(--font-en); font-weight: 800; color: #6f9fc9; font-size: 14px; }
+.qw-sentence { font-size: 13.5px; margin: 3px 0; line-height: 1.5; }
+.qw-nick { font-size: 11.5px; color: var(--muted); text-align: right; }
 
 /* ═══════════════ 水彩墨插畫重皮（2026-07-11）═══════════════ */
 /* 標題／英雄區：文學襯線 + 墨色 */
@@ -637,6 +649,8 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 }
 .menu-card.locked .wc-mcard-ph { font-size: 38px; }
 .menu-card.locked .wc-mcard-sub { font-weight: 700; color: var(--muted); }
+.wc-lock-bar { display: block; height: 6px; border-radius: 4px; background: var(--paper2); margin-top: 6px; overflow: hidden; }
+.wc-lock-bar span { display: block; height: 100%; background: var(--accent2); border-radius: 4px; }
 /* 更多工具：摺疊卡，點開才展開題庫工具群 */
 .tools-fold summary {
   list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px;
@@ -1008,6 +1022,10 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .wg-tabs { display: flex; gap: 8px; margin: 0 0 10px; }
 .wg-tab { border: 1.5px solid rgba(43,43,43,.25); background: transparent; border-radius: 20px; padding: 6px 16px; font-size: .92rem; color: var(--ink); cursor: pointer; font-family: inherit; }
 .wg-tab.on { background: #2b2b2b; color: #fdfcf8; border-color: #2b2b2b; }
+.hero-tabs { display: flex; gap: 8px; margin: 0 0 14px; flex-wrap: wrap; }
+.hero-tab { border: 1.5px solid rgba(43,43,43,.25); background: transparent; border-radius: 20px; padding: 6px 16px; font-size: .92rem; color: var(--ink); cursor: pointer; font-family: inherit; }
+.hero-tab.on { background: #2b2b2b; color: #fdfcf8; border-color: #2b2b2b; }
+body.dark .hero-tab { color: var(--ink); }
 .wg-stats { font-size: .88rem; color: #5a6b78; margin: 0 0 8px; }
 #wg-canvas { width: 100%; touch-action: none; cursor: grab; background: transparent; border: 1px dashed rgba(74,123,166,.25); border-radius: 12px; }
 
@@ -1093,6 +1111,7 @@ body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-lar
 .tw-quest img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
 .tw-quest.done { opacity: .65; border-style: solid; }
 .tw-quest i { font-style: normal; color: #5a6b78; font-size: .8rem; }
+.tw-quest i.tw-lore { display: inline-block; margin-top: 3px; font-style: italic; color: #e8a020; }
 .tw-sel { font-family: inherit; font-size: .92rem; padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(43,43,43,.25); background: rgba(255,255,255,.7); }
 
 /* ── 單字之城 平面俯視格子（2.5D 等角因 GPU 卡＋負邊距溢出重疊，已於 2026-07-12 退役；建築圖已去背 RGBA） ── */

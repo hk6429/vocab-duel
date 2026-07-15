@@ -78,7 +78,8 @@ const VDTownUI = (() => {
         `<button class="btn small ghost tw-t2r" data-r="${r}">🪙→${VDTown.RES_META[r].ico}×20</button>`).join('')}</div>` : ''}
       ${q ? `<div class="tw-quest ${q.done ? 'done' : ''}">
         <img src="${img('res_mayor')}" alt="" loading="lazy" decoding="async" onerror="this.remove()">
-        <span><b>${VDGame.esc(q.giver)}</b>：“${VDGame.esc(q.text)}”${q.done ? '　✅ Done!' : `　<i>(交 ${VDTown.RES_META[q.res].ico}×${q.n} 得 🪙×${q.rewardTokens})</i>`}</span>
+        <span><b>${VDGame.esc(q.giver)}</b>：“${VDGame.esc(q.text)}”${q.done ? '　✅ Done!' : `　<i>(交 ${VDTown.RES_META[q.res].ico}×${q.n} 得 🪙×${q.rewardTokens})</i>`}
+        ${q.loreQuote ? `<br><i class="tw-lore">✨ ${VDGame.esc(q.loreQuote)}</i>` : ''}</span>
         ${q.done ? '' : '<button class="btn small" id="twQuest">交付</button>'}
       </div>` : ''}`;
   }
@@ -275,7 +276,9 @@ const VDTownUI = (() => {
         <div class="tw-vgrid">${mini.join('')}</div>
         <div class="pet-actrow">${['👍', '🔥', '🏗️'].map(e =>
           `<button class="btn small ghost tw-cheer" data-e="${e}">${e} 打氣</button>`).join('')}</div>
-        <div class="pg-hint">觀摩完回自己的城，把它蓋得更高吧！</div>
+        <div class="pet-actrow">${VDTown.RES.map(r =>
+          `<button class="btn small ghost tw-gift" data-r="${r}">🎁 送${VDTown.RES_META[r].ico}×10</button>`).join('')}</div>
+        <div class="pg-hint">觀摩完回自己的城，把它蓋得更高吧！（每天可贈禮一次）</div>
       </div>`;
       box.querySelectorAll('.tw-cheer').forEach(b => b.onclick = async () => {
         b.disabled = true;
@@ -287,6 +290,17 @@ const VDTownUI = (() => {
           VDGame.toast(rr.ok ? `${b.dataset.e} 打氣送出，城主會在訪客簿看到你！` : (rr.error || '打氣沒送出去'));
           if (!rr.ok) b.disabled = false;
         } catch { b.disabled = false; VDGame.toast('連不上雲端，打氣沒送出去'); }
+      });
+      box.querySelectorAll('.tw-gift').forEach(b => b.onclick = async () => {
+        box.querySelectorAll('.tw-gift').forEach(x => x.disabled = true);
+        try {
+          const rr = await fetch(API + '/api/town', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ op: 'gift', visitCode: code, res: b.dataset.r })
+          }).then(x => x.json());
+          VDGame.toast(rr.ok ? `🎁 已贈送 ${VDTown.RES_META[b.dataset.r].ico}×${rr.n}！` : (rr.error || '贈禮沒送出去'));
+          if (!rr.ok) box.querySelectorAll('.tw-gift').forEach(x => x.disabled = false);
+        } catch { box.querySelectorAll('.tw-gift').forEach(x => x.disabled = false); VDGame.toast('連不上雲端，贈禮沒送出去'); }
       });
     } catch { box.innerHTML = ''; VDGame.toast('連不上雲端（本機模式沒有後端）'); }
   }

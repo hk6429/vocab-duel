@@ -45,6 +45,11 @@ const VDGame = (() => {
     const L = level(), base = xpForLevel(L), need = xpForLevel(L + 1) - base;
     return { L, title: title(), inLv: g.xp - base, need, pct: Math.round((g.xp - base) / need * 100) };
   }
+  /* 距離某目標等級的總體進度（供鎖定卡進度條用）：已達標回 100 */
+  function progressToLevel(target) {
+    if (level() >= target) return 100;
+    return Math.max(0, Math.min(100, Math.round(g.xp / xpForLevel(target) * 100)));
+  }
 
   /* ── 每日重置 ── */
   function rollDaily() {
@@ -68,6 +73,13 @@ const VDGame = (() => {
     { key: 'sprint',    label: '本週限時衝刺破紀錄 1 次', n: 1 }
   ];
   const CHAMPIONS = ['andersen', 'aesop', 'twain', 'austen', 'hemingway', 'dickens', 'shakespeare', 'tolstoy'];
+  /* 限時主題週：沿用 weekIdxNum() 的 hash-mod 輪替手法，全端一致、免後端狀態 */
+  const THEMES = [
+    { key: 'mystery', label: '🎁 雙倍神秘字週', desc: '今日神秘字開出雙倍字幣與 XP' },
+    { key: 'chest', label: '💰 任務豐收週', desc: '每日任務開箱獎勵 +50%' },
+    { key: 'combo', label: '💥 連擊祭典週', desc: '連擊 ×3 起就有大場面特效' }
+  ];
+  const weekTheme = () => THEMES[weekIdxNum() % THEMES.length];
   function weekKey() {
     const d = new Date(VDStore.today() + 'T00:00:00');
     d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // 回推到本週一
@@ -81,7 +93,7 @@ const VDGame = (() => {
   const weekGoal = () => WEEK_GOALS[weekIdxNum() % WEEK_GOALS.length];
   function weekInfo() {
     const wi = weekIdxNum(), gl = weekGoal();
-    return { weekIdx: wi, championId: CHAMPIONS[wi % CHAMPIONS.length], affixIdx: wi, goal: { key: gl.key, label: gl.label, n: gl.n } };
+    return { weekIdx: wi, championId: CHAMPIONS[wi % CHAMPIONS.length], affixIdx: wi, goal: { key: gl.key, label: gl.label, n: gl.n }, theme: weekTheme() };
   }
   function rollWeekly() {
     const k = weekKey(), gl = weekGoal();
@@ -184,8 +196,9 @@ const VDGame = (() => {
       else if (g.ss.correct <= 20) { xp *= 2; coins *= 2; toast(`🌟 新手祝福 ×2！（第 ${g.ss.correct}/20 題）`); }
       else if (g.ss.correct <= 30) { xp = Math.round(xp * 1.5); coins = Math.round(coins * 1.5); toast(`🌟 新手祝福 ×1.5！（第 ${g.ss.correct}/30 題）`); }
       award(xp, coins);
-      // 連擊大場面：×5、×10、×15… 全螢幕墨潑
-      if (combo && combo >= 5 && combo % 5 === 0) comboSplash(combo);
+      // 連擊大場面：平常 ×5、×10、×15…；連擊祭典週降到 ×3、×6、×9…
+      const comboStep = weekTheme().key === 'combo' ? 3 : 5;
+      if (combo && combo >= comboStep && combo % comboStep === 0) comboSplash(combo);
     } else {
       if (window.VDSound) VDSound.wrong();
       const wn = (g.quests.wrongXp || 0) + 1;
@@ -293,7 +306,8 @@ const VDGame = (() => {
     const tier = q && q.tiers[t];
     if (!tier || !tier.done || tier.claimed) return null;
     g.quests.claimed.push(`${i}:${t}`);
-    const chest = openChest(tier.reward);
+    const reward = weekTheme().key === 'chest' ? Math.round(tier.reward * 1.5) : tier.reward; // 任務豐收週：開箱基礎值 +50%
+    const chest = openChest(reward);
     // 全清 = 三軌各領過至少一檔（一天只發一次）
     const tracks = new Set(g.quests.claimed.map(c => String(c).split(':')[0]));
     if (tracks.size >= 3 && !g.quests.allBonus) {
@@ -372,7 +386,8 @@ const VDGame = (() => {
     rollDaily();
     if (g.mystery.opened) return null;
     g.mystery.opened = true;
-    const chest = openChest(25);
+    const base = weekTheme().key === 'mystery' ? 50 : 25; // 雙倍神秘字週：基礎值加倍
+    const chest = openChest(base);
     save();
     return chest;
   }
@@ -642,8 +657,11 @@ function setNick(v) {
       ? `<div class="vg-fomo">🔥 連續 <b>${streak}</b> 天——今天還沒練，別斷在這裡！</div>` : '';
     const doneCard = easyDone
       ? `<div class="vg-fomo" style="background:#e8f5e9;border-color:#66bb6a">✅ 今天的功課完成了，明天見！</div>` : '';
+    const th = weekTheme();
+    const themeHtml = `<div class="vg-theme">🎉 本週主題：<b>${th.label}</b>　<span class="vg-theme-desc">${th.desc}</span></div>`;
     const wq = weekQuest();
     const weekHtml = `
+      ${themeHtml}
       <div class="vg-quest week ${wq.done ? 'done' : ''}">
         <span class="vg-q-ico">👑</span>
         <span class="vg-q-body"><span class="vg-q-name">本週挑戰：${wq.label}（保底傳說寶箱）</span>
@@ -780,11 +798,11 @@ function setNick(v) {
   function init() { load(); checkEscaped(); welcomeBack(); shieldNotice(); }
 
   return {
-    init, level, title, levelProgress, get coins() { return g.coins; }, get avatar() { return g.avatar; },
+    init, level, title, levelProgress, progressToLevel, get coins() { return g.coins; }, get avatar() { return g.avatar; },
     get shield() { return g.shield; }, get revive() { return g.revive; }, heroName, get raw() { return g; },
     onAnswer, onFlash, onFlashDone, onQuizDone, onBattleStart, onBattleFinish, onBattleWin, esc,
     quests, claimQuest, claimAndRefresh, openMystery, openMysteryUI, mysteryWord,
-    weekQuest, claimWeek, claimWeekUI, weekVaultReady, openWeekVault, weekInfo,
+    weekQuest, claimWeek, claimWeekUI, weekVaultReady, openWeekVault, weekInfo, weekTheme,
     SHOP, buy, setFrame, get frame() { return g.shop.frame; }, get owned() { return g.shop.owned.slice(); },
     rankInfo, rankWin, rankLose, useRevive,
     nextMilestone, milestoneHtml,
