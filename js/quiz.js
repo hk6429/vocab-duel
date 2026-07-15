@@ -22,7 +22,8 @@ const VDQuiz = (() => {
     if (!hits.length) return null;
     // 優先等長（原形）的 match，否則取最短的變化形
     const hit = hits.find(h => h.length === stem.length) || hits.sort((a, b) => a.length - b.length)[0];
-    return w.example.replace(hit, '＿'.repeat(5)); // 固定 5 格，不洩漏字長
+    // text＝挖空句；hit＝實際挖掉的字形（可能是變化形，如 parents），拼寫題兩形都算對
+    return { text: w.example.replace(hit, '＿'.repeat(5)), hit }; // 固定 5 格，不洩漏字長
   }
 
   /* 編輯距離（Levenshtein），量拼字相近程度 */
@@ -103,12 +104,15 @@ const VDQuiz = (() => {
         : { type, prompt: w.zh, sub: '哪個英文字對應這個意思？', options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
     } else if (type === 'cloze') {
       const ds = pickDistractors(w, sameLevel, 3, x => x.word, fam && !easy, easy);
-      q = { type, prompt: clz, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
+      q = { type, prompt: clz.text, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
     } else {
-      q = { type: 'spell', prompt: w.zh, sub: `拼出這個英文字（${w.pos.join('・')}）`, hint: clz, ans: w.word, first: w.word[0] };
+      q = { type: 'spell', prompt: w.zh, sub: `拼出這個英文字（${w.pos.join('・')}）`, hint: clz.text, ans: w.word, first: w.word[0] };
     }
     q.word = w.word;
-    if (w.variants) q.variants = w.variants; // 拼寫判定接受英式等變體拼法
+    const vs = (w.variants || []).slice(); // 拼寫判定接受英式等變體拼法
+    // 拼寫題：例句挖掉的是變化形（如 parents）時，該形也算對，避免照句意作答反被判錯
+    if (q.type === 'spell' && clz && clz.hit && clz.hit.toLowerCase() !== w.word.toLowerCase()) vs.push(clz.hit);
+    if (vs.length) q.variants = vs;
     q.meaning = { zh: w.zh, pos: w.pos, example: w.example, example_zh: w.example_zh };
     return q;
   }
