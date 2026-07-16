@@ -138,6 +138,13 @@ body.dark .hdr-badge-i { border-color: #3a4258; }
 .lst-play { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 6px; }
 .lst-icon { font-size: 48px; }
 #lstReplay:disabled { opacity: .5; }
+.tts-warn { background: #fff4e0; border: 1px solid #e6b062; border-radius: 10px; padding: 10px 12px;
+  margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #7a4a12; }
+.tts-warn b { color: #b5560f; }
+.tts-warn summary { cursor: pointer; color: var(--accent2); font-weight: 600; margin-top: 4px; }
+.tts-warn details[open] summary { margin-bottom: 4px; }
+body.dark .tts-warn { background: rgba(230,176,98,.14); border-color: rgba(230,176,98,.5); color: #e6c088; }
+body.dark .tts-warn b { color: #f0b878; }
 /* ── 統一選項樣式：左側字母徽章 + 靠左內文 ── */
 .btn.opt {
   background: #eef4f8; color: var(--text); font-weight: 500;

@@ -7,6 +7,7 @@ const VDSpeak = (() => {
   let lang = localStorage.getItem(KEY) || 'en-US';
   let voice = null;
   let cur = null;                                      // 正在播的有道音檔
+  let voicesLoaded = false, warned = false;            // TTS 語音清單是否載入、是否已提示過缺語音
   const cache = {};
 
   /* 選聲：依品質排序，避免抓到系統的玩具音（Albert/Bells/Zarvox…完全聽不懂） */
@@ -33,18 +34,38 @@ const VDSpeak = (() => {
   }
   function pick() {
     if (!ok) return;
+    if (speechSynthesis.getVoices().length) voicesLoaded = true;
     const vs = speechSynthesis.getVoices()
       .filter(v => v.lang && v.lang.replace('_', '-').toLowerCase().startsWith('en'));
     voice = vs.sort((a, b) => score(b) - score(a))[0] || null;
     if (voice && score(voice) < 0) voice = null;       // 全是玩具聲就交給系統預設
   }
-  if (ok) { pick(); speechSynthesis.onvoiceschanged = pick; }
+  // 有些裝置本來就沒語音、且不會觸發 onvoiceschanged，1.5s 後仍空就當作載完（好偵測「真的沒語音」）
+  if (ok) { pick(); speechSynthesis.onvoiceschanged = pick; setTimeout(() => { voicesLoaded = true; }, 1500); }
+
+  /* 裝置是否有可用的英語 TTS 語音；沒有的話「聽句選義」與例句朗讀會無聲 */
+  function hasVoice() {
+    return ok && speechSynthesis.getVoices().some(v => /^en/i.test((v.lang || '').replace('_', '-')));
+  }
+  /* 'ok' | 'no-voice' | 'unknown'（清單尚未載入完，先別誤報） | 'unsupported' */
+  function ttsStatus() {
+    if (!ok) return 'unsupported';
+    if (!voicesLoaded) return 'unknown';
+    return hasVoice() ? 'ok' : 'no-voice';
+  }
+  function maybeWarnNoVoice() {
+    if (warned || ttsStatus() !== 'no-voice') return;
+    warned = true;
+    if (window.VDGame && VDGame.toast)
+      VDGame.toast('🔇 你的裝置偵測不到英語語音，朗讀會沒聲音。到「設定 → 朗讀內容／文字轉語音」安裝一個英文語音就好。');
+  }
 
   function tts(spoken) {
     if (!ok) return;
     const u = new SpeechSynthesisUtterance(spoken);
     u.lang = lang; if (voice) u.voice = voice; u.rate = 0.9;
-    speechSynthesis.speak(u);
+    speechSynthesis.speak(u);      // 一律盡力播（避開清單載入競態）
+    maybeWarnNoVoice();            // 但若確定沒英語語音，提示一次安裝
   }
   /* 有道真人音：抓失敗（斷網/被擋/整句 500）就交給 onFail 退回 TTS */
   function playUrl(spoken, onFail) {
@@ -88,6 +109,6 @@ const VDSpeak = (() => {
     return spk + rpt;
   }
 
-  return { say, btn, setAccent, accent, supported };
+  return { say, btn, setAccent, accent, supported, hasVoice, ttsStatus };
 })();
 if (typeof window !== 'undefined') window.VDSpeak = VDSpeak;

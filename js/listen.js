@@ -95,6 +95,18 @@ const VDListen = (() => {
     };
   }
 
+  /* 偵測不到英語語音時提示安裝：句子題完全靠 TTS；單字題平常走有道，但校網擋有道時也會退回 TTS */
+  function ttsBanner() {
+    const st = VDSpeak.ttsStatus ? VDSpeak.ttsStatus() : 'ok';
+    if (st === 'ok' || st === 'unknown') return '';
+    if (st === 'unsupported')
+      return `<div class="tts-warn">🔇 這個瀏覽器不支援語音朗讀，建議改用 Chrome 或 Safari。</div>`;
+    return `<div class="tts-warn">🔇 偵測不到英語語音，<b>「聽句選義」題可能沒聲音</b>（單字題不受影響）。
+      <details><summary>👉 教我安裝英語語音（一次就好）</summary>
+      <b>iPhone／iPad：</b>設定 → 輔助使用 → 朗讀內容 → 語音 → 英文 → 下載一個（例如 Samantha）。<br>
+      <b>Android：</b>設定 → 系統 → 語言與輸入 → 文字轉語音輸出 → ⚙️ → 安裝語音資料 → English。</details></div>`;
+  }
+
   function render(el) {
     if (idx >= questions.length) {
       el.innerHTML = `<div class="card-done"><div class="big">${score >= 6 ? '🏆' : score >= 4 ? '💪' : '📖'}</div>
@@ -109,6 +121,7 @@ const VDListen = (() => {
     replays = 0;
     VDSpeak.say(q.audio); // 進題自動播一次；無 onEnd 回呼可偵測，只能靠使用者點擊重播
     const head = `
+      ${ttsBanner()}
       <div class="flash-progress">第 ${idx + 1} / ${questions.length} 題　得分 ${score}</div>
       <div class="lst-play"><div class="lst-icon">🎧</div><button class="btn ghost" id="lstReplay">🔁 重播（剩 ${REPLAY_MAX} 次）</button></div>
       <div class="quiz-sub">${q.sub}</div>`;
