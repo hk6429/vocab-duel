@@ -11,10 +11,10 @@ const VDGame = (() => {
 
   const DEFAULT = () => ({
     xp: 0, coins: 0, nick: '', avatar: '🦸',
-    badges: {}, quests: { date: '', prog: { correct: 0, battle: 0, flash: 0 }, claimed: [] },
+    badges: {}, quests: { date: '', prog: { correct: 0, battle: 0, flash: 0, listen: 0 }, claimed: [] },
     mystery: { date: '', opened: false }, shield: 0, unlocked: [],
     best: { sprint: 0, battleWins: 0 }, seenIntro: false, seed: 7,
-    ss: { correct: 0, spell: 0, exam: 0, battleWon: 0, maxCombo: 0 },
+    ss: { correct: 0, spell: 0, exam: 0, battleWon: 0, maxCombo: 0, listen: 0 },
     shop: { owned: [], frame: '' }, revive: 0,
     rank: { pts: 0, peak: 0 },
     week: { key: '', prog: 0, claimed: false }
@@ -26,9 +26,9 @@ const VDGame = (() => {
     try { g = Object.assign(DEFAULT(), JSON.parse(localStorage.getItem(KEY)) || {}); }
     catch { g = DEFAULT(); }
     // 巢狀欄位補齊
-    g.quests = Object.assign({ date: '', prog: { correct: 0, battle: 0, flash: 0 }, claimed: [] }, g.quests);
-    g.quests.prog = Object.assign({ correct: 0, battle: 0, flash: 0 }, g.quests.prog);
-    g.ss = Object.assign({ correct: 0, spell: 0, exam: 0, battleWon: 0, maxCombo: 0 }, g.ss);
+    g.quests = Object.assign({ date: '', prog: { correct: 0, battle: 0, flash: 0, listen: 0 }, claimed: [] }, g.quests);
+    g.quests.prog = Object.assign({ correct: 0, battle: 0, flash: 0, listen: 0 }, g.quests.prog);
+    g.ss = Object.assign({ correct: 0, spell: 0, exam: 0, battleWon: 0, maxCombo: 0, listen: 0 }, g.ss);
     g.shop = Object.assign({ owned: [], frame: '' }, g.shop);
     g.rank = Object.assign({ pts: 0, peak: 0 }, g.rank);
     g.week = Object.assign({ key: '', prog: 0, claimed: false }, g.week);
@@ -55,7 +55,7 @@ const VDGame = (() => {
   function rollDaily() {
     const t = VDStore.today();
     if (g.quests.date !== t) {
-      g.quests = { date: t, prog: { correct: 0, battle: 0, flash: 0 }, claimed: [] };
+      g.quests = { date: t, prog: { correct: 0, battle: 0, flash: 0, listen: 0 }, claimed: [] };
     }
     if (g.mystery.date !== t) g.mystery = { date: t, opened: false };
     rollWeekly();
@@ -77,7 +77,8 @@ const VDGame = (() => {
   const THEMES = [
     { key: 'mystery', label: '🎁 雙倍神秘字週', desc: '今日神秘字開出雙倍字幣與 XP' },
     { key: 'chest', label: '💰 任務豐收週', desc: '每日任務開箱獎勵 +50%' },
-    { key: 'combo', label: '💥 連擊祭典週', desc: '連擊 ×3 起就有大場面特效' }
+    { key: 'combo', label: '💥 連擊祭典週', desc: '連擊 ×3 起就有大場面特效' },
+    { key: 'listen', label: '🎧 聽力雙倍週', desc: '聽力任務獎勵 +50%' }
   ];
   const weekTheme = () => THEMES[weekIdxNum() % THEMES.length];
   function weekKey() {
@@ -188,9 +189,10 @@ const VDGame = (() => {
       weekTick('correct');
       if (kind === 'spell') { g.ss.spell++; weekTick('spell'); }
       if (kind === 'exam') g.ss.exam++;
+      if (kind === 'listen') g.ss.listen++;
       if (combo && combo > g.ss.maxCombo) g.ss.maxCombo = combo;
-      let xp = kind === 'spell' ? 15 : kind === 'battle' ? 12 : 10;
-      let coins = kind === 'spell' ? 4 : 2;
+      let xp = kind === 'spell' ? 15 : kind === 'listen' ? 13 : kind === 'battle' ? 12 : 10;
+      let coins = kind === 'spell' ? 4 : kind === 'listen' ? 3 : 2;
       // 新手祝福漸退：1-10 題 ×3、11-20 ×2、21-30 ×1.5，慢慢放手不斷崖
       if (g.ss.correct <= 10) { xp *= 3; coins *= 3; toast(`🌟 新手祝福 ×3！（第 ${g.ss.correct}/10 題）`); }
       else if (g.ss.correct <= 20) { xp *= 2; coins *= 2; toast(`🌟 新手祝福 ×2！（第 ${g.ss.correct}/20 題）`); }
@@ -214,6 +216,7 @@ const VDGame = (() => {
     checkBadges();
   }
   function onFlash() { rollDaily(); g.quests.prog.flash++; weekTick('flash'); save(); checkBadges(); }
+  function onListen() { rollDaily(); g.quests.prog.listen++; save(); checkBadges(); }
   function onFlashDone(wrongReview) {
     const xp10 = window.VDPets && VDPets.hasPerk('xp10');
     // 錯題複習比一般閃卡耗神，基礎獎勵就比照加成，有 wrong2 天賦再疊一次
@@ -250,6 +253,8 @@ const VDGame = (() => {
     { id: 'combo10', ico: '⚡', name: '十連爆發', desc: '單場連擊 ×10', chk: s => s.ss.maxCombo >= 10 },
     { id: 'spell10', ico: '✍️', name: '拼字達人', desc: '拼寫答對 10 題', chk: s => s.ss.spell >= 10 },
     { id: 'exam50', ico: '📝', name: '會考老手', desc: '會考答對 50 題', chk: s => s.ss.exam >= 50 },
+    { id: 'listen10', ico: '🎧', name: '聽力達人', desc: '聽力答對 10 題', chk: s => s.ss.listen >= 10 },
+    { id: 'listen50', ico: '🎧', name: '聽力大師', desc: '聽力答對 50 題', chk: s => s.ss.listen >= 50 },
     { id: 'lv5', ico: '🎖️', name: '登堂入室', desc: '達到 5 級', chk: () => level() >= 5 },
     { id: 'lv10', ico: '🏅', name: '登峰造極', desc: '達到 10 級', chk: () => level() >= 10 },
     { id: 'dailyall', ico: '✅', name: '每日全清', desc: '一天完成三項任務', chk: s => new Set(s.quests.claimed.map(c => String(c).split(':')[0])).size >= 3 },
@@ -298,7 +303,8 @@ const VDGame = (() => {
     return [
       mk(0, '✍️', '每日答題', p.correct, '題', [10, 25, 50], [25, 60, 130]),
       mk(1, '🎭', '每日對戰', p.battle, '場', [1, 3, 6], [20, 50, 110]),
-      mk(2, '🃏', '每日閃卡', p.flash, '張', [10, 25, 50], [20, 50, 110])
+      mk(2, '🃏', '每日閃卡', p.flash, '張', [10, 25, 50], [20, 50, 110]),
+      mk(3, '🎧', '每日聽力', p.listen, '題', [5, 15, 30], [25, 60, 130])
     ];
   }
   function claimQuest(i, t) {
@@ -306,7 +312,9 @@ const VDGame = (() => {
     const tier = q && q.tiers[t];
     if (!tier || !tier.done || tier.claimed) return null;
     g.quests.claimed.push(`${i}:${t}`);
-    const reward = weekTheme().key === 'chest' ? Math.round(tier.reward * 1.5) : tier.reward; // 任務豐收週：開箱基礎值 +50%
+    let reward = tier.reward;
+    if (weekTheme().key === 'chest') reward = Math.round(reward * 1.5); // 任務豐收週：所有任務開箱基礎值 +50%
+    if (weekTheme().key === 'listen' && i === 3) reward = Math.round(reward * 1.5); // 聽力雙倍週：只加成聽力軌
     const chest = openChest(reward);
     // 全清 = 三軌各領過至少一檔（一天只發一次）
     const tracks = new Set(g.quests.claimed.map(c => String(c).split(':')[0]));
@@ -709,7 +717,7 @@ function setNick(v) {
     </div>`;
   }
   /* 三軌任務列（獨立函式：領獎後就地重繪用）；整列可點直達對應模式 */
-  const QUEST_GO = ['quiz', 'battle', 'flash'];
+  const QUEST_GO = ['quiz', 'battle', 'flash', 'listen'];
   function questRowsHtml(qs) {
     qs = qs || quests();
     return qs.map(q => {
@@ -800,7 +808,7 @@ function setNick(v) {
   return {
     init, level, title, levelProgress, progressToLevel, get coins() { return g.coins; }, get avatar() { return g.avatar; },
     get shield() { return g.shield; }, get revive() { return g.revive; }, heroName, get raw() { return g; },
-    onAnswer, onFlash, onFlashDone, onQuizDone, onBattleStart, onBattleFinish, onBattleWin, esc,
+    onAnswer, onFlash, onFlashDone, onQuizDone, onBattleStart, onBattleFinish, onBattleWin, onListen, esc,
     quests, claimQuest, claimAndRefresh, openMystery, openMysteryUI, mysteryWord,
     weekQuest, claimWeek, claimWeekUI, weekVaultReady, openWeekVault, weekInfo, weekTheme,
     SHOP, buy, setFrame, get frame() { return g.shop.frame; }, get owned() { return g.shop.owned.slice(); },

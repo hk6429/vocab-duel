@@ -5,8 +5,8 @@ const VDStore = (() => {
   const INTERVALS = [0, 1, 3, 8, 21, 60]; // 各盒複習間隔（天）；擴張式間隔提升長期保留
 
   // 錯誤資料智慧化：h 欄位是逐題歷史 token（題型碼+結果碼各1字元，封頂近 8 次作答）
-  const HIST_TYPE_MAP = { e2z: 'e', z2e: 'z', cloze: 'c', spell: 's' };
-  const HIST_TYPE_REV = { e: 'e2z', z: 'z2e', c: 'cloze', s: 'spell' };
+  const HIST_TYPE_MAP = { e2z: 'e', z2e: 'z', cloze: 'c', spell: 's', listen: 'l' };
+  const HIST_TYPE_REV = { e: 'e2z', z: 'z2e', c: 'cloze', s: 'spell', l: 'listen' };
   const FAST_MS = 1200;  // 選擇題答對耗時低於此視為可疑快答（拼寫產出題不算）
   const HIST_CAP = 16;   // 2 字元/次 × 8 次
 

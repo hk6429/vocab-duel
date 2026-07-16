@@ -134,6 +134,10 @@ body.dark .hdr-badge-i { border-color: #3a4258; }
 }
 .quiz-sub { text-align: center; color: var(--muted); margin: 12px 0 18px; font-size: 14px; }
 .quiz-opts { display: flex; flex-direction: column; gap: 12px; }
+
+.lst-play { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 6px; }
+.lst-icon { font-size: 48px; }
+#lstReplay:disabled { opacity: .5; }
 /* ── 統一選項樣式：左側字母徽章 + 靠左內文 ── */
 .btn.opt {
   background: #eef4f8; color: var(--text); font-weight: 500;

@@ -145,6 +145,7 @@ const VDApp = (() => {
           <div class="wc-mgrid">
             ${card('flash', 'm_flash', '🃏', '閃卡練功', '五盒間隔複習，記得牢')}
             ${card('quiz', 'm_quiz', '✍️', '單字自測', '三題型隨機，一輪十題')}
+            ${card('listen', 'm_listen', '🎧', '聽力理解', '聽音辨義／聽寫關鍵字')}
             ${lv >= 2 ? card('sprint', 'm_sprint', '⏱️', '限時衝刺', '60 秒搶答，衝高分') : lockCard('⏱️', '限時衝刺', 2)}
             ${lv >= 2 && wrongN ? card('review', 'm_review', '🩹', '錯題複習', '只練你答錯過的字', false, wrongN) : ''}
           </div>
@@ -219,6 +220,10 @@ const VDApp = (() => {
     quiz() {
       $view().innerHTML = header('單字自測') + '<div id="mod"></div>';
       VDQuiz.start(scopeWords(), document.getElementById('mod'));
+    },
+    listen() {
+      $view().innerHTML = header('聽力理解') + '<div id="mod"></div>';
+      VDListen.start(scopeWords(), document.getElementById('mod'));
     },
     stats() {
       $view().innerHTML = header('我的戰績') + '<div id="mod"></div>';
