@@ -5,6 +5,7 @@ const VDQuiz = (() => {
   let questions = [], idx = 0, score = 0, combo = 0;
   let wrongStreak = 0, rescue = false, curPool = []; // 連錯救援：連錯 3 題起後續誘答改隨機
   let session = 0; // 場次代號：自動下一題的計時器用來偵測「已離開這一輪」
+  let qStart = 0; // 本題出現時間戳，答題時算耗時判斷是否可疑快答
 
   function shuffle(a) {
     for (let i = a.length - 1; i > 0; i--) {
@@ -22,8 +23,7 @@ const VDQuiz = (() => {
     if (!hits.length) return null;
     // 優先等長（原形）的 match，否則取最短的變化形
     const hit = hits.find(h => h.length === stem.length) || hits.sort((a, b) => a.length - b.length)[0];
-    // text＝挖空句；hit＝實際挖掉的字形（可能是變化形，如 parents），拼寫題兩形都算對
-    return { text: w.example.replace(hit, '＿'.repeat(5)), hit }; // 固定 5 格，不洩漏字長
+    return w.example.replace(hit, '＿'.repeat(5)); // 固定 5 格，不洩漏字長
   }
 
   /* 編輯距離（Levenshtein），量拼字相近程度 */
@@ -71,8 +71,9 @@ const VDQuiz = (() => {
     return out;
   }
 
-  /* 為單一字建一題（隨機題型），pool 供同 level 誘答；allowSpell 開啟產出型拼寫題（僅自測用，對戰不出）；easy=救援模式 */
-  function makeQuestionFor(w, pool, allowSpell, easy) {
+  /* 為單一字建一題，pool 供同 level 誘答；allowSpell 開啟產出型拼寫題（僅自測用，對戰不出）；easy=救援模式；
+     bias=true 時優先挑這個字「還沒答對過」的題型（逼題型多樣性，防止只靠同一種題型騙過系統），僅自測模式傳入 */
+  function makeQuestionFor(w, pool, allowSpell, easy, bias) {
     const sameLevel = pool.filter(x => x.level === w.level);
     const fam = VDStore.box(w.word) >= 2; // 盒 ≥2 = 已穩固；未穩固不出形近誘答、不出拼寫
     const types = ['e2z', 'z2e'];
@@ -80,7 +81,14 @@ const VDQuiz = (() => {
     if (clz) types.push('cloze');
     // 拼寫題只給已穩固（盒 ≥2）、單一純字母、長度 3–12 的字（新字／片語／連字號不出），並提高權重
     if (allowSpell && fam && /^[a-z]{3,12}$/i.test(w.word)) types.push('spell', 'spell');
-    const type = types[Math.floor(Math.random() * types.length)];
+    let type;
+    if (bias && !easy) {
+      const seen = VDStore.correctTypes(w.word);
+      const untested = types.filter(t => !seen.has(t));
+      type = untested.length ? untested[Math.floor(Math.random() * untested.length)] : types[Math.floor(Math.random() * types.length)];
+    } else {
+      type = types[Math.floor(Math.random() * types.length)];
+    }
     let q;
     if (type === 'e2z') {
       /* 英英模式：選項改用英文定義（enrich 資料齊全才出，缺則回中文四選一） */
@@ -104,15 +112,12 @@ const VDQuiz = (() => {
         : { type, prompt: w.zh, sub: '哪個英文字對應這個意思？', options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
     } else if (type === 'cloze') {
       const ds = pickDistractors(w, sameLevel, 3, x => x.word, fam && !easy, easy);
-      q = { type, prompt: clz.text, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
+      q = { type, prompt: clz, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
     } else {
-      q = { type: 'spell', prompt: w.zh, sub: `拼出這個英文字（${w.pos.join('・')}）`, hint: clz.text, ans: w.word, first: w.word[0] };
+      q = { type: 'spell', prompt: w.zh, sub: `拼出這個英文字（${w.pos.join('・')}）`, hint: clz, ans: w.word, first: w.word[0] };
     }
     q.word = w.word;
-    const vs = (w.variants || []).slice(); // 拼寫判定接受英式等變體拼法
-    // 拼寫題：例句挖掉的是變化形（如 parents）時，該形也算對，避免照句意作答反被判錯
-    if (q.type === 'spell' && clz && clz.hit && clz.hit.toLowerCase() !== w.word.toLowerCase()) vs.push(clz.hit);
-    if (vs.length) q.variants = vs;
+    if (w.variants) q.variants = w.variants; // 拼寫判定接受英式等變體拼法
     q.meaning = { zh: w.zh, pos: w.pos, example: w.example, example_zh: w.example_zh };
     return q;
   }
@@ -125,13 +130,15 @@ const VDQuiz = (() => {
   }
 
   function buildQuestions(words) {
-    /* 出題對象：低盒優先（不熟的先考），混一些沒看過的 */
+    /* 出題對象：低盒優先（不熟的先考），混一些沒看過的；假熟練（盒夠高但信任度低）額外扣分提前重測 */
     const pool = words.slice();
     const targets = shuffle(pool.slice()).sort((a, b) => {
       const ba = VDStore.box(a.word), bb = VDStore.box(b.word);
-      return (ba === -1 ? 2.5 : ba) - (bb === -1 ? 2.5 : bb) + (Math.random() - 0.5);
+      const pa = (ba === -1 ? 2.5 : ba) - (VDStore.isFakeMastery(a.word) ? 1.5 : 0);
+      const pb = (bb === -1 ? 2.5 : bb) - (VDStore.isFakeMastery(b.word) ? 1.5 : 0);
+      return pa - pb + (Math.random() - 0.5);
     }).slice(0, ROUND);
-    return targets.map(w => makeQuestionFor(w, pool, true));
+    return targets.map(w => makeQuestionFor(w, pool, true, false, true));
   }
 
   function start(words, el) {
@@ -145,7 +152,7 @@ const VDQuiz = (() => {
   /* 指定字開一輪（閃卡「畢業自測」入口）：list＝要考的字，pool＝誘答來源（預設 list） */
   function startWith(list, el, pool) {
     curPool = (pool && pool.length ? pool : list).slice();
-    questions = list.slice(0, SESSION_MAX).map(w => makeQuestionFor(w, curPool, true));
+    questions = list.slice(0, SESSION_MAX).map(w => makeQuestionFor(w, curPool, true, false, true));
     idx = 0; score = 0; combo = 0; wrongStreak = 0; rescue = false; render._awarded = false;
     session++;
     render(el);
@@ -176,6 +183,7 @@ const VDQuiz = (() => {
       return;
     }
     const q = questions[idx];
+    qStart = performance.now(); // 本題開始計時，答對太快視為可疑快答（拼寫題不算，見 appendHist）
     // 拼寫產出題：不給選項，讓學生自己打出英文（產出型記憶，比辨識強）
     if (q.type === 'spell') return renderSpell(el, q);
     // 題幹是英文時（看英想中、例句挖空）給發音鈕；看中選英的題幹是中文不給
@@ -194,7 +202,7 @@ const VDQuiz = (() => {
         const v = decodeURIComponent(btn.dataset.v);
         const correct = v === q.ans;
         combo = correct ? combo + 1 : 0;
-        VDStore.record(q.word, correct);
+        VDStore.record(q.word, correct, undefined, { qtype: q.type, ms: performance.now() - qStart });
         VDGame.onAnswer(correct, 'quiz', combo);
         trackStreak(correct);
         if (correct) score++;
@@ -230,7 +238,7 @@ const VDQuiz = (() => {
     const finish = correct => {
       locked = true;
       combo = correct ? combo + 1 : 0;
-      VDStore.record(q.word, correct);
+      VDStore.record(q.word, correct, undefined, { qtype: q.type, ms: performance.now() - qStart });
       VDGame.onAnswer(correct, 'spell', combo);
       trackStreak(correct);
       if (correct) score++;

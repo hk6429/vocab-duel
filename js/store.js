@@ -4,6 +4,18 @@ const VDStore = (() => {
   const META_KEY = 'vd_meta';     // { stage:'E'|'J', daily:{date:count}, lastDay, streak }
   const INTERVALS = [0, 1, 3, 8, 21, 60]; // 各盒複習間隔（天）；擴張式間隔提升長期保留
 
+  // 錯誤資料智慧化：h 欄位是逐題歷史 token（題型碼+結果碼各1字元，封頂近 8 次作答）
+  const HIST_TYPE_MAP = { e2z: 'e', z2e: 'z', cloze: 'c', spell: 's' };
+  const HIST_TYPE_REV = { e: 'e2z', z: 'z2e', c: 'cloze', s: 'spell' };
+  const FAST_MS = 1200;  // 選擇題答對耗時低於此視為可疑快答（拼寫產出題不算）
+  const HIST_CAP = 16;   // 2 字元/次 × 8 次
+
+  function appendHist(h, correct, opts) {
+    const code = (opts && HIST_TYPE_MAP[opts.qtype]) || 'x';
+    const fast = !!(opts && opts.ms != null && opts.ms < FAST_MS && code !== 's');
+    return ((h || '') + code + (!correct ? 'N' : (fast ? 'y' : 'Y'))).slice(-HIST_CAP);
+  }
+
   const today = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD 本地時區
 
   function load(key, fallback) {
@@ -120,14 +132,16 @@ const VDStore = (() => {
     get stage() { return meta.stage; },
     set stage(v) { meta.stage = v; saveMeta(); },
     getWord: w => prog[w] || null,
-    /* 答題結果回寫：source 選填 — undefined/'quiz' 完整效果、'flash' 閃卡自評、'battle' 限時競技 */
-    record(word, correct, source) {
+    /* 答題結果回寫：source 選填 — undefined/'quiz' 完整效果、'flash' 閃卡自評、'battle' 限時競技
+       opts 選填 — { qtype: 'e2z'|'z2e'|'cloze'|'spell', ms: 作答耗時毫秒 }，供信任度判讀用，不影響升降盒 */
+    record(word, correct, source, opts) {
       snapshotHist(today()); // 快照要在今天第一題「改動進度前」拍，週增量才不會少算
       const rec = prog[word] || { b: 0, d: today(), s: 0 };
       pushRecent(correct);
       if (source === 'battle' && !correct) {
         // 競技答錯：只記錯題本，不降盒、不改到期日（限時手滑不懲罰學習進度）
         rec.s += 1;
+        rec.h = appendHist(rec.h, correct, opts);
         prog[word] = rec;
         meta.wrong[word] = today();
         saveProg();
@@ -143,12 +157,47 @@ const VDStore = (() => {
       }
       rec.d = addDays(today(), INTERVALS[rec.b]);
       rec.s += 1;
+      rec.h = appendHist(rec.h, correct, opts);
       prog[word] = rec;
       // 錯題本：答錯記入；答對且已達熟練（盒 ≥3）才畢業移除
       if (!correct) meta.wrong[word] = today();
       else if (rec.b >= 3 && meta.wrong[word]) delete meta.wrong[word];
       saveProg();
       bumpDaily();
+    },
+    /* 這個字曾經「答對過」的題型集合，供自測出題偏好還沒測過的題型 */
+    correctTypes(word) {
+      const out = new Set();
+      const h = prog[word] && prog[word].h;
+      if (!h) return out;
+      for (let i = 0; i < h.length; i += 2) {
+        const t = HIST_TYPE_REV[h[i]], f = h[i + 1];
+        if (t && (f === 'Y' || f === 'y')) out.add(t);
+      }
+      return out;
+    },
+    /* 信任度 0–1：近幾次作答只靠單一題型答對／過半是可疑快答／忽對忽錯，各扣分；資料不足回傳 1（不誤判） */
+    trustScore(word) {
+      const h = prog[word] && prog[word].h;
+      if (!h) return 1;
+      const pairs = [];
+      for (let i = 0; i < h.length; i += 2) pairs.push(h.slice(i, i + 2));
+      const last = pairs.slice(-6);
+      if (!last.length) return 1;
+      let score = 1;
+      const correct = last.filter(p => p[1] === 'Y' || p[1] === 'y');
+      const correctTypeCount = new Set(correct.map(p => p[0]).filter(t => t !== 'x')).size;
+      if (correctTypeCount <= 1 && last.length >= 2) score -= 0.3; // 只靠單一題型答對
+      const fastRatio = correct.length ? last.filter(p => p[1] === 'y').length / correct.length : 0;
+      if (fastRatio >= 0.5) score -= 0.3; // 過半正確答案是可疑快答
+      const last4 = last.slice(-4);
+      if (last4.some(p => p[1] === 'N') && last4.some(p => p[1] !== 'N')) score -= 0.2; // 忽對忽錯
+      return Math.max(0, score);
+    },
+    /* 假熟練：已達盒 3（系統認定熟練）但信任度偏低，自測出題該優先重測 */
+    isFakeMastery(word) {
+      const r = prog[word];
+      return !!r && r.b >= 3 && this.trustScore(word) < 0.7;
     },
     isWrong: w => !!meta.wrong[w],
     /* 錯題清單：回傳仍在錯題本裡的字物件（限定 scope 範圍） */
