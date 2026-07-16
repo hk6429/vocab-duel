@@ -95,16 +95,27 @@ const VDListen = (() => {
     };
   }
 
-  /* 偵測不到英語語音時提示安裝：句子題完全靠 TTS；單字題平常走有道，但校網擋有道時也會退回 TTS */
-  function ttsBanner() {
+  /* 安裝英語語音的完整教學（含連結）：聽力一律顯示「聽不到聲音？」提醒；偵測不到語音時自動展開＋加警示。
+     句子題完全靠裝置 TTS；單字題平常走有道，但校網擋有道時也會退回 TTS，所以一律提供說明 */
+  function ttsHelp() {
     const st = VDSpeak.ttsStatus ? VDSpeak.ttsStatus() : 'ok';
-    if (st === 'ok' || st === 'unknown') return '';
     if (st === 'unsupported')
-      return `<div class="tts-warn">🔇 這個瀏覽器不支援語音朗讀，建議改用 Chrome 或 Safari。</div>`;
-    return `<div class="tts-warn">🔇 偵測不到英語語音，<b>「聽句選義」題可能沒聲音</b>（單字題不受影響）。
-      <details><summary>👉 教我安裝英語語音（一次就好）</summary>
-      <b>iPhone／iPad：</b>設定 → 輔助使用 → 朗讀內容 → 語音 → 英文 → 下載一個（例如 Samantha）。<br>
-      <b>Android：</b>設定 → 系統 → 語言與輸入 → 文字轉語音輸出 → ⚙️ → 安裝語音資料 → English。</details></div>`;
+      return `<div class="tts-help warn">🔇 這個瀏覽器不支援語音朗讀，聽力題會沒聲音，建議改用 Chrome 或 Safari。</div>`;
+    const noVoice = st === 'no-voice';
+    const lead = noVoice
+      ? `<div class="tts-lead">🔇 偵測不到英語語音，<b>「聽句選義」題會沒有聲音</b>（單字題不受影響）。請照下面安裝：</div>` : '';
+    return `<div class="tts-help${noVoice ? ' warn' : ''}">
+      ${lead}
+      <details${noVoice ? ' open' : ''}>
+        <summary>🔊 聽不到聲音？點我安裝英語語音（手機必看）</summary>
+        <div class="tts-steps">
+          <p><b>📱 iPhone／iPad</b>（內建、免裝 App）：設定 → 輔助使用 → 朗讀內容 → 開啟「朗讀所選項目」→ 語音 → 英文 → 點一個語音（例如 Samantha）下載。</p>
+          <p><b>🤖 Android</b>：先安裝或更新「Google 文字轉語音」→ <a href="https://play.google.com/store/apps/details?id=com.google.android.tts" target="_blank" rel="noopener">前往 Play 商店安裝</a>；再到 設定 → 系統 → 語言與輸入 → 文字轉語音輸出 → ⚙️ → 安裝語音資料 → English。</p>
+          <p><b>💻 電腦</b>：Chrome／Edge／Safari 內建語音通常直接有聲；沒聲音先檢查系統音量、或改用 Chrome。</p>
+          <p class="tts-note">裝好後回到這頁重新整理一次即可。單字題發音用線上真人音，不受影響。</p>
+        </div>
+      </details>
+    </div>`;
   }
 
   function render(el) {
@@ -121,7 +132,7 @@ const VDListen = (() => {
     replays = 0;
     VDSpeak.say(q.audio); // 進題自動播一次；無 onEnd 回呼可偵測，只能靠使用者點擊重播
     const head = `
-      ${ttsBanner()}
+      ${ttsHelp()}
       <div class="flash-progress">第 ${idx + 1} / ${questions.length} 題　得分 ${score}</div>
       <div class="lst-play"><div class="lst-icon">🎧</div><button class="btn ghost" id="lstReplay">🔁 重播（剩 ${REPLAY_MAX} 次）</button></div>
       <div class="quiz-sub">${q.sub}</div>`;
