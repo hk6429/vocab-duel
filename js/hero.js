@@ -59,8 +59,10 @@ const VDHero = (() => {
             <button class="set-toggle" id="fsToggle" aria-pressed="${(localStorage.getItem('vd_fontscale') || 'normal') === 'large'}">🔠 字級：<b>${(localStorage.getItem('vd_fontscale') || 'normal') === 'large' ? '大' : '標準'}</b></button>
             <button class="set-toggle" id="thToggle" aria-pressed="${localStorage.getItem('vd_theme') === 'dark'}">🌓 深色模式：<b>${localStorage.getItem('vd_theme') === 'dark' ? '開' : '關'}</b></button>
             <button class="set-toggle" id="qmToggle" aria-pressed="${localStorage.getItem('vd_quizmode') === 'en'}">🇬🇧 英英模式：<b>${localStorage.getItem('vd_quizmode') === 'en' ? '開' : '關'}</b></button>
+            <button class="set-toggle" id="calmToggle" aria-pressed="${localStorage.getItem('vd_calm') === '1'}">🕊️ 安心模式：<b>${localStorage.getItem('vd_calm') === '1' ? '開' : '關'}</b></button>
           </div>
           <div class="pg-hint">英英模式：單字自測的「字義題」改用英文定義當選項（學測練兵）。</div>
+          <div class="pg-hint">安心模式：隱藏排行榜名次比較，只跟上週的自己比——資料照常同步給老師。</div>
         </div>
       </div>
 
@@ -104,6 +106,12 @@ const VDHero = (() => {
       localStorage.setItem('vd_quizmode', next);
       if (next === 'en' && window.VDEnrich) VDEnrich.ensure();
       VDGame.toast(next === 'en' ? '🇬🇧 英英模式開啟——下一輪自測生效' : '已切回中文選項');
+      render(el);
+    };
+    el.querySelector('#calmToggle').onclick = () => {
+      const on = localStorage.getItem('vd_calm') === '1';
+      if (on) localStorage.removeItem('vd_calm'); else localStorage.setItem('vd_calm', '1');
+      VDGame.toast(on ? '已關閉安心模式，排行榜恢復顯示' : '🕊️ 安心模式開啟——排行榜只顯示你自己的進步');
       render(el);
     };
     // 分享

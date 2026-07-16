@@ -145,15 +145,19 @@ const VDQuiz = (() => {
     curPool = words.slice();
     questions = buildQuestions(words);
     idx = 0; score = 0; combo = 0; wrongStreak = 0; rescue = false; render._awarded = false;
+    startOpts = null;
     session++;
     render(el);
   }
 
-  /* 指定字開一輪（閃卡「畢業自測」入口）：list＝要考的字，pool＝誘答來源（預設 list） */
-  function startWith(list, el, pool) {
+  /* 指定字開一輪（閃卡「畢業自測」入口）：list＝要考的字，pool＝誘答來源（預設 list）
+     opts 選填 {onDone(score,total), doneHtml(score,total)}：召回關卡等特殊結算用 */
+  let startOpts = null;
+  function startWith(list, el, pool, opts) {
     curPool = (pool && pool.length ? pool : list).slice();
     questions = list.slice(0, SESSION_MAX).map(w => makeQuestionFor(w, curPool, true, false, true));
     idx = 0; score = 0; combo = 0; wrongStreak = 0; rescue = false; render._awarded = false;
+    startOpts = opts || null;
     session++;
     render(el);
   }
@@ -174,7 +178,15 @@ const VDQuiz = (() => {
 
   function render(el) {
     if (idx >= questions.length) {
-      if (!render._awarded) { VDGame.onQuizDone(score); render._awarded = true; }
+      if (!render._awarded) {
+        VDGame.onQuizDone(score);
+        render._awarded = true;
+        if (startOpts && startOpts.onDone) startOpts.onDone(score, questions.length);
+      }
+      if (startOpts && startOpts.doneHtml) {
+        el.innerHTML = startOpts.doneHtml(score, questions.length);
+        return;
+      }
       el.innerHTML = `<div class="card-done"><div class="big">${score >= 8 ? '🏆' : score >= 5 ? '💪' : '📖'}</div>
         <p>答對 ${score} / ${questions.length} 題！</p>
         ${VDGame.milestoneHtml()}

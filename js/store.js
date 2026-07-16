@@ -5,14 +5,14 @@ const VDStore = (() => {
   const INTERVALS = [0, 1, 3, 8, 21, 60]; // 各盒複習間隔（天）；擴張式間隔提升長期保留
 
   // 錯誤資料智慧化：h 欄位是逐題歷史 token（題型碼+結果碼各1字元，封頂近 8 次作答）
-  const HIST_TYPE_MAP = { e2z: 'e', z2e: 'z', cloze: 'c', spell: 's', listen: 'l' };
-  const HIST_TYPE_REV = { e: 'e2z', z: 'z2e', c: 'cloze', s: 'spell', l: 'listen' };
-  const FAST_MS = 1200;  // 選擇題答對耗時低於此視為可疑快答（拼寫產出題不算）
+  const HIST_TYPE_MAP = { e2z: 'e', z2e: 'z', cloze: 'c', spell: 's', listen: 'l', write: 'w' };
+  const HIST_TYPE_REV = { e: 'e2z', z: 'z2e', c: 'cloze', s: 'spell', l: 'listen', w: 'write' };
+  const FAST_MS = 1200;  // 選擇題答對耗時低於此視為可疑快答（拼寫／寫作等產出題不算）
   const HIST_CAP = 16;   // 2 字元/次 × 8 次
 
   function appendHist(h, correct, opts) {
     const code = (opts && HIST_TYPE_MAP[opts.qtype]) || 'x';
-    const fast = !!(opts && opts.ms != null && opts.ms < FAST_MS && code !== 's');
+    const fast = !!(opts && opts.ms != null && opts.ms < FAST_MS && code !== 's' && code !== 'w');
     return ((h || '') + code + (!correct ? 'N' : (fast ? 'y' : 'Y'))).slice(-HIST_CAP);
   }
 
@@ -33,7 +33,8 @@ const VDStore = (() => {
     if (!m.hist) m.hist = {};          // 每日精熟快照：'YYYY-MM-DD' → masteredCount
     if (!m.recent) m.recent = [];      // 近期答題滑動窗（1=對 0=錯，上限 30 筆）
     if (m.unitIdx == null) m.unitIdx = 0; // 20 字包進度：目前第幾包（0 起算）
-    if (!m.assignments) m.assignments = {}; // 老師字表指派：code → {name, words, ts}
+    if (!m.assignments) m.assignments = {}; // 老師字表指派：code → {name, words, ts, due?, lock?}
+    if (m.lockAsg === undefined) m.lockAsg = null; // 老師範圍鎖：作用中的指派 code 或 null
     return m;
   }
   meta = normalize(meta);
@@ -100,6 +101,16 @@ const VDStore = (() => {
     saveMeta();
   }
 
+  /* 班級弱字上報佇列：答錯就記一筆到 vd_weakq（有加入班級才記），cloud.js 隨 autoSync 批次上傳 */
+  function queueWeak(word) {
+    try {
+      if (!localStorage.getItem('vd_classcode')) return;
+      const q = JSON.parse(localStorage.getItem('vd_weakq') || '{}');
+      q[word] = (q[word] || 0) + 1;
+      localStorage.setItem('vd_weakq', JSON.stringify(q));
+    } catch { /* 佇列壞了就放掉，不影響答題 */ }
+  }
+
   /* 近期答題滑動窗：record() 時維護，上限 30 筆 */
   function pushRecent(correct) {
     meta.recent.push(correct ? 1 : 0);
@@ -144,6 +155,7 @@ const VDStore = (() => {
         rec.h = appendHist(rec.h, correct, opts);
         prog[word] = rec;
         meta.wrong[word] = today();
+        queueWeak(word);
         saveProg();
         bumpDaily();
         return;
@@ -160,7 +172,7 @@ const VDStore = (() => {
       rec.h = appendHist(rec.h, correct, opts);
       prog[word] = rec;
       // 錯題本：答錯記入；答對且已達熟練（盒 ≥3）才畢業移除
-      if (!correct) meta.wrong[word] = today();
+      if (!correct) { meta.wrong[word] = today(); queueWeak(word); }
       else if (rec.b >= 3 && meta.wrong[word]) delete meta.wrong[word];
       saveProg();
       bumpDaily();
@@ -278,12 +290,38 @@ const VDStore = (() => {
       saveMeta();
       return meta.streak;
     },
-    /* 老師字表指派：存一份 {name, words, ts}，供戰績頁追進度 */
-    addAssignment(code, name, words) {
-      meta.assignments[code] = { name, words, ts: Date.now() };
+    /* 免費修復 streak（召回關卡通關獎勵）：同 repairStreak 但不扣字幣 */
+    repairStreakFree() {
+      const info = this.streakRepairInfo();
+      if (!info) return false;
+      meta.streak = info.was + meta.streak;
+      delete meta.streakBroken;
+      saveMeta();
+      return meta.streak;
+    },
+    /* 老師字表指派：存一份 {name, words, ts}，供戰績頁追進度；extra 選填 {due, lock, ts}（雲端指派帶截止日／範圍鎖） */
+    addAssignment(code, name, words, extra) {
+      const prev = meta.assignments[code];
+      meta.assignments[code] = Object.assign({ name, words, ts: (prev && prev.ts) || Date.now() }, extra || {});
       saveMeta();
     },
     assignments() { return meta.assignments; },
+    /* 老師範圍鎖：設定／讀取作用中的指派 code */
+    setLockAsg(code) { meta.lockAsg = code || null; saveMeta(); },
+    lockAsg() { return meta.lockAsg; },
+    /* 鎖定字表：回傳該指派的字串陣列；指派不存在／已完成／已過截止日自動解鎖回 null；
+       小於 8 字不鎖（誘答池會壞），照常回 null 但保留鎖以便完成後追蹤 */
+    lockWords() {
+      const code = meta.lockAsg;
+      if (!code) return null;
+      const a = meta.assignments[code];
+      if (!a) { meta.lockAsg = null; saveMeta(); return null; }
+      if (a.due && today() > a.due) { meta.lockAsg = null; saveMeta(); return null; }
+      const done = a.words.filter(w => (prog[w] ? prog[w].b : -1) >= 1).length;
+      if (done >= a.words.length) { meta.lockAsg = null; saveMeta(); return null; }
+      if (a.words.length < 8) return null;
+      return a.words;
+    },
     /* 目前作用中字表指派（最近一次新增）完成進度：{code,name,done,total} 或 null 無指派時
        done 定義與 stats.js assignmentCard() 一致＝box≥1（不是精熟，避免剛派下去全班顯示 0 太打擊士氣） */
     activeAssignmentProgress() {

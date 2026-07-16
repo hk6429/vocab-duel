@@ -14,7 +14,7 @@ const VDGame = (() => {
     badges: {}, quests: { date: '', prog: { correct: 0, battle: 0, flash: 0, listen: 0 }, claimed: [] },
     mystery: { date: '', opened: false }, shield: 0, unlocked: [],
     best: { sprint: 0, battleWins: 0 }, seenIntro: false, seed: 7,
-    ss: { correct: 0, spell: 0, exam: 0, battleWon: 0, maxCombo: 0, listen: 0 },
+    ss: { correct: 0, spell: 0, exam: 0, battleWon: 0, maxCombo: 0, listen: 0, write: 0 },
     shop: { owned: [], frame: '' }, revive: 0,
     rank: { pts: 0, peak: 0 },
     week: { key: '', prog: 0, claimed: false }
@@ -28,7 +28,7 @@ const VDGame = (() => {
     // 巢狀欄位補齊
     g.quests = Object.assign({ date: '', prog: { correct: 0, battle: 0, flash: 0, listen: 0 }, claimed: [] }, g.quests);
     g.quests.prog = Object.assign({ correct: 0, battle: 0, flash: 0, listen: 0 }, g.quests.prog);
-    g.ss = Object.assign({ correct: 0, spell: 0, exam: 0, battleWon: 0, maxCombo: 0, listen: 0 }, g.ss);
+    g.ss = Object.assign({ correct: 0, spell: 0, exam: 0, battleWon: 0, maxCombo: 0, listen: 0, write: 0 }, g.ss);
     g.shop = Object.assign({ owned: [], frame: '' }, g.shop);
     g.rank = Object.assign({ pts: 0, peak: 0 }, g.rank);
     g.week = Object.assign({ key: '', prog: 0, claimed: false }, g.week);
@@ -190,9 +190,10 @@ const VDGame = (() => {
       if (kind === 'spell') { g.ss.spell++; weekTick('spell'); }
       if (kind === 'exam') g.ss.exam++;
       if (kind === 'listen') g.ss.listen++;
+      if (kind === 'write') g.ss.write++;
       if (combo && combo > g.ss.maxCombo) g.ss.maxCombo = combo;
-      let xp = kind === 'spell' ? 15 : kind === 'listen' ? 13 : kind === 'battle' ? 12 : 10;
-      let coins = kind === 'spell' ? 4 : kind === 'listen' ? 3 : 2;
+      let xp = kind === 'spell' || kind === 'write' ? 15 : kind === 'listen' ? 13 : kind === 'battle' ? 12 : 10;
+      let coins = kind === 'spell' || kind === 'write' ? 4 : kind === 'listen' ? 3 : 2;
       // 新手祝福漸退：1-10 題 ×3、11-20 ×2、21-30 ×1.5，慢慢放手不斷崖
       if (g.ss.correct <= 10) { xp *= 3; coins *= 3; toast(`🌟 新手祝福 ×3！（第 ${g.ss.correct}/10 題）`); }
       else if (g.ss.correct <= 20) { xp *= 2; coins *= 2; toast(`🌟 新手祝福 ×2！（第 ${g.ss.correct}/20 題）`); }
@@ -255,6 +256,8 @@ const VDGame = (() => {
     { id: 'exam50', ico: '📝', name: '會考老手', desc: '會考答對 50 題', chk: s => s.ss.exam >= 50 },
     { id: 'listen10', ico: '🎧', name: '聽力達人', desc: '聽力答對 10 題', chk: s => s.ss.listen >= 10 },
     { id: 'listen50', ico: '🎧', name: '聽力大師', desc: '聽力答對 50 題', chk: s => s.ss.listen >= 50 },
+    { id: 'write10', ico: '📝', name: '造句新星', desc: '寫作坊答對 10 題', chk: s => s.ss.write >= 10 },
+    { id: 'write50', ico: '🖋️', name: '妙筆生花', desc: '寫作坊答對 50 題', chk: s => s.ss.write >= 50 },
     { id: 'lv5', ico: '🎖️', name: '登堂入室', desc: '達到 5 級', chk: () => level() >= 5 },
     { id: 'lv10', ico: '🏅', name: '登峰造極', desc: '達到 10 級', chk: () => level() >= 10 },
     { id: 'dailyall', ico: '✅', name: '每日全清', desc: '一天完成三項任務', chk: s => new Set(s.quests.claimed.map(c => String(c).split(':')[0])).size >= 3 },
@@ -663,6 +666,10 @@ function setNick(v) {
     const st = VDStore.stats([]);
     const fomo = (!easyDone && streak >= 2 && st.todayCount === 0)
       ? `<div class="vg-fomo">🔥 連續 <b>${streak}</b> 天——今天還沒練，別斷在這裡！</div>` : '';
+    // 斷檔修復窗：免費召回關卡與金幣即修並列，讓「努力」也是一條路
+    const rep = VDStore.streakRepairInfo();
+    const repHtml = rep
+      ? `<div class="vg-fomo">🔥 連續 ${rep.was} 天斷掉了！<button class="vg-q-claim" onclick="VDApp.go('recall')">🏮 免費打 5 題接回</button></div>` : '';
     const doneCard = easyDone
       ? `<div class="vg-fomo" style="background:#e8f5e9;border-color:#66bb6a">✅ 今天的功課完成了，明天見！</div>` : '';
     const th = weekTheme();
@@ -701,7 +708,7 @@ function setNick(v) {
       : milestoneHtml();
     return `<div class="vg-daily wc-card">
       <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_daily.webp" alt="" onerror="this.remove()">
-      ${doneCard}${fomo}
+      ${doneCard}${fomo}${repHtml}
       <div class="vg-cal">
         <div class="vg-cal-strip">${calHtml}</div>
         <div class="vg-cal-note">連續 <b>${streak}</b> 天　明天回來：首勝+30・神秘字・城鎮收成・招募×2</div>
@@ -784,10 +791,45 @@ function setNick(v) {
         <div class="vg-lu-t">歡迎回城！</div>
         <div class="vg-lu-title">${diff} 天不見，送你一個稀有寶箱</div>
         <div class="vg-lu-sub">先從今天的 20 字開始就好</div>
-        <div class="vg-lu-sub">點一下開箱</div></div>`;
+        <button class="btn" id="wbChest">🎁 直接開箱</button>
+        <button class="btn ghost" id="wbRecall">🏮 打 5 題召回關卡（獎勵更好）</button></div>`;
       ov.onclick = () => { ov.remove(); openChest(40, 'rare'); };
+      ov.querySelector('#wbRecall').onclick = e => { e.stopPropagation(); ov.remove(); VDApp.go('recall'); };
       document.body.appendChild(ov);
     } catch { /* vd_meta 壞資料不擋主流程 */ }
+  }
+
+  /* ── 斷崖召回關卡：5 題快考，答對 ≥4 免費接回 streak；沒有斷檔窗時當久別回歸獎勵（寶箱＋護盾） ── */
+  function startRecall(el) {
+    const t = VDStore.today();
+    if (g.recallDay === t) {
+      el.innerHTML = `<div class="card-done"><div class="big">🏮</div>
+        <p>今天已經通關過召回關卡了，明天再來！</p>
+        <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button></div>`;
+      return;
+    }
+    const scope = VDApp.scopeWords();
+    let pool = scope.filter(w => VDStore.box(w.word) >= 3);
+    if (pool.length < 5) pool = scope.filter(w => VDStore.box(w.word) >= 1);
+    if (pool.length < 5) pool = scope.slice().sort(() => Math.random() - 0.5).slice(0, 20);
+    const five = pool.slice().sort(() => Math.random() - 0.5).slice(0, 5);
+    VDQuiz.startWith(five, el, scope, {
+      onDone(score) {
+        if (score < 4) return;
+        g.recallDay = t;
+        const ns = VDStore.repairStreakFree();
+        if (ns) toast(`🏮 連續 ${ns} 天接回來了！`);
+        else { openChest(40, 'rare'); g.shield++; toast('🏮 召回成功！稀有寶箱＋護盾 ×1'); }
+        save();
+      },
+      doneHtml(score, total) {
+        const win = score >= 4;
+        return `<div class="card-done"><div class="big">${win ? '🏮' : '🌱'}</div>
+          <p>${win ? `答對 ${score}/${total}，召回成功！記憶都還在。` : `答對 ${score}/${total}，差一點——這不是考試，休息一下再試就好。`}</p>
+          ${win ? '' : `<button class="btn" onclick="VDApp.go('recall')">再試一次</button>`}
+          <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button></div>`;
+      }
+    });
   }
 
   /* ── 護盾生效通知：store.js 消耗護盾後在 vd_meta 記 shieldUsed=1，這裡吐 toast 並清 flag ── */
@@ -818,7 +860,7 @@ function setNick(v) {
     badges: () => BADGES.map(b => ({ ...b, got: !!g.badges[b.id], date: g.badges[b.id] })),
     badgeCount: () => ({ got: Object.keys(g.badges).length, total: BADGES.length }),
     bragText, challengeCode, decodeChallenge, setSprintBest, get sprintBest() { return g.best.sprint; },
-    heroStrip, dailyPanel, toast, checkBadges, masteredAll,
+    heroStrip, dailyPanel, toast, checkBadges, masteredAll, startRecall,
     isBeaten: id => g.unlocked.includes('beat_' + id)
   };
 })();

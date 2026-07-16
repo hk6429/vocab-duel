@@ -114,6 +114,11 @@ const VDCloud = (() => {
         <div id="qwMsg" class="cloud-msg" aria-live="polite"></div>
         <div id="qwBox"></div>
       </div>
+      <div class="cloud-sec">
+        <div class="cloud-h">🧑‍🏫 我是老師</div>
+        <p class="cloud-tip">認領班級碼、發布字表指派、追蹤全班完成度與弱字。</p>
+        <button class="btn ghost" onclick="VDApp.go('teach')">進入老師後台</button>
+      </div>
       <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>`;
 
     const msg = (id, t, ok) => { const m = el.querySelector('#' + id); m.textContent = t; m.className = 'cloud-msg ' + (ok ? 'ok' : 'err'); };
@@ -220,6 +225,23 @@ const VDCloud = (() => {
   async function loadBoard(code, me) {
     const box = el.querySelector('#boardBox');
     box.innerHTML = '<div class="cloud-msg">載入中…</div>';
+    // 安心模式：不顯示名次表，只顯示自己的數字＋全班參與人數＋自我基準卡
+    if (calm()) {
+      try {
+        const r = await api('/api/board?code=' + encodeURIComponent(code), {});
+        const rows = r.rows || [];
+        const mine = rows.find(x => x.name === me);
+        box.innerHTML = `
+          <div class="cloud-msg ok">🕊️ 安心模式開啟中——只跟自己比</div>
+          ${mine ? `<div class="pg-hint">你目前：已掌握 <b>${mine.mastered}</b> 字・Lv${mine.level}・🔥 ${mine.streak} 天</div>` : ''}
+          <div class="pg-hint">全班已有 <b>${rows.length}</b> 人上傳戰績</div>
+          ${(window.VDStats && VDStats.selfCard) ? VDStats.selfCard() : ''}
+          <div class="pg-hint">想看排名？到「英雄檔案 → 設定」關閉安心模式。</div>`;
+      } catch (e) {
+        box.innerHTML = `<div class="cloud-msg err">${friendly(e)}</div>`;
+      }
+      return;
+    }
     try {
       const r = await api('/api/board?code=' + encodeURIComponent(code) + (boardSort === 'week' ? '&sort=week' : ''), {});
       let rows = r.rows || [];
@@ -250,7 +272,8 @@ const VDCloud = (() => {
       box.innerHTML = `${tabs}
         <table class="board-tbl"><thead><tr><th>#</th><th>名字</th><th>${mainTh}</th><th>等級</th><th>🔥</th></tr></thead><tbody>${body}</tbody></table>
         ${hidden > 0 ? `<button class="btn ghost sm" id="boardExpBtn">展開全部（還有 ${hidden} 位）</button>` : ''}
-        ${boardExpand && rows.length > 5 ? '<button class="btn ghost sm" id="boardColBtn">收合</button>' : ''}`;
+        ${boardExpand && rows.length > 5 ? '<button class="btn ghost sm" id="boardColBtn">收合</button>' : ''}
+        <div class="pg-hint">覺得排名有壓力？到「英雄檔案 → 設定」開啟 🕊️ 安心模式，只跟自己比。</div>`;
       bindTabs(box, code, me);
       const ex = box.querySelector('#boardExpBtn');
       if (ex) ex.onclick = () => { boardExpand = true; loadBoard(code, me); };
@@ -273,12 +296,60 @@ const VDCloud = (() => {
     return '出錯了：' + m;
   }
 
+  /* 安心模式：隱藏排名比較，只跟自己比（display filter，資料照常上傳） */
+  const calm = () => localStorage.getItem('vd_calm') === '1';
+
+  /* 學生端自動領取老師指派：每天最多抓一次班級指派清單，字典比對後存進 VDStore；
+     有 lock:1 且未過截止日的指派 → 設定範圍鎖 */
+  async function fetchAssignments() {
+    const cc = localStorage.getItem(LS.ccode);
+    if (!cc) return;
+    const day = new Date().toLocaleDateString('sv-SE');
+    if (localStorage.getItem('vd_asg_day') === day) return;
+    localStorage.setItem('vd_asg_day', day); // 先記日期：失敗也不重試轟炸，明天再來
+    try {
+      const r = await api('/api/class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'get', code: cc }) });
+      if (!r.ok || !Array.isArray(r.asgs)) return;
+      const dict = new Map(VDApp.words().map(w => [w.word.toLowerCase(), w.word]));
+      const today = day;
+      let lockCode = null;
+      for (const a of r.asgs) {
+        const hit = a.words.map(lw => dict.get(lw)).filter(Boolean);
+        if (!hit.length) continue;
+        hit.forEach(w => VDStore.enroll(w));
+        VDStore.addAssignment(a.id, a.name, hit, { due: a.due || '', lock: a.lock || 0, ts: a.ts });
+        if (a.lock && (!a.due || today <= a.due)) lockCode = a.id;
+      }
+      if (lockCode && VDStore.lockAsg() !== lockCode) {
+        VDStore.setLockAsg(lockCode);
+        if (window.VDGame && VDGame.toast) VDGame.toast('📋 老師發布了新的指派範圍');
+      }
+    } catch (_) { /* 靜默，明天再抓 */ }
+  }
+
+  /* 班級弱字佇列上傳：store.js 答錯時累積在 vd_weakq，這裡批次送出（成功才清空） */
+  async function flushWeak() {
+    const cc = localStorage.getItem(LS.ccode);
+    if (!cc) return;
+    let q;
+    try { q = JSON.parse(localStorage.getItem('vd_weakq') || '{}'); } catch { q = {}; }
+    const entries = Object.entries(q);
+    if (!entries.length) return;
+    const words = Object.fromEntries(entries.slice(0, 50));
+    try {
+      const r = await api('/api/class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'weakReport', code: cc, words }) });
+      if (r.ok) localStorage.removeItem('vd_weakq');
+    } catch (_) { /* 靜默，佇列留著下次再送 */ }
+  }
+
   /* 自動上傳：存過班級碼／同步碼的玩家，返回主選單時自動備份（debounce ≥5 分鐘）
      失敗一律靜默；成功 toast 一天最多提示一次 */
   const AUTO_GAP = 5 * 60 * 1000;
   async function autoSync() {
     const now = Date.now();
     if (now - (+localStorage.getItem('vd_autoup_ts') || 0) < AUTO_GAP) return;
+    fetchAssignments(); // 每日一次領老師指派（自帶日期戳，不受 5 分鐘節流影響頻率）
+    flushWeak();        // 批次上傳錯字統計（佇列空就直接跳過）
     const sync = localStorage.getItem(LS.sync);
     const cc = localStorage.getItem(LS.ccode);
     const cn = localStorage.getItem(LS.cname);
@@ -312,6 +383,6 @@ const VDCloud = (() => {
     VDApp.go = function (name) { const r = orig.apply(this, arguments); if (name === 'menu') setTimeout(autoSync, 400); return r; };
   });
 
-  return { start: render, myStats, autoSync };
+  return { start: render, myStats, autoSync, fetchAssignments, calm, api, API };
 })();
 window.VDCloud = VDCloud;

@@ -71,6 +71,53 @@ const VDStats = (() => {
     </div></div>`;
   }
 
+  /* 自我基準卡：只跟自己比 — 14 天精熟曲線＋本週 vs 上週＋近期正確率
+     所有人的戰績頁都顯示；安心模式的班級榜也複用這張卡 */
+  function selfCard() {
+    let meta = {};
+    try { meta = JSON.parse(localStorage.getItem('vd_meta')) || {}; } catch { /* 沒有紀錄 */ }
+    const hist = meta.hist || {};
+    const t = VDStore.today();
+    const addDays = (ds, n) => { const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
+    // 14 天精熟數序列：缺快照的日子沿用前一筆（快照只在有練的日子拍）
+    const dates = Object.keys(hist).sort();
+    const series = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = addDays(t, -i);
+      let v = null;
+      for (const h of dates) { if (h <= d) v = hist[h]; else break; }
+      series.push(v);
+    }
+    const nums = series.map(v => v == null ? 0 : v);
+    const hasData = dates.length >= 2 && nums[13] > 0;
+    let spark = '';
+    if (hasData) {
+      const min = Math.min(...nums), max = Math.max(...nums), span = Math.max(1, max - min);
+      const pts = nums.map((v, i) => `${(i / 13 * 100).toFixed(1)},${(30 - (v - min) / span * 26).toFixed(1)}`).join(' ');
+      spark = `<svg viewBox="0 0 100 32" preserveAspectRatio="none" style="width:100%;height:44px;display:block" aria-label="近 14 天精熟曲線">
+        <polyline points="${pts}" fill="none" stroke="#4a8f52" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <div class="pg-hint" style="display:flex;justify-content:space-between"><span>14 天前：${nums[0]} 字</span><span>今天：${nums[13]} 字</span></div>`;
+    }
+    // 本週 vs 上週新增精熟：用週一快照基準相減；資料不足顯示 —
+    const monday = (ds) => { const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.toLocaleDateString('sv-SE'); };
+    const thisMon = monday(t), lastMon = addDays(thisMon, -7);
+    const baseAt = (cut) => { let b = null; for (const d of dates) { if (d < cut) b = hist[d]; else break; } return b; };
+    const thisWeek = VDStore.weekMastered();
+    const b1 = baseAt(thisMon), b0 = baseAt(lastMon);
+    const lastWeek = (b1 != null && b0 != null) ? Math.max(0, b1 - b0) : null;
+    const diff = lastWeek == null ? null : thisWeek - lastWeek;
+    const acc = VDStore.recentAcc(20);
+    const accLine = acc == null ? '' :
+      `<div class="pg-hint">🎯 最近 20 題正確率 <b>${Math.round(acc * 100)}%</b>${acc >= 0.8 ? '——穩得很！' : acc >= 0.5 ? '——持續進步中' : '——錯的字都記進弱字本了，慢慢清'}</div>`;
+    return `<div class="wc-card"><div class="wc-card-body">
+      <div class="hero-sec">🕊️ 跟自己比</div>
+      ${spark || '<div class="pg-hint">再累積幾天練習，這裡會畫出你的成長曲線。</div>'}
+      <div class="pg-hint">⚡ 本週新掌握 <b>${thisWeek}</b> 字${lastWeek == null ? '' :
+        `・上週 ${lastWeek} 字${diff > 0 ? `——比上週多 ${diff} 字 👏` : diff === 0 ? '——持平' : `——再補 ${-diff} 字就追平上週`}`}</div>
+      ${accLine}
+    </div></div>`;
+  }
+
   /* 老師字表指派進度：每份顯示 完成 N/M（box≥1）進度條 */
   function assignmentCard() {
     const asg = VDStore.assignments();
@@ -108,7 +155,7 @@ const VDStats = (() => {
             <div class="stat-tile"><div class="stat-num">${s.todayCount}</div><div class="stat-cap">今日複習</div></div>
             <div class="stat-tile"><div class="stat-num">${s.streak}</div><div class="stat-cap">連續天數</div></div>
           </div>
-          ${rep ? `<div class="pg-hint">🔥 連續 ${rep.was} 天斷掉了！<button class="btn small" id="btnRepair">🛠️ 花 ${rep.cost} 字幣接回</button></div>` : ''}
+          ${rep ? `<div class="pg-hint">🔥 連續 ${rep.was} 天斷掉了！<button class="btn small" id="btnRecallFix">🏮 免費打 5 題接回</button><button class="btn small" id="btnRepair">🛠️ 花 ${rep.cost} 字幣接回</button></div>` : ''}
           ${bar(pct(sE.mastered, eWords.length), `國小 1200 字（${sE.mastered}/${eWords.length}）`)}
           ${bar(pct(sJ.mastered, jWords.length), `國中 2000 字（${sJ.mastered}/${jWords.length}）`)}
           ${bar(pct(sAll.mastered, allWords.length), `高中 6000 字（${sAll.mastered}/${allWords.length}）`)}
@@ -117,6 +164,7 @@ const VDStats = (() => {
         </div>
       </div>
       ${weekCard()}
+      ${selfCard()}
       <div class="wc-card">
         <div class="wc-card-body">
           <div class="hero-sec">🎯 弱點分析</div>
@@ -171,6 +219,8 @@ const VDStats = (() => {
       alert(`匯入 ${n} 字（已加入複習佇列並加星）${miss ? `、${miss} 字不在字庫` : ''}${asg && hit.length ? `\n已建立指派「${asg.name}」（${asg.code}），戰績頁可追進度` : ''}`);
       VDApp.go('stats');
     };
+    const recallBtn = el.querySelector('#btnRecallFix');
+    if (recallBtn) recallBtn.onclick = () => VDApp.go('recall');
     const repBtn = el.querySelector('#btnRepair');
     if (repBtn) repBtn.onclick = () => {
       const ns = VDStore.repairStreak();
@@ -180,5 +230,5 @@ const VDStats = (() => {
     affixWeak(el);
   }
 
-  return { render };
+  return { render, selfCard };
 })();

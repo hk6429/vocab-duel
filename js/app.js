@@ -4,7 +4,13 @@ const VDApp = (() => {
 
   const $view = () => document.getElementById('view');
 
-  function scopeWords() {
+  function scopeWords(ignoreLock) {
+    // 老師範圍鎖：有作用中的鎖定指派（且本次會話沒按「暫離」）→ 全部練習模組只出指派字
+    const lock = ignoreLock ? null : VDStore.lockWords();
+    if (lock && !sessionStorage.getItem('vd_lockoff')) {
+      const set = new Set(lock);
+      return allWords.filter(w => set.has(w.word));
+    }
     const s = VDStore.stage;
     if (s === 'E') return allWords.filter(w => w.level === 'E');
     if (s === 'J') return allWords.filter(w => w.level === 'E' || w.level === 'J');
@@ -130,6 +136,19 @@ const VDApp = (() => {
             <button class="btn" onclick="sessionStorage.setItem('vd_firstBattle','1');VDApp.go('battle')">⚔️ 迎戰第一位文豪</button>
           </div>
         </div>` : '';
+      // 老師範圍鎖 chip：鎖定中顯示指派名與進度，可單次會話「暫離」（重新進站恢復鎖定）
+      const lockChip = (() => {
+        const lw = VDStore.lockWords();
+        if (!lw) return '';
+        const asg = VDStore.assignments()[VDStore.lockAsg()];
+        const done = lw.filter(w => VDStore.box(w) >= 1).length;
+        const off = !!sessionStorage.getItem('vd_lockoff');
+        return `<div class="lvl-row" style="align-items:center">
+          <span class="lvl-lab">📋 老師指派範圍：${VDGame.esc(asg.name)}（${done}/${lw.length}）${off ? '・已暫離' : ''}</span>
+          <button class="lvl-chip ${off ? '' : 'on'}" onclick="sessionStorage.${off ? 'removeItem' : 'setItem'}('vd_lockoff'${off ? '' : ",'1'"});VDApp.go('menu')">${off ? '回到指派範圍' : '暫離'}</button>
+        </div>`;
+      })();
+      const weakN = window.VDWeak ? VDWeak.count(words) : 0;
       $view().innerHTML = `
         <div class="wc-menu-top">
           <img loading="lazy" decoding="async" class="wc-menu-banner" src="img/wc/banner.webp" alt="" onerror="this.remove()">
@@ -139,6 +158,7 @@ const VDApp = (() => {
         ${VDGame.heroStrip()}
         ${VDGame.dailyPanel()}
         ${dashboard(words, stageName)}
+        ${lockChip}
         ${levelChips()}
         <div class="menu-group">
           <div class="menu-glabel">練習</div>
@@ -146,7 +166,9 @@ const VDApp = (() => {
             ${card('flash', 'm_flash', '🃏', '閃卡練功', '五盒間隔複習，記得牢')}
             ${card('quiz', 'm_quiz', '✍️', '單字自測', '三題型隨機，一輪十題')}
             ${card('listen', 'm_listen', '🎧', '聽力理解', '聽音辨義／聽寫關鍵字')}
+            ${card('write', 'm_write', '📝', '寫作坊', '造句・重組・填空，自己寫出來')}
             ${lv >= 2 ? card('sprint', 'm_sprint', '⏱️', '限時衝刺', '60 秒搶答，衝高分') : lockCard('⏱️', '限時衝刺', 2)}
+            ${weakN ? card('weak', 'm_weak', '🩺', '弱字本', '錯過＋假熟練，一站補強', false, weakN) : ''}
             ${lv >= 2 && wrongN ? card('review', 'm_review', '🩹', '錯題複習', '只練你答錯過的字', false, wrongN) : ''}
           </div>
         </div>
@@ -154,6 +176,7 @@ const VDApp = (() => {
           <div class="menu-glabel">對戰</div>
           <div class="wc-mgrid">
             ${card('battle', 'm_battle', '🎭', '文學家對戰', '八位文豪闖關／同機雙人搶答', true)}
+            ${localStorage.getItem('vd_classcode') ? card('live', 'm_live', '📡', '隨堂考', '老師開場，全班同步搶答') : ''}
           </div>
         </div>
         <div class="menu-group">
@@ -219,11 +242,34 @@ const VDApp = (() => {
     },
     quiz() {
       $view().innerHTML = header('單字自測') + '<div id="mod"></div>';
-      VDQuiz.start(scopeWords(), document.getElementById('mod'));
+      const ws = scopeWords();
+      // 範圍太小（如老師鎖定的短字表）：誘答池改用完整學段，避免選項重複／不足
+      if (ws.length < 12) VDQuiz.startWith(ws, document.getElementById('mod'), scopeWords(true));
+      else VDQuiz.start(ws, document.getElementById('mod'));
     },
     listen() {
       $view().innerHTML = header('聽力理解') + '<div id="mod"></div>';
       VDListen.start(scopeWords(), document.getElementById('mod'));
+    },
+    write() {
+      $view().innerHTML = header('寫作坊') + '<div id="mod"></div>';
+      VDWrite.start(scopeWords(), document.getElementById('mod'));
+    },
+    weak() {
+      $view().innerHTML = header('弱字本') + '<div id="mod"></div>';
+      VDWeak.start(scopeWords(), document.getElementById('mod'));
+    },
+    teach() {
+      $view().innerHTML = header('老師後台') + '<div id="mod"></div>';
+      VDTeach.start(document.getElementById('mod'));
+    },
+    live() {
+      $view().innerHTML = header('隨堂考') + '<div id="mod"></div>';
+      VDLive.start(scopeWords(), document.getElementById('mod'));
+    },
+    recall() {
+      $view().innerHTML = header('召回關卡') + '<div id="mod"></div>';
+      VDGame.startRecall(document.getElementById('mod'));
     },
     stats() {
       $view().innerHTML = header('我的戰績') + '<div id="mod"></div>';

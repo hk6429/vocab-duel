@@ -16,6 +16,15 @@ const okCode = (c) => typeof c === "string" && /^[一-鿿A-Za-z0-9_-]{2,16}$/.te
 const okName = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n); // 拒收危險字元
 const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
 
+/* 指派進度清洗：cloud.js myStats() 送上來的 {code,name,done,total}；格式不對回 null（不擋整筆同步） */
+function cleanAssign(a) {
+  if (!a || typeof a !== "object") return null;
+  const code = String(a.code || "").slice(0, 16);
+  const name = String(a.name || "").replace(/[<>&"']/g, "").slice(0, 20);
+  if (!code || !name) return null;
+  return { code, name, done: clamp(a.done, 500), total: clamp(a.total, 500) };
+}
+
 // 暱稱黑名單：常見中英文辱罵字詞（非窮舉），排行榜公開可見，擋掉明顯攻擊性暱稱
 const BAD_WORDS = /笨蛋|白癡|智障|廢物|去死|三小|幹你|靠北|媽的|垃圾|腦殘|fuck|shit|bitch|asshole|idiot|stupid|retard/i;
 
@@ -66,7 +75,7 @@ export default async function handler(req, res) {
       const all = (await redis.hgetall(key(code))) || {};
       const rows = Object.entries(all).map(([name, v]) => {
         const d = typeof v === "string" ? JSON.parse(v) : v;
-        return { name, mastered: d.mastered, level: d.level, streak: d.streak, badges: d.badges, weekMastered: d.weekMastered || 0, ts: d.ts };
+        return { name, mastered: d.mastered, level: d.level, streak: d.streak, badges: d.badges, weekMastered: d.weekMastered || 0, assign: d.assign || null, ts: d.ts };
       });
       if (req.query.sort === "week") rows.sort((a, b) => b.weekMastered - a.weekMastered || b.mastered - a.mastered);
       else rows.sort((a, b) => b.mastered - a.mastered || b.level - a.level || b.streak - a.streak);
@@ -91,6 +100,7 @@ export default async function handler(req, res) {
           streak: clamp(req.body.streak, 3650),
           badges: clamp(req.body.badges, 100),
           weekMastered: clamp(req.body.weekMastered, 6205),
+          assign: cleanAssign(req.body.assign),
           ts: Date.now(),
         };
         const reason = implausibleSync(prev, rec);
