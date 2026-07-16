@@ -4,7 +4,7 @@
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' https://dict.youdao.com; connect-src 'self' https://vocab-duel.vercel.app https://vocab-duel.pages.dev https://vocab-duel.netlify.app; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://gc.zgo.at; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://visitor-badge.laobi.icu https://hk6429.goatcounter.com; media-src 'self' https://dict.youdao.com; connect-src 'self' https://hk6429.goatcounter.com https://vocab-duel.vercel.app https://vocab-duel.pages.dev https://vocab-duel.netlify.app; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
 
 # 快取規則（後面的規則覆蓋前面同名 header）
 /img/*
