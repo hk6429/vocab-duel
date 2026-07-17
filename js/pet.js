@@ -36,7 +36,8 @@ const VDPet = (() => {
       <div class="wc-card">
         <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_pets.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
-          <p class="pg-hint">每隻詞靈守護一族字綴——你學會的字越多，牠的「詞源之力」越強。已結緣 <b>${ownedN}</b>/20${ownedN < 20 ? `・下一隻 ${cost === 0 ? '免費！' : cost + ' 字幣'}` : '・全員到齊！'}</p>
+          <div class="pet-northstar">🧠 你的詞靈有多強，取決於你真的懂多少構詞——牠是你單字腦的化身。</div>
+          <p class="pg-hint">每隻詞靈守護一族字綴——你把字記得越牢（推進到高盒／精熟），牠的「詞源之力」越強。已結緣 <b>${ownedN}</b>/20${ownedN < 20 ? `・下一隻 ${cost === 0 ? '免費！' : cost + ' 字幣'}` : '・全員到齊！'}</p>
           <div class="shop-wallet">💰 ${VDGame.raw.coins} 字幣　⚔️ 競技積分 ${VDPets.rating}</div>
         </div>
       </div>
@@ -135,7 +136,7 @@ const VDPet = (() => {
     const sameTier = selItems.length && selItems.every(x => x.tier === selItems[0].tier) ? selItems[0].tier : null;
     const req = sameTier ? VDPets.forgeReq(sameTier) : null;
     const forgeLabel = req
-      ? `🔥 鍛造成 ${VDPets.tierName(req.into)}（需 ${req.items} 件・${req.cost} 字幣・成功率 ${Math.round(req.chance * 100)}%）`
+      ? `🔥 鍛造成 ${VDPets.tierName(req.into)}（需 ${req.items} 件・${req.cost} 字幣・必成）`
       : '🔥 鍛造（先選同階裝備）';
     const forgeReady = sameTier && req && selItems.length === req.items;
     const bagCost = VDPets.bagUpgradeCost();
@@ -152,7 +153,7 @@ const VDPet = (() => {
             <button class="btn small" id="bagForge" ${forgeReady ? '' : 'disabled'}>${forgeLabel}</button>
             <button class="btn small ghost" id="bagDrop" ${sel.size ? '' : 'disabled'}>丟棄</button>
           </div>
-          <div class="hero-shieldhint">點裝備選取同一階；稀有以上可能帶「學習詞條」，掛在出戰詞靈身上全站生效；鍛造有失敗機率，材料與字幣失敗照扣。</div>`
+          <div class="hero-shieldhint">點裝備選取同一階；稀有以上可能帶「學習詞條」，掛在出戰詞靈身上全站生效；鍛造「集滿必成」——不看臉、不吞料。</div>`
         : '<div class="pg-hint">背包空空——去野生試煉打寶吧！</div>'}
         </div>
       </div>`;
@@ -176,7 +177,7 @@ const VDPet = (() => {
     if ($('#bagForge')) $('#bagForge').onclick = () => {
       const r = VDPets.forge([...sel]);
       if (!r.ok) return VDGame.toast(r.msg);
-      VDGame.toast(r.failed ? `💥 ${r.msg}` : `🔥 鍛造成功：${r.item.name}！`);
+      VDGame.toast(`🔥 鍛造成功：${r.item.name}！`);
       sel.clear(); renderList();
     };
     if ($('#bagDrop')) $('#bagDrop').onclick = () => {
@@ -234,6 +235,9 @@ const VDPet = (() => {
             <div class="pet-stat"><span>❤️ 血量</span><b>${p.hp}</b></div>
             <div class="pet-stat"><span>📖 詞源之力</span><b>+${pw}%</b></div>
           </div>
+          ${(() => { const bd = VDPets.atkBreakdown(id); return `
+          <div class="pet-atk-formula">⚔️ <b>${bd.total}</b> ＝（基礎 ${bd.base} ＋ 裝備 ${bd.equip}${bd.capped ? '<span class="atk-cap" title="裝備加成已達上限（≤基礎）——學習才是戰力主體">🔒封頂</span>' : ''}）× （1 ＋ 詞源之力 ${pw}%）
+            <i>學越多字 → 詞源之力越高 → 整體攻擊翻倍，裝備只是糖霜</i></div>`; })()}
           <div class="pet-actrow">
             ${p.lv < VDPets.MAX_LV ? `<button class="btn" id="doLv">⬆️ 升級（${lvCost} 字幣）</button>` : '<span class="pet-max">🌟 已滿級</span>'}
             ${p.isActive ? '' : '<button class="btn" id="doActive">🚩 出戰</button>'}

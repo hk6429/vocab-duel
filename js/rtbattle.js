@@ -255,7 +255,7 @@ const VDRT = (() => {
     VDGame.onBattleFinish();  // 每日對戰任務：結算才計數
     let ratingHtml = '';
     if (win === true) { const pts = VDPets.petWin(); VDGame.raw.coins += 25; localStorage.setItem('vd_game', JSON.stringify(VDGame.raw)); ratingHtml = `<div class="bt-rankdelta up">⚔️ 競技積分 +20（${pts}）・🏛️ 累計 +20（總 ${VDPets.lifetime()}）・💰 +25 字幣</div>`; }
-    else if (win === false) { const pts = VDPets.petLose(); ratingHtml = `<div class="bt-rankdelta down">⚔️ 競技積分 −10（${pts}）</div>`; }
+    else if (win === false) { const pts = VDPets.petLose(); ratingHtml = `<div class="bt-rankdelta">💪 積分不扣分——輸了不退步！把家族的字記得更牢，下次就贏得回來（積分 ${pts}）</div>`; }
     if (win !== null) VDPets.submitBoard();   // 積分有變動就刷全站榜——否則即時對戰的積分上不了排行榜
     el.innerHTML = `<div class="card-done">
       <div class="big">${win === true ? '🏆' : win === false ? '💀' : '🤝'}</div>

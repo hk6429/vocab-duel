@@ -4,27 +4,29 @@ const VDPets = (() => {
   const KIND = { p: 'prefixes', s: 'suffixes', r: 'roots' };
   const SLOTS = ['weapon', 'armor', 'trinket', 'crest'];
   const SLOT_NAME = { weapon: '武器', armor: '護甲', trinket: '飾品', crest: '紋章' };
-  /* 裝備階梯：傳說之上再加 10 階，越高階數值放大越多、鍛造也越難（見 forgeReq） */
+  /* 裝備階梯：傳說之上再加 10 階（階名保留、不動舊存檔），但數值成長由 ×1.8 壓平成 ×1.25，
+     搭配 atk() 軟上限（裝備 ≤ 基礎），讓「學習」永遠是戰力主體、裝備只是糖霜（P1-2） */
   const TIERS = ['common', 'rare', 'legendary', 'mythic', 'celestial', 'emperor', 'eternal', 'genesis', 'stellar', 'cosmic', 'primordial', 'transcendent', 'supreme'];
   const TIER_NAME = ['普通', '稀有', '傳說', '神話', '天位', '帝皇', '永恆', '創世', '星辰', '宇宙', '太初', '超凡', '至尊'];
   const TIER_ICO = ['🎁', '💠', '👑', '🔮', '🌠', '🐲', '♾️', '🌋', '✨', '🌌', '🌑', '🕊️', '🏆'];
+  const TIER_GROW = 1.25;   // 每階數值倍率（原 1.8，頂裝約 1157×；壓平後頂裝約 24×，不再輾壓學習乘數）
   const TIER_RANGE = (() => {
     const out = { common: [2, 4], rare: [5, 8], legendary: [10, 15] };
     let [lo, hi] = out.legendary;
-    for (let i = 3; i < TIERS.length; i++) { lo = Math.round(lo * 1.8); hi = Math.round(hi * 1.8); out[TIERS[i]] = [lo, hi]; }
+    for (let i = 3; i < TIERS.length; i++) { lo = Math.round(lo * TIER_GROW); hi = Math.round(hi * TIER_GROW); out[TIERS[i]] = [lo, hi]; }
     return out;
   })();
   const tierIdx = t => TIERS.indexOf(t);
   const tierName = t => TIER_NAME[tierIdx(t)] || '';
   const tierUp = t => { const i = tierIdx(t); return i >= 0 && i < TIERS.length - 1 ? TIERS[i + 1] : t; };
-  /* 鍛造門檻：目標階序位 step=1(稀有)…12(至尊)；材料件數 4→15、成功率傳說以下必成、之後遞減到 20%、字幣成本每階倍增以上 */
+  /* 鍛造門檻：目標階序位 step=1(稀有)…12(至尊)；材料件數 4→15、字幣成本每階倍增以上。
+     P1-4 去賭博化：一律「必成」（chance=1），集滿材料確定升階、不吞料、不看臉——家長最敏感的「教孩子賭」觀感雷拆掉 */
   function forgeReq(tier) {
     const step = tierIdx(tier) + 1;
     if (step <= 0 || step >= TIERS.length) return null;
     const items = 3 + step;
-    const chance = step <= 2 ? 1 : Math.max(0.2, 0.9 - 0.07 * (step - 2));
     const cost = step === 1 ? 50 : step === 2 ? 150 : Math.round(300 * Math.pow(1.85, step - 3) / 10) * 10;
-    return { items, chance: Math.round(chance * 100) / 100, cost, into: TIERS[step] };
+    return { items, chance: 1, cost, into: TIERS[step] };
   }
   const DECOS = ['', '🎀', '👑', '🧣', '👓', '🌸', '⭐'];
   const MAX_LV = 25;
@@ -93,13 +95,18 @@ const VDPets = (() => {
     wordsOfPet[f.id] = set;
   }
 
-  /* ── 詞源之力：家族已學字比例（box>=0 算已學） ── */
+  /* ── 詞源之力：家族「精熟深度」加權比例（P1-1，堵死刷已學後門） ──
+     舊制 box>=0 就算 1.0（碰過＝已學），學生刷已學就能衝戰力、假精熟。
+     改成依 Leitner 盒號加權：越接近長期記憶（高盒）貢獻越高，box3+（精熟）才給滿分。
+     權重仍收斂在 [0,1]，升級門檻與攻擊力乘數沿用不變。 */
+  const BOX_WEIGHT = [0.2, 0.4, 0.6, 1.0, 1.0, 1.0];   // box 0..5；未學(-1)=0
+  const boxWeight = b => b < 0 ? 0 : BOX_WEIGHT[Math.min(b, BOX_WEIGHT.length - 1)];
   function power(id) {
     const set = wordsOfPet[id];
     if (!set || !set.size) return 0;
-    let learned = 0;
-    for (const w of set) if (VDStore.box(w) >= 0) learned++;
-    return learned / set.size;
+    let sum = 0;
+    for (const w of set) sum += boxWeight(VDStore.box(w));
+    return sum / set.size;
   }
   function familyStats(id) {
     const set = wordsOfPet[id] || new Set();
@@ -115,7 +122,18 @@ const VDPets = (() => {
     return SLOTS.reduce((s, sl) => s + ((eq[sl] || {})[key] || 0), 0);
   }
   const lvOf = id => (g.owned[id] || {}).lv || 0;
-  const atk = id => Math.round((10 + 2 * lvOf(id)) * (1 + power(id))) + equipSum(id, 'atk');
+  const baseAtk = id => 10 + 2 * lvOf(id);
+  /* P1-2 攻擊力：裝備收進詞源乘數內、並設軟上限（裝備加成 ≤ 基礎），
+     讓「學得多」（詞源之力＋等級）永遠壓過「運氣好」（刷裝）。舊制裝備加在乘數外、量級可達千倍，把學習耦合架空。
+       atk =（基礎 + min(裝備, 基礎)）×（1 + 詞源之力）  */
+  function atkBreakdown(id) {
+    const base = baseAtk(id);
+    const equipRaw = equipSum(id, 'atk');
+    const equip = Math.min(equipRaw, base);       // 軟上限：裝備最多與基礎等值
+    const pw = power(id);
+    return { base, equip, equipRaw, capped: equipRaw > base, power: pw, mult: 1 + pw, total: Math.round((base + equip) * (1 + pw)) };
+  }
+  const atk = id => atkBreakdown(id).total;
   const hp = id => 100 + 6 * lvOf(id) + equipSum(id, 'hp');
 
   /* ── 領養／升級（花字幣，走 VDGame.raw 直接扣） ── */
@@ -225,9 +243,7 @@ const VDPets = (() => {
     VDGame.raw.coins -= req.cost;
     localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
     [...idxs].sort((a, b) => b - a).forEach(i => g.bag.splice(i, 1));
-    const success = rand() < req.chance;
-    save();
-    if (!success) return { ok: true, failed: true, msg: `鍛造失敗……${req.items} 件材料與 ${req.cost} 字幣付諸流水，再接再厲！` };
+    // P1-4 必成：集滿材料確定升階，不吞料、不看臉
     const item = rollDrop(req.into);
     recordDex(item);
     g.bag.push(item); save();
@@ -365,7 +381,8 @@ const VDPets = (() => {
 
   /* ── 競技積分／野生進度 ── */
   function petWin() { g.rating += 20; g.lifetime = (g.lifetime || 0) + 20; save(); return g.rating; }
-  function petLose() { g.rating = Math.max(0, g.rating - 10); save(); return g.rating; }
+  /* P1-3 去黑帽：敗場「不扣分」。積分只增或每週重置，避免損失規避＋全站淨勝榜對後段班的挫折放大。 */
+  function petLose() { return g.rating; }
   function clearWild(floor) { if (floor === g.wildFloor) { g.wildFloor = floor + 1; save(); } } // 無限爬塔：不封頂
 
   function snapshot() {
@@ -392,7 +409,7 @@ const VDPets = (() => {
   }
 
   return {
-    init, list, adopt, adoptCost, levelUp, levelCost, power, familyStats, atk, hp, stageOf, lvOf,
+    init, list, adopt, adoptCost, levelUp, levelCost, power, familyStats, atk, atkBreakdown, hp, stageOf, lvOf,
     rollDrop, equip, unequip, skillsOf, setDeco, setActive, active, DECOS, SLOTS, SLOT_NAME,
     PERKS, hasPerk, activePerks, assist, bag, addToBag, dropBag, forge, forgeReq, equipFromBag, eqDex,
     bagMax, bagUpgradeCost, upgradeBag,

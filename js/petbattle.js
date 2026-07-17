@@ -39,7 +39,7 @@ const VDPetBattle = (() => {
           }).join('')}</div>
           <div class="pg-sub">👤 影子對戰（挑戰其他玩家的詞靈快照）</div>
           <div class="pb-shadowrow">
-            <button class="btn" id="doShadow">👤 尋找影子對手（勝 +20／敗 −10）</button>
+            <button class="btn" id="doShadow">👤 尋找影子對手（勝 +20・輸不扣分）</button>
             <button class="btn ghost" id="doBoard">🏆 詞靈排行榜</button>
             <button class="btn ghost" id="doMarket">🏪 裝備市場</button>
             <span class="pg-hint">目前積分：<b>${VDPets.rating}</b></span>
@@ -266,7 +266,9 @@ const VDPetBattle = (() => {
     let ratingHtml = '';
     if (mode === 'shadow') {
       const pts = win ? VDPets.petWin() : VDPets.petLose();
-      ratingHtml = `<div class="bt-rankdelta ${win ? 'up' : 'down'}">⚔️ 競技積分 ${win ? '+20' : '−10'}（${pts}）${win ? `・🏛️ lifetime 累計 +20（總 ${VDPets.lifetime()}，城鎮兌換基準）` : ''}</div>`;
+      ratingHtml = win
+        ? `<div class="bt-rankdelta up">⚔️ 競技積分 +20（${pts}）・🏛️ lifetime 累計 +20（總 ${VDPets.lifetime()}，城鎮兌換基準）</div>`
+        : `<div class="bt-rankdelta">💪 積分不扣分——輸了不退步！回去把家族的字記得更牢，詞源之力升上去，下次就贏得回來（目前積分 ${pts}）</div>`;
       if (win) { VDGame.raw.coins += 25; coins = 25; localStorage.setItem('vd_game', JSON.stringify(VDGame.raw)); }
       submitSnapshot();
     }
