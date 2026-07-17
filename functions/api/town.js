@@ -4,12 +4,9 @@
 // POST { op:'visit', visitCode }                → 參觀模式：憑參觀碼唯讀城鎮（不暴露本體同步碼）
 // POST { op:'cheer', visitCode, nick, emoji }   → 訪客留言（LPUSH 保 20 筆）
 // POST { op:'guestbook', code }                 → 城主憑本體碼讀訪客簿，回 { list }
-import { Redis } from "@upstash/redis";
+import { redisFor, vercelToPages } from "./_redis.js";
+let redis;
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
-});
 
 const TTL = 400 * 24 * 60 * 60;          // 約一年多，過期自動清（與 sync.js 個人存檔一致；原本城鎮資料永不過期，隱私頁審查點名補上）
 const KEY = (code) => `vd:town:${code}`;
@@ -49,7 +46,8 @@ async function rateLimited(req, scope) {
   return n > 30;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res, env) {
+  redis = redisFor(env.DB);
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
@@ -161,3 +159,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }
 }
+
+export const onRequest = vercelToPages(handler);

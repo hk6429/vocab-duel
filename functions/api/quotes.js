@@ -1,12 +1,9 @@
 // 班級語錄牆 — 學生公開分享自編例句／助記口訣（補齊八角框架 Creativity 這條軸）
 // POST { op:'post', code, nick, word, sentence } → 發布一則（限長、走黑名單審核、LPUSH 保 200 筆）
 // POST { op:'list', code }                       → 讀該班最新語錄
-import { Redis } from "@upstash/redis";
+import { redisFor, vercelToPages } from "./_redis.js";
+let redis;
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
-});
 
 const TTL = 240 * 24 * 60 * 60; // 一學年左右，跟 board.js 一致
 const KEY = (code) => `vd:quote:${code}`;
@@ -35,7 +32,8 @@ async function rateLimited(req, scope, limit) {
   return n > limit;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res, env) {
+  redis = redisFor(env.DB);
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
@@ -72,3 +70,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }
 }
+
+export const onRequest = vercelToPages(handler);

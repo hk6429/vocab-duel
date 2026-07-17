@@ -2,8 +2,5 @@
   "name": "vocab-duel",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "dependencies": {
-    "@upstash/redis": "^1.38.0"
-  }
+  "type": "module"
 }

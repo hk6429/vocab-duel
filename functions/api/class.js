@@ -5,12 +5,9 @@
 // POST { op:'get', code }                           → 學生端讀指派清單（公開，不含 PIN）
 // POST { op:'weakReport', code, words:{word:n} }    → 學生端批次上報錯字次數
 // POST { op:'weakTop', code, pin }                  → 老師讀全班弱字 Top 30
-import { Redis } from "@upstash/redis";
+import { redisFor, vercelToPages } from "./_redis.js";
+let redis;
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
-});
 
 const TTL = 240 * 24 * 60 * 60; // 一學年左右，跟 board.js 一致
 const KEY = (c) => `vd:class:${c}`;
@@ -62,7 +59,8 @@ function cleanAsg(a) {
   return { id, name: a.name.trim(), words: a.words.map((w) => w.trim().toLowerCase()), module: module_, due, lock: a.lock ? 1 : 0, ts: Date.now() };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res, env) {
+  redis = redisFor(env.DB);
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
@@ -139,3 +137,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }
 }
+
+export const onRequest = vercelToPages(handler);

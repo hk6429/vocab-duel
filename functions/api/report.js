@@ -1,14 +1,9 @@
-// 單字發音／解釋錯誤回報 — 送到老師的 Telegram（不落地存 Redis，純轉發）
+// 單字發音／解釋錯誤回報 — 送到老師的 Telegram（不落地存 D1，純轉發）
 // POST { word, kind:'pron'|'mean'|'other', note? } → { ok: 1 }
-import { Redis } from "@upstash/redis";
+import { redisFor, vercelToPages } from "./_redis.js";
+let redis;
+let TOKEN, CHAT_ID;                       // 於 handler 內從 env 帶入（CF Pages secret）
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
-});
-
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const KIND_LABEL = { pron: "🔊 發音", mean: "📖 中文解釋", other: "❓ 其他" };
 
 // CORS 白名單：只回信任的來源，其餘退回主站
@@ -29,7 +24,10 @@ async function rateLimited(req) {
   return n > 5;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res, env) {
+  redis = redisFor(env.DB);
+  TOKEN = env.TELEGRAM_BOT_TOKEN;
+  CHAT_ID = env.TELEGRAM_CHAT_ID;
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
@@ -65,3 +63,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }
 }
+
+export const onRequest = vercelToPages(handler);

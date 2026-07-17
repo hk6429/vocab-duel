@@ -7,12 +7,9 @@
 // POST { op:'challenge', seed, scope, nick, score }   → 發戰帖，回 { code }（6 碼，7 天有效）
 // POST { op:'accept', code }                          → 領戰帖，回 { seed, scope, challenger, score }
 // POST { op:'challengeResult', code, nick, score }    → 回報應戰成績，回 { ok, challenger, accepter }
-import { Redis } from "@upstash/redis";
+import { redisFor, vercelToPages } from "./_redis.js";
+let redis;
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
-});
 
 const TTL = 600; // 房間 10 分鐘
 const CH_TTL = 7 * 86400; // 挑戰書 7 天
@@ -79,7 +76,8 @@ function cleanState(s) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res, env) {
+  redis = redisFor(env.DB);
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
@@ -201,3 +199,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }
 }
+
+export const onRequest = vercelToPages(handler);

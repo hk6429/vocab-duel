@@ -1,18 +1,14 @@
 // 裝備市場 — 全站掛單制。寵物不可交易，只交易裝備。
-// 防作弊：上架時伺服器驗數值區間＋HMAC 簽章（金鑰＝現有 env token，不新增秘密）；
+// 防作弊：上架時伺服器驗數值區間＋HMAC 簽章（金鑰＝CF Pages secret MARKET_SECRET）；
 //        賣家憑上架時發的 claimKey 領貨款／下架；買家每日限購 3 件；成交抽 10% 稅。
 // POST { op:'list' }                              → 市場前 50 筆（價格低→高）
 // POST { op:'post', item, price, seller, reserveFor? } → 上架（可保留給指定同學），回 { id, claimKey }
 // POST { op:'buy', id, nick }                     → 購買，回 { item }
 // POST { op:'cancel', id, claimKey }              → 下架，回 { item }
 // POST { op:'claim', id, claimKey }               → 已售出的掛單領貨款，回 { coins, buyer }
-import { Redis } from "@upstash/redis";
-import { createHmac, randomBytes } from "crypto";
-
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
-});
+import { redisFor, vercelToPages } from "./_redis.js";
+import { createHmac, randomBytes } from "node:crypto";
+let redis;
 
 const ZKEY = "vd:market";
 const ITEM = (id) => `vd:market:item:${id}`;
@@ -43,7 +39,8 @@ const POOL = {
 };
 const PERKS = ["", "xp10", "sprint5", "wrong2"];
 
-const secret = () => process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "vd";
+let SECRET = "vd";                        // 於 handler 內以 env.MARKET_SECRET 覆寫（CF Pages secret）
+const secret = () => SECRET;
 const sigOf = (item) => createHmac("sha256", secret()).update(JSON.stringify(item)).digest("hex").slice(0, 24);
 const BAD_WORDS = /笨蛋|白癡|白痴|智障|廢物|去死|王八蛋|三小|幹你|靠北|媽的|滾蛋|垃圾|腦殘|廢咖|fuck|shit|bitch|asshole|idiot|stupid|retard/i; // 賣家/預留者暱稱在市場公開可見，擋常見髒話羞辱字眼
 const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n) && !BAD_WORDS.test(n); // 拒收危險字元
@@ -93,7 +90,9 @@ async function rateLimited(req, scope) {
   return n > 30;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res, env) {
+  redis = redisFor(env.DB);
+  SECRET = env.MARKET_SECRET || SECRET;
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
@@ -197,3 +196,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }
 }
+
+export const onRequest = vercelToPages(handler);

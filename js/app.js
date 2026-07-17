@@ -201,6 +201,7 @@ const VDApp = (() => {
             ${card('hero', 'm_hero', '🦸', '英雄檔案', '稱號・徽章・字幣・自訂頭像', true)}
             ${lv >= 5 ? card('shop', 'm_shop', '🏪', '字幣商店', '頭像框・護盾・復活羽毛') : lockCard('🏪', '字幣商店', 5)}
             ${card('dex', 'm_dex', '🖼️', '單字圖鑑', `把 ${allWords.length} 個字一格一格點亮`)}
+            ${card('guide', 'm_guide', '📖', '完全攻略', '玩法・獎勵・升級路線全解析')}
           </div>
         </div>
         <details class="menu-group tools-fold">
@@ -286,6 +287,12 @@ const VDApp = (() => {
     dex() {
       $view().innerHTML = header('單字圖鑑') + '<div id="mod"></div>';
       VDDex.render(document.getElementById('mod'));
+    },
+    guide() {
+      // 完全攻略：內容存放在站底隱藏的 <footer.vd-guide> 樣板，這裡就地複製成一個頁面
+      const src = document.getElementById('vd-guide');
+      const body = src ? src.querySelector('.vg-wrap').outerHTML : '<p>攻略載入失敗，請重新整理。</p>';
+      $view().innerHTML = header('完全攻略') + `<div class="vd-guide vd-guide-page">${body}</div>`;
     },
     pets() {
       $view().innerHTML = header('詞靈夥伴') + '<div id="mod"></div>';

@@ -1,7 +1,7 @@
 /* 單字回報：發音／解釋有問題時，一鍵送到老師 Telegram。跟 VDCloud 走同一組 API 網址判斷 */
 const VDReport = (() => {
-  const API = location.hostname.includes('vercel.app') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-    ? '' : 'https://vocab-duel.vercel.app';
+  const API = location.hostname.includes('pages.dev') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? '' : 'https://vocab-duel.pages.dev';
   const esc = (s) => (window.VDGame && VDGame.esc) ? VDGame.esc(s) : String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   /* 產生一顆回報鈕，緊跟在發音鈕旁 */

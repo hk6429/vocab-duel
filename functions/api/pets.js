@@ -2,12 +2,9 @@
 // POST { op:'submit', snap }            → 上傳自己的出戰寵快照（進池＋刷榜）
 // POST { op:'opponent', rating }        → 從快照池抽一個接近積分的對手
 // POST { op:'board' }                   → 全站 Top 50
-import { Redis } from "@upstash/redis";
+import { redisFor, vercelToPages } from "./_redis.js";
+let redis;
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
-});
 
 const POOL = "vd:petpool";               // LPUSH 快照池，LTRIM 保留 200
 const BOARD = "vd:petboard:global";      // ZSET member=nick → rating，取 Top 50（每人唯一一列）
@@ -40,7 +37,8 @@ function cleanSnap(s) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res, env) {
+  redis = redisFor(env.DB);
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
@@ -108,3 +106,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }
 }
+
+export const onRequest = vercelToPages(handler);

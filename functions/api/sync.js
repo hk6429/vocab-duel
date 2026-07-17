@@ -1,12 +1,8 @@
-// 雲端存檔 — 個人進度跨裝置同步。Upstash Redis REST（字鬥專用 DB，key 前綴 vd:sync:）
+// 雲端存檔 — 個人進度跨裝置同步。Cloudflare D1（key 前綴 vd:sync:）
 // GET  ?code=XXXX        → 取回該同步碼的進度 blob
 // POST { code, blob }    → 上傳（覆寫）該同步碼的進度 blob
-import { Redis } from "@upstash/redis";
-
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
-});
+import { redisFor, vercelToPages } from "./_redis.js";
+let redis;
 
 const TTL = 400 * 24 * 60 * 60;          // 約一年多，過期自動清
 const MAX_BLOB = 512 * 1024;             // 單筆 512KB 上限，防濫用
@@ -22,7 +18,8 @@ const cors = (req, res) => {
   res.setHeader("Cache-Control", "no-store");
 };
 
-export default async function handler(req, res) {
+async function handler(req, res, env) {
+  redis = redisFor(env.DB);
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   try {
@@ -48,3 +45,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }
 }
+
+export const onRequest = vercelToPages(handler);

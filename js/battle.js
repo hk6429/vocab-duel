@@ -202,6 +202,7 @@ const VDBattle = (() => {
   function onPlayerAnswer(v) {
     if (locked) return;
     locked = true;
+    state.chosen = v;
     const correct = v === state.q.ans;
     VDStore.record(state.q.word, correct, 'battle');
     VDGame.onAnswer(correct, 'battle', state.combo + (correct ? 1 : 0));
@@ -242,10 +243,23 @@ const VDBattle = (() => {
     }, correct ? 800 : 1300);
   }
 
-  /* 選項按鈕：字母徽章＋內文，與自測／會考統一 */
-  function optBtn(o, i, extra, disabled) {
+  /* 選項按鈕：字母徽章＋內文，與自測／會考統一；作答後 reveal 揭示該選項對應的字（紅色小字） */
+  function optBtn(o, i, extra, disabled, reveal) {
     const attr = disabled ? 'disabled' : `data-v="${encodeURIComponent(o)}"`;
-    return `<button class="btn opt ${extra}" ${attr}><span class="opt-key">${'ABCD'[i]}</span><span class="opt-text">${o}</span></button>`;
+    const rev = reveal ? `<span class="opt-reveal">${reveal}</span>` : '';
+    return `<button class="btn opt ${extra}" ${attr}><span class="opt-key">${'ABCD'[i]}</span><span class="opt-text">${o}</span>${rev}</button>`;
+  }
+
+  /* 統一產生選項列：作答後（midTurn）標對／錯並揭示每個選項對應的字義 */
+  function optsHtml(q, midTurn) {
+    return q.options.map((o, i) => {
+      let extra = '', reveal = '';
+      if (midTurn) {
+        extra = o === q.ans ? 'right' : (o === state.chosen ? 'wrong' : '');
+        reveal = q.reveal ? (q.reveal[o] || '') : '';
+      }
+      return optBtn(o, i, extra, midTurn, reveal);
+    }).join('');
   }
 
   function assistTag() {
@@ -260,7 +274,7 @@ const VDBattle = (() => {
 
   function renderCpu(midTurn) {
     const q = state.q;
-    const opts = q.options.map((o, i) => optBtn(o, i, midTurn && o === q.ans ? 'right' : '', midTurn)).join('');
+    const opts = optsHtml(q, midTurn);
     el.innerHTML = `
       <div class="bt-arena">
         <div class="bt-side foe">
@@ -370,6 +384,7 @@ const VDBattle = (() => {
     if (locked) return;
     locked = true;
     const me = state.turn, foe = 1 - me;
+    state.chosen = v;
     const correct = v === state.q.ans;
     VDStore.record(state.q.word, correct, 'battle');
     VDGame.onAnswer(correct, 'battle', 0);
@@ -393,7 +408,7 @@ const VDBattle = (() => {
 
   function renderPvp(midTurn) {
     const q = state.q, t = state.turn;
-    const opts = q.options.map((o, i) => optBtn(o, i, midTurn && o === q.ans ? 'right' : '', midTurn)).join('');
+    const opts = optsHtml(q, midTurn);
     el.innerHTML = `
       <div class="bt-arena pvp">
         <div class="bt-side foe">

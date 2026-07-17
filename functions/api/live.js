@@ -5,12 +5,9 @@
 // POST { op:'state', code }                    → 學生輪詢場況（公開）
 // POST { op:'answer', code, nick, qNo, correct } → 學生回報作答（qNo=0 為報到）
 // POST { op:'roster', code }                   → 名冊與逐題答對（公開，暱稱分數本就班內公開）
-import { Redis } from "@upstash/redis";
+import { redisFor, vercelToPages } from "./_redis.js";
+let redis;
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
-});
 
 const TTL = 3600; // 一堂課的壽命，下課自動蒸發
 const CLASS_KEY = (c) => `vd:class:${c}`;
@@ -45,7 +42,8 @@ async function authed(code, pin) {
   return cls && cls.pin === pin ? cls : null;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res, env) {
+  redis = redisFor(env.DB);
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
@@ -114,3 +112,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }
 }
+
+export const onRequest = vercelToPages(handler);

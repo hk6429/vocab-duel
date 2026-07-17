@@ -1,0 +1,9 @@
+name = "vocab-duel"
+pages_build_output_dir = "."
+compatibility_date = "2026-07-15"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vocab-duel-db"
+database_id = "547a34b7-30ee-42f4-99f2-49b783c3339a"

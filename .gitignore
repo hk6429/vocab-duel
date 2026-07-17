@@ -1,6 +1,5 @@
 node_modules/
-package-lock.json
+.wrangler/
 .vercel/
-.vercel
-.env.local
-.env
+.DS_Store
+*.log

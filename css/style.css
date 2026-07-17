@@ -1202,3 +1202,61 @@ body.dark .en-chip { color: #cdd9ff; }
     transition-duration: .01ms !important;
   }
 }
+
+/* ── 站底完全攻略（.vd-guide，SPA 之外的靜態說明區） ── */
+.vd-guide{border-top:3px solid #e8a020;background:linear-gradient(180deg,#fffdf8,#fdf6e9);
+  padding:38px 16px 64px;margin-top:28px;color:#3a2f22;font-size:15px;line-height:1.75}
+.vd-guide .vg-wrap{max-width:760px;margin:0 auto}
+.vd-guide .vg-head h2{font-size:1.5em;margin:0 0 8px;color:#a8641a;letter-spacing:.5px}
+.vd-guide .vg-lead{margin:0 0 20px;color:#6a5a45}
+.vd-guide .vg-sec{border:1px solid #eadcc2;border-radius:12px;background:#fff;
+  margin-bottom:12px;overflow:hidden;box-shadow:0 1px 4px rgba(120,90,40,.06)}
+.vd-guide .vg-sec>summary{cursor:pointer;list-style:none;padding:15px 18px;font-weight:700;
+  font-size:1.05em;color:#8a5a16;background:#fdf4e2;position:relative;transition:background .15s}
+.vd-guide .vg-sec>summary::-webkit-details-marker{display:none}
+.vd-guide .vg-sec>summary::after{content:"＋";position:absolute;right:18px;color:#c99442;font-weight:700}
+.vd-guide .vg-sec[open]>summary::after{content:"－"}
+.vd-guide .vg-sec>summary:hover{background:#fbedcf}
+.vd-guide .vg-body{padding:6px 20px 18px}
+.vd-guide .vg-body ul,.vd-guide .vg-body ol{margin:8px 0;padding-left:22px}
+.vd-guide .vg-body li{margin:6px 0}
+.vd-guide .vg-body b{color:#8a5a16}
+.vd-guide .vg-tip{background:#fff7e6;border-left:4px solid #e8a020;border-radius:6px;
+  padding:10px 14px;margin:12px 0 4px;color:#5a4a30}
+.vd-guide .vg-tablewrap{overflow-x:auto;margin:10px 0}
+.vd-guide .vg-table{border-collapse:collapse;width:100%;font-size:.95em;min-width:480px}
+.vd-guide .vg-table th,.vd-guide .vg-table td{border:1px solid #ecdcc0;padding:9px 12px;text-align:left;vertical-align:top}
+.vd-guide .vg-table th{background:#f6e6c8;color:#7a5214;font-weight:700}
+.vd-guide .vg-table tr:nth-child(even) td{background:#fdf8ee}
+.vd-guide .vg-lock{display:inline-block;background:#e8a020;color:#fff;font-size:.72em;
+  padding:1px 6px;border-radius:6px;vertical-align:middle;margin-left:4px}
+.vd-guide a{color:#c0791a;text-decoration:underline}
+.vd-guide .vg-foot{text-align:center;color:#8a7455;margin:26px 0 0;font-size:.95em}
+
+body.dark .vd-guide{background:linear-gradient(180deg,#1c1712,#17130e);border-top-color:#b57e2a;color:#e6dccb}
+body.dark .vd-guide .vg-head h2{color:#e6a94a}
+body.dark .vd-guide .vg-lead{color:#b6a487}
+body.dark .vd-guide .vg-sec{background:#221b13;border-color:#3a2e1e;box-shadow:none}
+body.dark .vd-guide .vg-sec>summary{background:#2a2015;color:#e6a94a}
+body.dark .vd-guide .vg-sec>summary:hover{background:#332818}
+body.dark .vd-guide .vg-body b{color:#e6b25a}
+body.dark .vd-guide .vg-tip{background:#2a2114;border-left-color:#b57e2a;color:#d8c9ac}
+body.dark .vd-guide .vg-table th{background:#332818;color:#e6b25a}
+body.dark .vd-guide .vg-table th,body.dark .vd-guide .vg-table td{border-color:#3a2e1e}
+body.dark .vd-guide .vg-table tr:nth-child(even) td{background:#241c12}
+body.dark .vd-guide a{color:#e6b25a}
+body.dark .vd-guide .vg-foot{color:#a89474}
+
+/* 攻略作為「單字圖鑑旁」的頁面時：收成圓角面板，不用站底那條全幅上邊框 */
+.vd-guide.vd-guide-page{border-top:none;border-radius:16px;margin-top:14px;
+  padding:22px 14px 40px;box-shadow:0 2px 12px rgba(120,90,40,.1)}
+.vd-guide.vd-guide-page .vg-head h2{font-size:1.3em}
+body.dark .vd-guide.vd-guide-page{box-shadow:none}
+
+/* 對戰作答後：選項揭示對應字（中文選項→英文字、英文選項→中文義），紅色小字靠右 */
+.btn.opt .opt-reveal{margin-left:auto;font-size:.82em;font-weight:700;color:var(--red);
+  white-space:nowrap;padding-left:10px;letter-spacing:.3px}
+.btn.opt.right .opt-reveal{color:#0b3320;margin-right:6px}   /* 綠底：深色 */
+.btn.opt.wrong .opt-reveal{color:#fff;opacity:.95;margin-right:6px}  /* 紅底：白色 */
+body.dark .btn.opt .opt-reveal{color:#ff9b8a}  /* 深色中性底：亮紅 */
+body.dark .btn.opt.right .opt-reveal{color:#0b3320}

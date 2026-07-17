@@ -6,8 +6,8 @@ const VDTownUI = (() => {
   let lastTh = 0;          // 偵測市政廳升級 → 建城史詩卡
   const ERA = { 2: '拓荒村落', 3: '學者小鎮', 4: '智慧之城', 5: '單字王都' };
   /* 後端只在 Vercel：CF／Netlify 前端自動指回 vercel API */
-  const API = location.hostname.includes('vercel.app') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-    ? '' : 'https://vocab-duel.vercel.app';
+  const API = location.hostname.includes('pages.dev') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? '' : 'https://vocab-duel.pages.dev';
   const img = (n) => `img/town/${n}.webp`;
   const stageOf = (lv) => lv >= 4 ? 3 : lv >= 2 ? 2 : 1;
   let wmap = null;

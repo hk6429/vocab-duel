@@ -2,12 +2,9 @@
 // GET  ?code=班級碼                    → 該班排行（依已掌握字數、等級排序）
 // GET  ?code=班級碼&sort=week          → 依本週新掌握字數（weekMastered）排序
 // POST { action:'sync', code, name, ... } → 學生上傳自己的戰績
-import { Redis } from "@upstash/redis";
+import { redisFor, vercelToPages } from "./_redis.js";
+let redis;
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
-});
 
 const TTL = 240 * 24 * 60 * 60;          // 一學年左右
 const MAX_MEMBERS = 60;
@@ -65,7 +62,8 @@ async function rateLimited(req, scope) {
   return n > 30;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res, env) {
+  redis = redisFor(env.DB);
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   try {
@@ -116,3 +114,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }
 }
+
+export const onRequest = vercelToPages(handler);

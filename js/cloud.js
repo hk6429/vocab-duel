@@ -3,9 +3,9 @@
    - 未設定後端金鑰時，功能優雅降級：顯示「建置中」而非壞掉 */
 const VDCloud = (() => {
   // 同源在 Vercel → 相對路徑；其餘平台 → 指向 Vercel API
-  const API = location.hostname.includes('vercel.app') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+  const API = location.hostname.includes('pages.dev') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
     ? ''
-    : 'https://vocab-duel.vercel.app';
+    : 'https://vocab-duel.pages.dev';
 
   const LS = { sync: 'vd_synccode', ccode: 'vd_classcode', cname: 'vd_classname' };
   const genCode = () => {

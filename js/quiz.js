@@ -91,17 +91,20 @@ const VDQuiz = (() => {
       type = types[Math.floor(Math.random() * types.length)];
     }
     let q;
+    // reveal：作答後每個選項旁揭示「它其實對應哪個字」——中文選項顯示英文字、英文選項顯示中文義
+    const revMap = (arr, keyFn, valFn) => Object.fromEntries(arr.map(x => [keyFn(x), valFn(x)]));
     if (type === 'e2z') {
       /* 英英模式：選項改用英文定義（enrich 資料齊全才出，缺則回中文四選一） */
       const enMode = localStorage.getItem('vd_quizmode') === 'en' && window.VDEnrich;
       const defOf = x => { const e = enMode ? VDEnrich.get(x.word) : null; return (e && e.def_en) || ''; };
       if (enMode && defOf(w)) {
         const ds = pickDistractors(w, sameLevel.filter(x => defOf(x)), 3, x => defOf(x), false, easy);
-        if (ds.length === 3) q = { type, prompt: w.word, sub: '哪個英文解釋符合？（英英模式）', options: shuffle([defOf(w), ...ds.map(defOf)]), ans: defOf(w) };
+        if (ds.length === 3) { q = { type, prompt: w.word, sub: '哪個英文解釋符合？（英英模式）', options: shuffle([defOf(w), ...ds.map(defOf)]), ans: defOf(w) }; q.reveal = revMap([w, ...ds], defOf, x => x.word); }
       }
       if (!q) {
         const ds = pickDistractors(w, sameLevel, 3, x => x.zh, false, easy);
         q = { type, prompt: w.word, sub: '這個字是什麼意思？', options: shuffle([w.zh, ...ds.map(d => d.zh)]), ans: w.zh };
+        q.reveal = revMap([w, ...ds], x => x.zh, x => x.word);
       }
     } else if (type === 'z2e') {
       const ds = pickDistractors(w, sameLevel, 3, x => x.word, fam && !easy, easy);
@@ -111,9 +114,11 @@ const VDQuiz = (() => {
       q = (e && e.def_en)
         ? { type, prompt: e.def_en, sub: '哪個英文字符合這個定義？（英英模式）', options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word }
         : { type, prompt: w.zh, sub: '哪個英文字對應這個意思？', options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
+      q.reveal = revMap([w, ...ds], x => x.word, x => x.zh);
     } else if (type === 'cloze') {
       const ds = pickDistractors(w, sameLevel, 3, x => x.word, fam && !easy, easy);
       q = { type, prompt: clz.text, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
+      q.reveal = revMap([w, ...ds], x => x.word, x => x.zh);
     } else {
       q = { type: 'spell', prompt: w.zh, sub: `拼出這個英文字（${w.pos.join('・')}）`, hint: clz.text, ans: w.word, first: w.word[0] };
     }
