@@ -6,11 +6,20 @@ const VDTown = (() => {
   const GRID = 8;
   const RES = ['wood', 'stone', 'ore', 'rice'];
   const RES_META = { wood: { name: '木頭', ico: '🪵' }, stone: { name: '石頭', ico: '🪨' }, ore: { name: '礦石', ico: '⛏️' }, rice: { name: '稻米', ico: '🌾' } };
+  const RES_EN = { wood: 'timber', stone: 'stone', ore: 'ore', rice: 'rice' };   // P2-3 委託英文字（交付時進閃卡）
   const MOVEIN_PER_DAY = 2, HOUSE_CAP = 4, MAX_LV = 5;
   const PACK = { wood: 3, stone: 2, ore: 1, rice: 1 };   // 學習換資源：每包內容
   const PACK_PER = 5;                                     // 每答對 5 題換 1 包
   const TOKEN_RATING = 40;                                // 每 40 競技積分兌 1 代幣
   const UPGRADE_MIN = 5;                                  // 升級耗時 5 分鐘 × 目標等級
+  /* P1-3 封無日限旁路：讓「答題換資源」恆為最划算的資源主幹 */
+  const LOOT_FULL_BASE = 3;                               // 徵戰每日前 3 場全額掉落（＋燈塔級），之後減半
+  const TOKEN_RES_AMT = 10, TOKEN_RES_PER_DAY = 3;        // 代幣換資源：匯率 20→10、每日上限 3 次
+  const RUSH_PER_DAY = 3;                                 // 代幣加速每日上限 3 次
+  /* P1-5 endgame：市政廳滿級後由精熟長尾＋世界奇觀驅動的無限聲望層 */
+  const PRESTIGE_BASE = 700, PRESTIGE_STEP = 50;         // 精熟每超過 700 再 +50 字點亮一顆聲望★
+  const WONDER_COST = { tokens: 2, ore: 50, rice: 30 };  // 世界奇觀：後期資源＋代幣的唯一大出口
+  const STREAK_MIN = 1;                                   // 共學日曆：當日「新精熟 ≥1 字」才續連（純榮譽、不發可轉資源）
 
   let data = null, g = null;
 
@@ -20,7 +29,7 @@ const VDTown = (() => {
   const DEFAULT = () => ({
     name: '',
     grid: { '3,3': { b: 'townhall', lv: 1 } },
-    res: { wood: 20, stone: 10, ore: 0, rice: 5 },
+    res: { wood: 20, stone: 10, ore: 0, rice: 18 },
     tokens: 0, redeemedRating: 0,
     visitCode: '',
     log: [],
@@ -32,7 +41,14 @@ const VDTown = (() => {
     coinPacks: { date: '', count: 0 },
     quest: null,        // { text, res, n, rewardTokens, giver }
     questDate: '',
-    seq: 1
+    seq: 1,
+    lootDay: { date: '', count: 0 },      // P1-3 徵戰每日掉落計數
+    tokenResDay: { date: '', count: 0 },  // P1-3 代幣換資源每日計數
+    rushDay: { date: '', count: 0 },      // P1-3 代幣加速每日計數
+    masterySnap: { date: '', count: 0 },  // P1-1 當日精熟基準（算「今日新精熟增量」）
+    streak: { date: '', days: 0, best: 0 }, // P2-6 共學日曆連續達標
+    wonder: 0,          // P1-5 世界奇觀層（代幣/後期資源出口）
+    forgeEmber: 0       // P2-7 鐵匠鋪爐火：城內 ore 單向煉入詞靈的榮譽計數
   });
 
   function load() {
@@ -60,6 +76,7 @@ const VDTown = (() => {
     if (data) return;
     load();
     data = await (await fetch('data/town.json')).json();
+    try { masterySnap(); } catch { /* VDStore 尚未就緒時略過，稍後首次呼叫再抓基準 */ } // P1-1 盡早抓當日精熟基準
     if (!g.pop.length) { addResident(); addResident(); save(); } // 開村送兩位村民
   }
 
@@ -68,23 +85,37 @@ const VDTown = (() => {
   const countOf = (b) => cells().filter(x => x.b === b).length;
   const sumLv = (b) => cells().filter(x => x.b === b).reduce((s, x) => s + (x.lv || 1), 0); // 同類建築總等級＝升級加成的計量單位
   const thLevel = () => (cells().find(x => x.b === 'townhall') || { lv: 1 }).lv;
-  const resCap = () => 300 + 200 * thLevel() + 2 * sumLv('statue');   // 雕像每級 +2 倉儲
+  // P2-1 倉儲上限也綁精熟字數（廣度沾學習）：每精熟 1 字 +1，最多 +500
+  const resCap = () => 300 + 200 * thLevel() + 2 * sumLv('statue') + Math.min(500, mastered());
   const popCap = () => HOUSE_CAP * sumLv('house');                    // 民房每級多住 4 人（Lv5=20）
   const profCount = (job) => g.pop.filter(p => p.job === job).length;
   const idle = () => g.pop.filter(p => !p.job);
+  /* P1-2 精熟認定＝盒 ≥3「且不是假熟練」——重用 store.js 的 isFakeMastery(box≥3 但 trustScore<0.7)，
+     堵死「同一場把生字連對 3 次就算精熟」的刷分後門。VDStore 未載入時退回裸 box≥3（不誤卡）。 */
+  const fakeMastery = (w) => {
+    try { return !!(window.VDStore && VDStore.isFakeMastery && VDStore.isFakeMastery(w)); }
+    catch { return false; }
+  };
   const mastered = () => {
     let m = 0;
     const prog = JSON.parse(localStorage.getItem('vd_progress') || '{}');
-    for (const w in prog) if ((prog[w].b || 0) >= 3) m++;
+    for (const w in prog) if ((prog[w].b || 0) >= 3 && !fakeMastery(w)) m++;
     return m;
   };
-  /* 快精熟的字（盒 1–2，再對幾次就精熟）——市政廳「去練」入口用 */
+  /* 快精熟的字（盒 1–2，再對幾次就精熟）——市政廳「去練」入口用。
+     P1-2 補盲區：盒 ≥3 但被判假熟的字也要出現在這裡，否則它既不算精熟又無「去練」入口。 */
   const nearMastered = () => {
     const prog = JSON.parse(localStorage.getItem('vd_progress') || '{}');
     return Object.keys(prog)
-      .filter(w => (prog[w].b || 0) === 1 || (prog[w].b || 0) === 2)
+      .filter(w => { const b = prog[w].b || 0; return b === 1 || b === 2 || (b >= 3 && fakeMastery(w)); })
       .sort((a, b) => (prog[b].b || 0) - (prog[a].b || 0));
   };
+  /* P1-1 今日新精熟增量：收成的學習係數綁「真的多背了幾個字」而非「隨便答對幾題」 */
+  function masterySnap() {
+    if (!g.masterySnap || g.masterySnap.date !== today()) { g.masterySnap = { date: today(), count: mastered() }; save(); }
+    return g.masterySnap;
+  }
+  const newMasteredToday = () => Math.max(0, mastered() - masterySnap().count);
 
   function needProfOk(need) {
     for (const job in (need || {})) if (profCount(job) < need[job]) return data.jobs[job].name + ' ×' + need[job];
@@ -95,8 +126,16 @@ const VDTown = (() => {
     return '';
   }
   function payCost(cost) { for (const r in (cost || {})) g.res[r] -= cost[r]; }
+  /* P3-1 回傳被倉儲上限截掉的量，讓 UI 能提示「倉庫滿了、X 浪費、快加倉」而非靜默蒸發 */
   function gainRes(obj, mult) {
-    for (const r in obj) g.res[r] = Math.min(resCap(), (g.res[r] || 0) + Math.round(obj[r] * (mult || 1)));
+    const cap = resCap();
+    let wasted = 0;
+    for (const r in obj) {
+      const want = (g.res[r] || 0) + Math.round(obj[r] * (mult || 1));
+      if (want > cap) wasted += want - cap;
+      g.res[r] = Math.min(cap, want);
+    }
+    return wasted;
   }
 
   /* ── 建造 ── */
@@ -207,15 +246,22 @@ const VDTown = (() => {
     if (changed) save();
     return changed;
   }
+  function rushDayInfo() {
+    if (!g.rushDay || g.rushDay.date !== today()) { g.rushDay = { date: today(), count: 0 }; save(); }
+    return { todayLeft: Math.max(0, RUSH_PER_DAY - g.rushDay.count) };
+  }
   function rushUpgrade(key) {
     const c = g.grid[key];
     if (!c || !c.up) return { ok: false, msg: '沒有進行中的升級' };
+    // P1-3 代幣加速加每日上限，別讓硬通貨無限 pay-to-skip 碾壓答題加速
+    if (rushDayInfo().todayLeft <= 0) return { ok: false, msg: `代幣加速每日上限 ${RUSH_PER_DAY} 次，明天再來（答題加速不限次，勤學最快）` };
     if (g.tokens < 1) return { ok: false, msg: '需要 1 枚城邦代幣' };
-    g.tokens -= 1; finishUp(key); save();
+    g.tokens -= 1; g.rushDay.count++; finishUp(key); save();
     return { ok: true };
   }
-  /* 答題加速：UI 跑完 5 題對 4 才呼叫（勤學＝最快的工程隊）；每日上限 2 次 */
-  const QUIZRUSH_PER_DAY = 2;
+  /* 答題加速：UI 跑完 5 題對 4 才呼叫（勤學＝最快的工程隊）。
+     P1-3：放寬到 4 次，讓「靠答題加速」不劣於「靠代幣加速」（learn-to-skip ≥ pay-to-skip） */
+  const QUIZRUSH_PER_DAY = 4;
   function rushInfo() {
     if (!g.rush || g.rush.date !== today()) { g.rush = { date: today(), count: 0 }; save(); }
     return { todayLeft: Math.max(0, QUIZRUSH_PER_DAY - g.rush.count) };
@@ -279,9 +325,8 @@ const VDTown = (() => {
     if (!countOf('school')) return { ok: false, msg: '先蓋學校' };
     if (p.job && !data.jobs[p.job].basic) return { ok: false, msg: `${p.name} 已是${data.jobs[p.job].name}` };
     if (!quizPassed) return { ok: false, msg: '要先通過主題單字測驗' };
-    if (VDGame.raw.coins < def.tuition) return { ok: false, msg: `學費不足，需要 ${def.tuition} 字幣` };
-    VDGame.raw.coins -= def.tuition;
-    localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
+    // P3-3 走統一的 spendCoins（會優先呼叫 VDGame.spend 的驗證／防負值），不再手寫 localStorage
+    if (!spendCoins(def.tuition)) return { ok: false, msg: `學費不足，需要 ${def.tuition} 字幣` };
     p.job = job;
     logEvt(`🎓 ${p.name} 結業成為${def.name}`);
     save();
@@ -306,6 +351,9 @@ const VDTown = (() => {
         out[r] += v;
       }
     }
+    // P2-2 稻田涓滴：有稻田但當下沒農夫產米時，每座自動產 2 米，讓「種田」與「訓練農夫」解耦、緩解死亡螺旋
+    const farmlands = countOf('farm');
+    if (farmlands && !out.rice) out.rice = 2 * farmlands;
     const hosp = sumLv('hospital');                       // 醫院每級：全城每項產出 +1
     if (hosp) for (const r of RES) if (out[r]) out[r] += hosp;
     return out;
@@ -315,35 +363,49 @@ const VDTown = (() => {
     return ((vg.quests || {}).date === today() ? (vg.quests.prog || {}).correct : 0) || 0;
   };
   function harvestReady() { return g.harvest.date !== today() && Object.values(dailyOutput()).some(v => v); }
+  /* P1-1 學習係數：綁「今天真的多背了幾個字」而非「隨便答對幾題」。
+     全額(×1.0)必須有真實新精熟；純複習日給 0.7 保底、地板 0.5，不把餵養做成懲罰（白帽）。 */
+  function learnMult() {
+    const nm = newMasteredToday();
+    if (nm >= 3) return 1.0;
+    if (nm >= 1) return 0.85;
+    if (todayCorrect() >= 10) return 0.7;   // 沒新精熟但認真複習
+    if (todayCorrect() >= 1) return 0.6;
+    return 0.5;                              // 今天完全沒練
+  }
   function harvest() {
     if (g.harvest.date === today()) return { ok: false, msg: '今天收過了——明天再來' };
-    const out = dailyOutput();
-    if (!Object.values(out).some(v => v)) return { ok: false, msg: '沒有工人在工作' };
+    const base = dailyOutput();
+    if (!Object.values(base).some(v => v)) return { ok: false, msg: '沒有工人在工作' };
     /* 收成變異：每項 ×0.7–1.4，天天有點不一樣 */
-    for (const r of RES) if (out[r]) out[r] = Math.max(1, Math.round(out[r] * (0.7 + Math.random() * 0.7)));
-    const lazy = todayCorrect() === 0;   // 城主今天沒練功 → 居民只交一半（想看你讀書）
-    if (lazy) for (const r of RES) out[r] = Math.floor(out[r] / 2);
-    /* 每日口糧：全城居民每人吃 1 稻米，糧倉見底就鬧饑荒（建材產出減半） */
+    const out = { wood: 0, stone: 0, ore: 0, rice: 0 };
+    for (const r of RES) if (base[r]) out[r] = Math.max(1, Math.round(base[r] * (0.7 + Math.random() * 0.7)));
+    /* 口糧：全城居民每人吃 1 米；判饑荒用「當日產米＋庫存」（P3-2 修正：當天種的米算得進當天口糧） */
     const ate = g.pop.length;
-    let famine = false;
-    if (g.res.rice >= ate) { g.res.rice -= ate; }
-    else {
-      famine = true; g.res.rice = 0;
-      for (const r of ['wood', 'stone', 'ore']) out[r] = Math.floor(out[r] / 2);
-      logEvt('🍚 糧倉見底，居民鬧饑荒——今日建材產出減半');
+    const riceAvail = (g.res.rice || 0) + (out.rice || 0);
+    const famine = riceAvail < ate;
+    const lm = learnMult();
+    /* 係數：全資源套學習係數；饑荒時建材另取「較重者」作用一次（審查：lazy×famine 不疊乘、地板不歸零） */
+    for (const r of RES) {
+      if (!out[r]) continue;
+      let coef = lm;
+      if (famine && (r === 'wood' || r === 'stone' || r === 'ore')) coef = Math.min(coef, 0.6);
+      out[r] = Math.max(1, Math.round(out[r] * coef));
     }
     gainRes(out);
+    if (famine) { g.res.rice = 0; logEvt('🍚 糧倉見底，居民鬧饑荒——今日建材產出打折'); }
+    else g.res.rice = Math.max(0, g.res.rice - ate);
     g.harvest.date = today();
-    /* 奇遇：大奇遇 5%（代幣或稀有資源大包）＋小奇遇 30%（日常好事） */
+    checkStreak();
+    /* 奇遇：大奇遇 5%（稀有資源大包，不再直接送代幣——避免掛機白送硬通貨）＋小奇遇 30% */
     let event = null;
     const roll = Math.random();
     if (roll < 0.05) {
       const bigs = [
-        { t: '🐉 天降祥龍，留下一枚城邦古幣', en: 'A dragon left an ancient coin!', gain: {}, tokens: 1 },
-        { t: '🏺 挖地基挖出前朝寶庫', en: 'We found an ancient treasure vault!', gain: { wood: 10, stone: 10, ore: 8 } }
+        { t: '🐉 天降祥龍，留下一車奇珍', en: 'A dragon left a cart of treasures!', gain: { wood: 15, stone: 12, ore: 8 } },
+        { t: '🏺 挖地基挖出前朝寶庫', en: 'We found an ancient treasure vault!', gain: { wood: 10, stone: 10, ore: 8, rice: 6 } }
       ];
       event = bigs[Math.floor(Math.random() * bigs.length)];
-      if (event.tokens) g.tokens += event.tokens;
       gainRes(event.gain);
       logEvt(`🌟 大奇遇！${event.t}`);
     } else if (roll < 0.35) {
@@ -358,8 +420,20 @@ const VDTown = (() => {
       logEvt(`${event.t}`);
     }
     save();
-    return { ok: true, out, lazy, event, ate, famine };
+    return { ok: true, out, learnMult: lm, newMastered: newMasteredToday(), event, ate, famine };
   }
+  /* P2-6 共學日曆：當日「新精熟 ≥1 字」才續連（純榮譽戳章，不發可轉資源的字幣，避免掛機續命） */
+  function checkStreak() {
+    if (!g.streak) g.streak = { date: '', days: 0, best: 0 };
+    if (g.streak.date === today()) return;
+    if (newMasteredToday() < STREAK_MIN) return;   // 今天沒有真的多背字，不續連（也不歸零，等真的學了才算）
+    const y = new Date(Date.parse(today()) - 86400000).toISOString().slice(0, 10);
+    g.streak.days = (g.streak.date === y) ? g.streak.days + 1 : 1;   // 昨天有續才連號，否則重新起算
+    g.streak.date = today();
+    g.streak.best = Math.max(g.streak.best || 0, g.streak.days);
+    if (g.streak.days >= 3) logEvt(`🔥 共學連續 ${g.streak.days} 天`);
+  }
+  function streakInfo() { return { days: (g.streak && g.streak.date === today() ? g.streak.days : (g.streak ? g.streak.days : 0)), best: (g.streak && g.streak.best) || 0, todayDone: !!(g.streak && g.streak.date === today()) }; }
 
   /* ── 學習換資源：今日答對題數 → 資源包（燈塔 +2 包上限） ── */
   function packInfo() {
@@ -415,11 +489,22 @@ const VDTown = (() => {
     return { ok: true, pack: PACK };
   }
 
-  /* ── 徵戰掉資源（petbattle 野生勝利呼叫） ── */
+  /* ── 徵戰掉資源（petbattle 野生勝利呼叫） ──
+     P1-3：改「當日場次硬日限」而非 lazy——打野戰本身就要答對，lazy 對打野者永遠無效；
+     每日前 (3＋燈塔級) 場全額，之後掉落減半，收窄掛機刷戰農場，讓答題換包恆為主幹。 */
+  function lootDayInfo() {
+    if (!g.lootDay || g.lootDay.date !== today()) { g.lootDay = { date: today(), count: 0 }; save(); }
+    const cap = LOOT_FULL_BASE + sumLv('lighthouse');
+    return { count: g.lootDay.count, cap, fullLeft: Math.max(0, cap - g.lootDay.count) };
+  }
   function battleLoot(floor) {
+    const info = lootDayInfo();
+    const full = info.count < info.cap;
     const loot = { wood: 2 + floor, stone: 1 + floor };
     if (floor >= 3) loot.ore = Math.ceil(floor / 2);
     if (floor >= 5) loot.rice = Math.ceil(floor / 3);
+    if (!full) for (const r in loot) loot[r] = Math.max(1, Math.floor(loot[r] * 0.5));
+    g.lootDay.count++;
     gainRes(loot);
     save();
     return loot;
@@ -441,13 +526,56 @@ const VDTown = (() => {
     save();
     return { ok: true, n: t.avail };
   }
+  /* P1-3／P2-4 代幣退化成資源的洩壓閥收窄：匯率 20→10、每日上限 3 次。
+     代幣主要價值改鎖進「時間（加速）＋炫耀（世界奇觀）」而非可無限刷的資源。 */
+  function tokenResInfo() {
+    if (!g.tokenResDay || g.tokenResDay.date !== today()) { g.tokenResDay = { date: today(), count: 0 }; save(); }
+    return { todayLeft: Math.max(0, TOKEN_RES_PER_DAY - g.tokenResDay.count), amt: TOKEN_RES_AMT };
+  }
   function tokenToRes(r) {
     if (!RES.includes(r)) return { ok: false, msg: '沒有這種資源' };
     if (g.tokens < 1) return { ok: false, msg: '代幣不足' };
+    if (tokenResInfo().todayLeft <= 0) return { ok: false, msg: `代幣換資源每日上限 ${TOKEN_RES_PER_DAY} 次——代幣留著加速或蓋世界奇觀更值` };
     g.tokens -= 1;
-    gainRes({ [r]: 20 });
+    g.tokenResDay.count++;
+    gainRes({ [r]: TOKEN_RES_AMT });
     save();
     return { ok: true };
+  }
+  /* ── P1-5 endgame：世界奇觀（後期資源＋代幣的唯一大出口）＋精熟長尾聲望★ ── */
+  function wonderInfo() { return { level: g.wonder || 0, cost: WONDER_COST, unlocked: thLevel() >= MAX_LV }; }
+  function donateWonder() {
+    if (thLevel() < MAX_LV) return { ok: false, msg: `市政廳滿級（Lv${MAX_LV}）後才能興建世界奇觀` };
+    if ((g.tokens || 0) < WONDER_COST.tokens) return { ok: false, msg: `需要 ${WONDER_COST.tokens} 枚代幣` };
+    for (const r in WONDER_COST) if (r !== 'tokens' && (g.res[r] || 0) < WONDER_COST[r]) return { ok: false, msg: RES_META[r].name + ' 不足' };
+    g.tokens -= WONDER_COST.tokens;
+    for (const r in WONDER_COST) if (r !== 'tokens') g.res[r] -= WONDER_COST[r];
+    g.wonder = (g.wonder || 0) + 1;
+    logEvt(`🏯 世界奇觀 +1（第 ${g.wonder} 層）`);
+    save();
+    return { ok: true, level: g.wonder };
+  }
+  /* 聲望★＝精熟超過 700 的長尾（每 50 字一顆）＋世界奇觀層；純榮譽、不灌資源／戰力 */
+  function prestige() {
+    const extra = Math.max(0, mastered() - PRESTIGE_BASE);
+    return Math.floor(extra / PRESTIGE_STEP) + (g.wonder || 0);
+  }
+  /* ── P2-7 鐵匠鋪爐火：城內 ore 單向煉入詞靈（純榮譽計數，不回饋 battleLoot，防 farm 迴圈） ── */
+  const SMELT_ORE = 20, SMELT_PER_DAY = 2;
+  function smeltInfo() {
+    if (!g.smeltDay || g.smeltDay.date !== today()) { g.smeltDay = { date: today(), count: 0 }; save(); }
+    return { todayLeft: Math.max(0, SMELT_PER_DAY - g.smeltDay.count), cost: SMELT_ORE, ember: g.forgeEmber || 0, hasSmithy: !!countOf('smithy') };
+  }
+  function smeltOre() {
+    if (!countOf('smithy')) return { ok: false, msg: '先蓋鐵匠鋪' };
+    if (smeltInfo().todayLeft <= 0) return { ok: false, msg: `爐火每日上限 ${SMELT_PER_DAY} 次，明天再來` };
+    if ((g.res.ore || 0) < SMELT_ORE) return { ok: false, msg: `礦石不足，需要 ${SMELT_ORE}` };
+    g.res.ore -= SMELT_ORE;
+    g.smeltDay.count++;
+    g.forgeEmber = (g.forgeEmber || 0) + 1;
+    logEvt(`⚒️ 鐵匠鋪爐火 +1（詞靈鍛造之魂 ×${g.forgeEmber}）`);
+    save();
+    return { ok: true, ember: g.forgeEmber };
   }
 
   /* 世界觀彩蛋：從已擊敗的文豪語錄庫借一句，當委託人的靈感來源（純文字，不影響委託本身邏輯） */
@@ -467,10 +595,14 @@ const VDTown = (() => {
     if (g.questDate !== today()) {
       g.questDate = today();
       if (g.pop.length) {
-        const t = data.questTemplates[Math.floor(Math.random() * data.questTemplates.length)];
+        /* P3-6 只派「拿得到的資源」委託：手上已有 or 有工人在產 的資源，避免新手一開局就撞不可能的 ore 委託 */
+        const producing = new Set(g.pop.map(p => { const d = data.jobs[p.job]; return d && Object.keys(d.out || {})[0]; }).filter(Boolean));
+        const elig = data.questTemplates.filter(t => (g.res[t.res] || 0) > 0 || producing.has(t.res));
+        const pool = elig.length ? elig : data.questTemplates.filter(t => t.res === 'wood' || t.res === 'stone');
+        const t = pool[Math.floor(Math.random() * pool.length)];
         const n = t.n[0] + Math.floor(Math.random() * (t.n[1] - t.n[0] + 1));
         const giver = g.pop[Math.floor(Math.random() * g.pop.length)];
-        g.quest = { text: t.text.replace('{n}', n), res: t.res, n, rewardTokens: t.rewardTokens, giver: giver.name, done: false, loreQuote: pickLoreQuote() };
+        g.quest = { text: t.text.replace('{n}', n), res: t.res, n, rewardTokens: t.rewardTokens, giver: giver.name, done: false, loreQuote: pickLoreQuote(), word: RES_EN[t.res] };
       } else g.quest = null;
       save();
     }
@@ -483,18 +615,40 @@ const VDTown = (() => {
     g.res[q.res] -= q.n;
     g.tokens += q.rewardTokens;
     q.done = true;
+    // P2-3 委託英文字進閃卡：把「搬資源」升級成「認得這個字」的學習輸入
+    try { if (q.word && window.VDStore && typeof VDStore.enroll === 'function') VDStore.enroll(q.word); } catch { /* enroll 不可用不阻斷 */ }
     logEvt(`✅ 完成 ${q.giver} 的委託`);
     save();
-    return { ok: true, tokens: q.rewardTokens };
+    return { ok: true, tokens: q.rewardTokens, enrolled: q.word };
   }
 
-  /* ── NPC 台詞：依職業出英文句＋目標單字 ── */
+  /* ── NPC 台詞：依職業出英文句＋目標單字 ──
+     P3-4：目標字優先挑「學生自己該複習的字」（快精熟的字），讓 NPC 變成會走動的複習提醒；沒有就退回職業字池 */
   function npcLine(p) {
     const kind = p.job && data.npcLines[p.job] ? p.job : 'villager';
     const lines = data.npcLines[kind];
-    const words = data.npcWords[kind];
-    const w = words[Math.floor(Math.random() * words.length)];
+    let w = '';
+    const near = nearMastered();
+    if (near.length) w = near[Math.floor(Math.random() * Math.min(near.length, 20))];
+    if (!w) { const words = data.npcWords[kind]; w = words[Math.floor(Math.random() * words.length)]; }
     return { text: lines[Math.floor(Math.random() * lines.length)].replace('{w}', `<b class="npc-w" data-w="${w}">${w}</b>`), word: w };
+  }
+  /* ── P2-6 今天的一件事：前端算出「此刻最高價值的單一動作」，給首頁大卡 CTA 用 ── */
+  function nextBestAction() {
+    if (g.harvest.date !== today() && Object.values(dailyOutput()).some(v => v))
+      return { text: '今天的收成還沒領', cta: '去收成', act: 'harvest' };
+    const th = g.grid['3,3'];
+    if (th) {
+      const req = data.thUpgrade[th.lv + 1];
+      if (req) {
+        const gap = req.mastered - mastered();
+        if (gap > 0) return { text: `再精熟 ${gap} 個字，市政廳就能升 Lv${th.lv + 1}`, cta: '去練快精熟的字', act: 'practice' };
+      }
+    }
+    const pk = packInfo();
+    if (pk.avail > 0) return { text: `有 ${pk.avail} 包學習補給可領`, cta: '去領補給', act: 'packs' };
+    if (nearMastered().length) return { text: '把快精熟的字補到精熟，城才長得高', cta: '去練', act: 'practice' };
+    return { text: '答對 5 題就能換 1 包補給', cta: '去答題', act: 'practice' };
   }
 
   /* ── 雲端綁定（同步碼／唯讀參觀碼） ── */
@@ -511,12 +665,14 @@ const VDTown = (() => {
     init, GRID, RES, RES_META, MAX_LV,
     get raw() { return g; },
     cells, countOf, thLevel, resCap, popCap, profCount, idle, mastered, nearMastered,
-    canBuild, buildCost, build, demolish, move, upgradeReq, upgrade, tickUpgrades, rushUpgrade, quizRush, rushInfo,
+    newMasteredToday, learnMult,
+    canBuild, buildCost, build, demolish, move, upgradeReq, upgrade, tickUpgrades, rushUpgrade, rushDayInfo, quizRush, rushInfo,
     setName, setVisitCode,
     moveinInfo, tryMovein, assignJob, train,
-    dailyOutput, harvestReady, harvest,
-    packInfo, claimPacks, coinPackInfo, coinToRes, battleLoot,
-    tokenInfo, redeemTokens, tokenToRes,
+    dailyOutput, harvestReady, harvest, streakInfo, nextBestAction,
+    packInfo, claimPacks, coinPackInfo, coinToRes, battleLoot, lootDayInfo,
+    tokenInfo, redeemTokens, tokenToRes, tokenResInfo,
+    prestige, wonderInfo, donateWonder, smeltInfo, smeltOre,
     questInfo, fulfillQuest, npcLine,
     exportState, importState,
     buildings: () => data.buildings, jobs: () => data.jobs,

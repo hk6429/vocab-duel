@@ -115,8 +115,17 @@
         "wood": 5,
         "stone": 15
       },
-      "scaleCost": 1.3,
+      "scaleCost": 1.15,
       "desc": "城市雕像每級 +2 倉庫上限；越蓋越貴（每多一座造價 ×1.3）。"
+    },
+    "sawmill": {
+      "name": "林場",
+      "ico": "🌲",
+      "max": 2,
+      "cost": {
+        "wood": 10
+      },
+      "desc": "樵夫每日產出 +2；林場每升 1 級再 +2，多座等級累加。木頭是最大宗建材，靠它擴產。"
     }
   },
   "thUpgrade": [
@@ -127,7 +136,7 @@
         "wood": 50,
         "stone": 30
       },
-      "mastered": 100
+      "mastered": 45
     },
     {
       "cost": {
@@ -135,7 +144,7 @@
         "stone": 80,
         "ore": 30
       },
-      "mastered": 250,
+      "mastered": 150,
       "needProf": {
         "carpenter": 1
       }
@@ -147,7 +156,7 @@
         "ore": 80,
         "rice": 50
       },
-      "mastered": 450,
+      "mastered": 300,
       "needProf": {
         "doctor": 1,
         "carpenter": 2
@@ -160,7 +169,7 @@
         "ore": 150,
         "rice": 100
       },
-      "mastered": 700,
+      "mastered": 500,
       "needProf": {
         "doctor": 1,
         "smith": 1,
@@ -175,7 +184,8 @@
       "basic": true,
       "out": {
         "wood": 3
-      }
+      },
+      "boostBy": "sawmill"
     },
     "quarryman": {
       "name": "石匠",
@@ -198,7 +208,7 @@
     "farmer": {
       "name": "農夫",
       "ico": "🌾",
-      "basic": false,
+      "basic": true,
       "out": {
         "rice": 4
       },
@@ -223,7 +233,9 @@
       "name": "鐵匠",
       "ico": "⚒️",
       "basic": false,
-      "out": {},
+      "out": {
+        "ore": 2
+      },
       "tuition": 100
     },
     "carpenter": {

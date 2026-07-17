@@ -49,7 +49,7 @@ const VDTownUI = (() => {
   }
   const resbarHtml = () =>
     VDTown.RES.map(r => `<span class="tw-res">${VDTown.RES_META[r].ico} ${VDTown.raw.res[r] || 0}</span>`).join('') +
-    `<span class="tw-res" title="倉庫上限＝300＋市政廳每級200＋雕像每級2，升市政廳或升雕像可擴充">📦 上限 ${VDTown.resCap()}</span>` +
+    `<span class="tw-res" title="倉庫上限＝300＋市政廳每級200＋雕像每級2＋每精熟1字1（上限500）；升市政廳、蓋雕像或多背單字都能擴充">📦 上限 ${VDTown.resCap()}</span>` +
     `<span class="tw-res">🪙 ${VDTown.raw.tokens} 代幣</span><span class="tw-res">💰 ${VDGame.raw.coins}</span>`;
   function refreshRes() { const b = el && el.querySelector('#tw-resbar'); if (b) b.innerHTML = resbarHtml(); }
   function supplyHtml() {
@@ -57,6 +57,7 @@ const VDTownUI = (() => {
     const q = VDTown.questInfo();
     const pk = VDTown.packInfo();
     const tk = VDTown.tokenInfo();
+    const tr = VDTown.tokenResInfo();
     const cp = VDTown.coinPackInfo();
     return `<div class="hero-sec">📦 資源補給</div>
       <div class="shop-item"><span class="shop-body">
@@ -66,7 +67,7 @@ const VDTownUI = (() => {
       </div>
       <div class="shop-item"><span class="shop-body">
         <span class="shop-name">🪙 城邦代幣</span>
-        <span class="shop-desc">累計勝分 ${tk.rating}・可兌 ${tk.avail} 枚（每 ${tk.per} 分 1 枚）；代幣可加速升級或換 20 資源</span></span>
+        <span class="shop-desc">累計勝分 ${tk.rating}・可兌 ${tk.avail} 枚（每 ${tk.per} 分 1 枚）；代幣留著加速升級、蓋世界奇觀最值，換資源每日限 ${tr.todayLeft} 次</span></span>
         <button class="btn sm" id="twRedeem" ${tk.avail ? '' : 'disabled'}>兌換</button>
       </div>
       <div class="shop-item"><span class="shop-body">
@@ -75,7 +76,7 @@ const VDTownUI = (() => {
         <button class="btn sm" id="twCoinPack" ${cp.todayLeft > 0 && VDGame.raw.coins >= cp.cost ? '' : 'disabled'}>🪙 50 字幣換補給包</button>
       </div>
       ${g.tokens ? `<div class="pet-actrow">${VDTown.RES.map(r =>
-        `<button class="btn small ghost tw-t2r" data-r="${r}">🪙→${VDTown.RES_META[r].ico}×20</button>`).join('')}</div>` : ''}
+        `<button class="btn small ghost tw-t2r" data-r="${r}" ${tr.todayLeft > 0 ? '' : 'disabled'}>🪙→${VDTown.RES_META[r].ico}×${tr.amt}</button>`).join('')}<span class="shop-desc" style="align-self:center">（每日 ${tr.todayLeft} 次）</span></div>` : ''}
       ${q ? `<div class="tw-quest ${q.done ? 'done' : ''}">
         <img src="${img('res_mayor')}" alt="" loading="lazy" decoding="async" onerror="this.remove()">
         <span><b>${VDGame.esc(q.giver)}</b>：“${VDGame.esc(q.text)}”${q.done ? '　✅ Done!' : `　<i>(交 ${VDTown.RES_META[q.res].ico}×${q.n} 得 🪙×${q.rewardTokens})</i>`}
@@ -120,6 +121,32 @@ const VDTownUI = (() => {
     };
   }
 
+  /* 聲望★（精熟超過 700 的長尾＋世界奇觀）＋共學連續天數，純榮譽顯示 */
+  const prestigeStr = () => { const p = VDTown.prestige(); return p ? `・<b title="市政廳滿級後，精熟每 50 字＋每座世界奇觀各 1 顆聲望★">${'⭐'.repeat(Math.min(p, 10))}${p > 10 ? '×' + p : ''}</b>` : ''; };
+  const streakStr = () => { const s = VDTown.streakInfo(); return s.days >= 2 ? `・🔥 共學連續 ${s.days} 天` : ''; };
+  /* P2-6 今天的一件事：把此刻最高價值的單一動作做成大 CTA，直接導向學習 */
+  function ctaHtml() {
+    const na = VDTown.nextBestAction();
+    return `<button class="tw-cta-card" id="twCta" data-act="${na.act}">
+      <span class="tw-cta-txt">👉 ${VDGame.esc(na.text)}</span><span class="tw-cta-go">${VDGame.esc(na.cta)} ›</span></button>`;
+  }
+  function refreshCta() { const b = el && el.querySelector('#tw-cta'); if (b) { b.innerHTML = ctaHtml(); bindCta(); } }
+  function bindCta() {
+    const btn = el && el.querySelector('#twCta');
+    if (!btn) return;
+    btn.onclick = () => {
+      const act = btn.dataset.act;
+      if (act === 'harvest') { const hb = el.querySelector('#twHarvest'); if (hb) hb.click(); else VDGame.toast('今天收過了'); return; }
+      if (act === 'packs') { const pb = el.querySelector('#twPacks'); if (pb) { pb.click(); } else VDGame.toast('再答對幾題就有補給'); return; }
+      // practice：直接把「快精熟的字」丟進閃卡，最短路徑回到學習
+      const wm = words();
+      const list = VDTown.nearMastered().map(w => wm[w.toLowerCase()]).filter(Boolean);
+      if (!list.length) return VDGame.toast('先去閃卡或答題累積一些字吧！');
+      el.innerHTML = '<div id="tw-flash"></div>';
+      VDFlash.start(list.slice(0, 20), el.querySelector('#tw-flash'), { raw: true });
+    };
+  }
+
   /* ── 主畫面（2.5D 等角紙劇場：地面斜置、建築立牌直立） ── */
   function paint() {
     VDTown.tickUpgrades();
@@ -133,10 +160,11 @@ const VDTownUI = (() => {
       <div class="wc-card">
         <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_town.webp" alt="" onerror="this.remove()">
         <div class="wc-card-body">
-          <p class="pg-hint">🏛️ <b>${VDGame.esc(g.name || '（點此為城命名）')}</b>・${era}・市政廳 Lv${VDTown.thLevel()}
+          <p class="pg-hint">🏛️ <b>${VDGame.esc(g.name || '（點此為城命名）')}</b>・${era}・市政廳 Lv${VDTown.thLevel()}${prestigeStr()}
             <button class="btn sm ghost" id="twName">✏️</button><br>
-            👥 ${g.pop.length}/${VDTown.popCap()} 人・📚 精熟 ${VDTown.mastered()} 字（城的高度＝你的單字量）</p>
+            👥 ${g.pop.length}/${VDTown.popCap()} 人・📚 精熟 ${VDTown.mastered()} 字（城的高度＝你的單字量）${streakStr()}</p>
           <div class="tw-resbar" id="tw-resbar">${resbarHtml()}</div>
+          <div id="tw-cta">${ctaHtml()}</div>
           ${moving ? '<div class="pg-hint">🚚 搬移中——點一塊空地放下，或再點原建築取消</div>' : ''}
           <div class="tw-iso"><div class="tw-grid" style="background-image:url(${img('base')})">${gridHtml()}</div></div>
           <div id="tw-panel"></div>
@@ -339,19 +367,25 @@ const VDTownUI = (() => {
       if (!r.ok) return VDGame.toast(r.msg);
       let msg = '🧺 收成：' + Object.entries(r.out).filter(([, v]) => v).map(([k, v]) => `${VDTown.RES_META[k].ico}+${v}`).join(' ');
       if (r.ate) msg += `　🌾-${r.ate}（居民口糧）`;
-      if (r.lazy) msg += '（今天還沒練功，居民只交一半——去答幾題吧！）';
-      if (r.famine) msg += '　⚠️ 糧倉見底！居民鬧饑荒，建材產出減半——快蓋稻田＋訓練農夫';
+      // P1-1 學習係數可視化：把「今天多背了幾個字」跟收成掛鉤講清楚
+      const pct = Math.round(r.learnMult * 100);
+      if (r.learnMult >= 1) msg += `　📚 今天新精熟 ${r.newMastered} 字，滿額收成 ×1.0！`;
+      else msg += `　📚 今日產出 ×${(r.learnMult).toFixed(2).replace(/0$/, '')}（${pct}%）——多精熟幾個字就能拿滿`;
+      if (r.famine) msg += '　⚠️ 糧倉見底！居民鬧饑荒，建材打折——快蓋稻田（無農夫也會涓滴產米）';
       VDGame.toast(msg);
       if (r.event) setTimeout(() => {
         const parts = Object.entries(r.event.gain || {}).map(([k, v]) => `${VDTown.RES_META[k].ico}+${v}`);
-        if (r.event.tokens) parts.push(`🪙+${r.event.tokens}`);
-        VDGame.toast(`${r.event.tokens ? '🌟 大奇遇！' : '🎁 奇遇！'}${r.event.t} “${r.event.en}” ${parts.join(' ')}`);
+        VDGame.toast(`🎁 奇遇！${r.event.t} “${r.event.en}” ${parts.join(' ')}`);
       }, 1400);
       const hb = $('#twHarvest');
       if (hb) hb.remove();       // 今天收完了，按鈕直接收走
-      refreshRes();              // 高頻操作只更新資源列，不整頁 paint
+      // P3-1 倉庫滿了別讓辛苦換的資源靜默蒸發，提示去加倉
+      if (VDTown.RES.some(rr => (VDTown.raw.res[rr] || 0) >= VDTown.resCap()))
+        setTimeout(() => VDGame.toast('📦 倉庫滿了，多的資源會浪費——升市政廳或蓋城飾雕像加倉'), 700);
+      refreshRes(); refreshCta();   // 高頻操作只更新資源列＋今天的一件事
     };
     bindSupply();
+    bindCta();
     $('#twSave').onclick = () => cloudOp('save');
     $('#twLoad').onclick = () => cloudOp('load');
     $('#twVisit').onclick = () => {
@@ -467,6 +501,8 @@ const VDTownUI = (() => {
             : `<span class="pg-hint">⬆️ ${req.msg}</span>`}
         ${cell.b === 'school' ? '<button class="btn small" id="twTrain">🎓 職業訓練</button>' : ''}
         ${cell.b === 'townhall' && near.length ? '<button class="btn small" id="twNear">⚡ 去練快精熟的字</button>' : ''}
+        ${cell.b === 'townhall' && cell.lv >= VDTown.MAX_LV ? `<button class="btn small" id="twWonder">🏯 興建世界奇觀（${VDTown.wonderInfo().cost.tokens}🪙＋${VDTown.wonderInfo().cost.ore}⛏️＋${VDTown.wonderInfo().cost.rice}🌾・已建 ${VDTown.wonderInfo().level} 層）</button>` : ''}
+        ${cell.b === 'smithy' ? `<button class="btn small" id="twSmelt">⚒️ 爐火煉魂（${VDTown.smeltInfo().cost}⛏️→詞靈鍛造之魂・今日剩 ${VDTown.smeltInfo().todayLeft} 次）</button>` : ''}
         ${cell.b === 'house' && VDTown.raw.pop.length ? '<button class="btn small ghost" id="twKnock">🙋 敲門聊聊</button>' : ''}
         ${cell.b !== 'townhall' ? `<button class="btn small ghost" id="twMove">🚚 搬移</button>
           <button class="btn small ghost" id="twDemo">🧨 拆除（退一半建材）</button>` : ''}
@@ -477,6 +513,8 @@ const VDTownUI = (() => {
     if ($('#twRush')) $('#twRush').onclick = () => { const r = VDTown.rushUpgrade(key); VDGame.toast(r.ok ? '🪙 完工！' : r.msg); if (r.ok) paint(); };
     if ($('#twQRush')) $('#twQRush').onclick = () => rushQuiz(key);
     if ($('#twTrain')) $('#twTrain').onclick = () => schoolPanel(box);
+    if ($('#twWonder')) $('#twWonder').onclick = () => { const r = VDTown.donateWonder(); VDGame.toast(r.ok ? `🏯 世界奇觀升至第 ${r.level} 層！聲望 +1` : r.msg); if (r.ok) paint(); };
+    if ($('#twSmelt')) $('#twSmelt').onclick = () => { const r = VDTown.smeltOre(); VDGame.toast(r.ok ? `⚒️ 爐火 +1（詞靈鍛造之魂 ×${r.ember}）` : r.msg); if (r.ok) paint(); };
     if ($('#twNear')) $('#twNear').onclick = () => {
       const wm = words();
       const list = VDTown.nearMastered().map(w => wm[w.toLowerCase()]).filter(Boolean);
