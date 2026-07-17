@@ -27,7 +27,7 @@ const AFFIXES = {
 };
 
 // 建一個載入好 petstore 的沙箱：boxMap 決定每個字的 Leitner 盒號，seed 預置 vd_pets 存檔
-async function loadPets({ boxMap = {}, petSave = null, coins = 100000 } = {}) {
+async function loadPets({ boxMap = {}, petSave = null, coins = 100000, dueSet = [], today = '2026-07-18' } = {}) {
   const storeMem = {};
   if (petSave) storeMem['vd_pets'] = JSON.stringify(petSave);
   storeMem['vd_game'] = JSON.stringify({ coins, xp: 0 });
@@ -36,7 +36,7 @@ async function loadPets({ boxMap = {}, petSave = null, coins = 100000 } = {}) {
     setItem: (k, v) => { storeMem[k] = String(v); },
     removeItem: k => { delete storeMem[k]; }
   };
-  const VDStore = { box: w => (w in boxMap ? boxMap[w] : -1), today: () => '2026-07-18' };
+  const VDStore = { box: w => (w in boxMap ? boxMap[w] : -1), isDue: w => dueSet.includes(w), today: () => today };
   const gameRaw = JSON.parse(storeMem['vd_game']);
   const VDGame = { raw: gameRaw, heroName: () => '測試英雄' };
   const fetch = async (url) => ({ json: async () => (url.includes('pets') ? PETS : AFFIXES) });
@@ -188,4 +188,67 @@ test('P3-11 融合門檻：Lv14 擋下', async () => {
   const { VDPets } = await loadPets({ petSave, coins: 1000 });
   const r = VDPets.fuse('t1', 't2', '幼幼', ['a', 'b', 'c']);
   assert.equal(r.ok, false);
+});
+
+test('P2-6 每日餵養：家族有到期/未學字→未完成；全顧好→可領一次', async () => {
+  const petSave = { owned: { t1: { lv: 5, equip: {} } }, active: 't1' };
+  // 全未學 → actionable 5 → 未完成
+  let inst = await loadPets({ petSave, coins: 0 });
+  let f = inst.VDPets.dailyFeed();
+  assert.equal(f.petId, 't1');
+  assert.equal(f.done, false);
+  assert.equal(inst.VDPets.claimFeed().ok, false, '未完成不可領');
+  // 全精熟且不到期 → actionable 0 → 完成、可領一次
+  inst = await loadPets({ boxMap: { alpha: 3, beta: 3, gamma: 3, delta: 3, omega: 3 }, petSave, coins: 0 });
+  f = inst.VDPets.dailyFeed();
+  assert.equal(f.done, true);
+  const c = inst.VDPets.claimFeed();
+  assert.equal(c.ok, true);
+  assert.equal(c.reward, 30);
+  assert.equal(inst.VDGame.raw.coins, 30, '獎勵入帳');
+  assert.equal(inst.VDPets.claimFeed().ok, false, '同日不可重複領');
+});
+
+test('P2-10 構詞題：回傳可用的四選一，正解屬於家族、誘答不屬於', async () => {
+  const petSave = { owned: { t1: { lv: 5, equip: {} } }, active: 't1' };
+  const { VDPets } = await loadPets({ petSave });
+  const allWords = [{ word: 'zebra' }, { word: 'mango' }, { word: 'piano' }, { word: 'tiger' }];
+  const q = VDPets.affixQuestion('t1', allWords);
+  assert.ok(q, '應能出題');
+  assert.equal(q.options.length, 4);
+  assert.ok(q.options.includes(q.ans));
+  assert.ok(['alpha', 'beta', 'gamma', 'delta', 'omega'].includes(q.ans), '正解屬於家族');
+  assert.equal(q.word, q.ans);
+});
+
+test('P3-12 主題季：回傳當週主題、in-season 判定正確', async () => {
+  const { VDPets } = await loadPets({});
+  const s = VDPets.currentSeason();
+  assert.ok(s.name && Array.isArray(s.forms));
+  // 不同日期會落在不同季（14 天一輪）
+  const a = (await loadPets({ today: '2026-01-01' })).VDPets.currentSeason().idx;
+  const b = (await loadPets({ today: '2026-01-20' })).VDPets.currentSeason().idx;
+  assert.notEqual(a, b, '相隔 19 天應跨季');
+});
+
+test('P3-13 今天的一件事：無寵→引導領養；有未完成餵養→指向 pets', async () => {
+  let inst = await loadPets({});
+  assert.equal(inst.VDPets.nextBestAction().cta, 'pets');
+  assert.match(inst.VDPets.nextBestAction().text, /結緣|第一隻/);
+  const petSave = { owned: { t1: { lv: 5, equip: {} } }, active: 't1' };
+  inst = await loadPets({ petSave });
+  const nba = inst.VDPets.nextBestAction();
+  assert.equal(nba.cta, 'pets');
+});
+
+test('P3-14 傳承銘文：校驗（屬家族/長度/含字/去重）＋寫入 loreOf', async () => {
+  const petSave = { owned: { t1: { lv: 25, equip: {} } }, active: 't1' };
+  const { VDPets } = await loadPets({ boxMap: { alpha: 3 }, petSave });
+  assert.equal(VDPets.addLore('t1', 'notinfamily', 'notinfamily is here').ok, false, '非家族字擋下');
+  assert.equal(VDPets.addLore('t1', 'alpha', 'short').ok, false, '太短擋下');
+  assert.equal(VDPets.addLore('t1', 'alpha', 'this sentence has no target').ok, false, '不含字擋下');
+  assert.equal(VDPets.addLore('t1', 'alpha', 'the alpha wolf leads the pack').ok, true);
+  assert.equal(VDPets.loreOf('t1').length, 1);
+  assert.equal(VDPets.addLore('t1', 'alpha', 'the alpha wolf leads the pack').ok, false, '重複擋下');
+  assert.equal(VDPets.addLore('t1', 'alpha', 'no angle brackets <script> here').ok, false, '含<>擋下');
 });

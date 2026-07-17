@@ -993,6 +993,29 @@ body.dark .pet-mastery i { color: rgba(255,255,255,.55); }
 .pnc-row { display: flex; justify-content: space-between; padding: 4px 0; border-top: 1px dashed #e0c491; font-size: 14px; }
 .pnc-row b { color: #c0392b; }
 .pnc-foot { margin-top: 10px; text-align: center; font-size: 11px; color: #b08a4a; }
+/* P3-13 今天的一件事 / P2-6 每日餵養 / P3-12 主題季 */
+.pet-nba { padding: 8px 12px; border-radius: 12px; font-size: 13.5px; line-height: 1.6; color: var(--ink);
+  background: linear-gradient(100deg, #e7f3ff, #d7ebff); border: 1px solid #b8d9f5; }
+body.dark .pet-nba { background: linear-gradient(100deg, #14293f, #16324a); border-color: #2c5273; }
+.pet-feed { margin-top: 8px; padding: 8px 12px; border-radius: 12px; background: var(--paper2); border: 1px solid var(--line); }
+.pet-feed.done { border-color: #7cc47c; background: linear-gradient(100deg, #eafbe9, #dff5df); }
+body.dark .pet-feed.done { background: linear-gradient(100deg, #1c3a1c, #234f23); border-color: #3f7a3f; }
+.pf-head { font-size: 12.5px; font-weight: 700; color: #b8860b; }
+.pf-body { font-size: 13px; margin: 2px 0 6px; color: var(--ink); }
+.pf-bar { height: 7px; border-radius: 5px; background: rgba(0,0,0,.1); overflow: hidden; margin-top: 5px; }
+.pf-bar span { display: block; height: 100%; background: linear-gradient(90deg, #f5b942, #f39c12); border-radius: 5px; }
+.pet-season { margin-top: 8px; font-size: 12.5px; color: rgba(43,43,43,.7); }
+body.dark .pet-season { color: rgba(255,255,255,.6); }
+.season-tag { position: absolute; top: 4px; right: 4px; font-size: 15px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+/* P3-14 傳承銘文 */
+.lore-form { margin: 4px 0; }
+.lore-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.lore-list.others { padding: 8px; border-radius: 10px; background: var(--paper2); }
+.lore-item { font-size: 13px; line-height: 1.5; padding: 6px 10px; border-radius: 10px; background: var(--paper2);
+  border-left: 3px solid var(--accent); color: var(--ink); }
+.lore-item b { color: var(--accent2, #c0392b); }
+.lore-item i { display: block; margin-top: 2px; font-size: 11px; color: rgba(43,43,43,.55); font-style: normal; }
+body.dark .lore-item i { color: rgba(255,255,255,.5); }
 .pet-actrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
 .pet-max { align-self: center; color: #c99a35; font-weight: 700; }
 .pet-skills { display: flex; flex-direction: column; gap: 6px; }

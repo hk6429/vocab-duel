@@ -150,6 +150,12 @@ const VDPetBattle = (() => {
   /* 第 11 層起出題強制混入錯題本字與 box≤1 低盒字各佔 30%（抓不到就 fallback 隨機）
      ——讓「打不過」的解法回到「去學字」 */
   function pickQuestion() {
+    // P2-10 構詞題：出戰詞靈約 35% 機率改考「哪個字用到這個字綴」，把戰鬥從換皮測驗變構詞應用
+    const petId = VDPets.active();
+    if (petId && Math.random() < 0.35) {
+      const aq = VDPets.affixQuestion(petId, words);
+      if (aq) return aq;
+    }
     if (state.mode === 'wild' && state.foe.floorNo > 10) {
       const r = Math.random();
       let cand = null;

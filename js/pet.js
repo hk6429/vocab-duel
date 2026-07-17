@@ -33,6 +33,7 @@ const VDPet = (() => {
     const list = VDPets.list();
     const ownedN = list.filter(p => p.owned).length;
     const cost = VDPets.adoptCost();
+    const season = VDPets.currentSeason();
     el.innerHTML = `
       <div class="wc-card">
         <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_pets.webp" alt="" onerror="this.remove()">
@@ -42,10 +43,12 @@ const VDPet = (() => {
           <div class="shop-wallet">💰 ${VDGame.raw.coins} 字幣　⚔️ 競技積分 ${VDPets.rating}</div>
         </div>
       </div>
+      ${topCards(season)}
       <div class="wc-mgrid pet-grid">
         ${list.map(p => `
           <button class="wc-mcard pet-card ${p.owned ? '' : 'locked'}" data-id="${p.id}">
             ${p.isActive ? '<span class="wc-mcard-badge">出戰中</span>' : ''}
+            ${p.owned && VDPets.isInSeason(p.id, season) ? `<span class="season-tag" title="本週主題季家族">${season.ico}</span>` : ''}
             ${p.isFusion ? petImg(p, p.stage, 'wc-mcard-img') : `<img loading="lazy" decoding="async" class="wc-mcard-img ${p.owned ? '' : 'pet-sil'}" src="${imgOf(p.id, p.stage)}" alt=""
               onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">`}
             <div class="wc-mcard-cap">
@@ -61,6 +64,43 @@ const VDPet = (() => {
     el.querySelectorAll('.pet-card').forEach(b => { b.onclick = () => renderDetail(b.dataset.id); });
     bindAltar();
     bindBag();
+    bindTopCards();
+  }
+
+  /* P2-6 每日餵養 + P3-13 今天的一件事 + P3-12 主題季 卡片 */
+  function topCards(season) {
+    const nba = VDPets.nextBestAction();
+    const feed = VDPets.dailyFeed();
+    const feedHtml = feed ? `
+      <div class="pet-feed ${feed.done ? 'done' : ''}">
+        <div class="pf-head">🍥 今日餵養任務</div>
+        <div class="pf-body"><b>${feed.ico} ${VDGame.esc(feed.name)}</b>：${feed.done ? '已把今天的字都顧好了！' : `複習這家族還剩 <b>${feed.remaining}</b> 個到期／未學的字`}
+          <div class="pf-bar"><span style="width:${feed.target ? Math.round(feed.doneCount / feed.target * 100) : 100}%"></span></div>
+        </div>
+        ${feed.done && !feed.claimed ? `<button class="btn small" id="feedClaim">🪙 領 ${feed.reward} 字幣</button>`
+        : feed.claimed ? '<span class="pg-hint">✅ 今日已領</span>'
+          : `<button class="btn small ghost" id="feedGo">去複習</button>`}
+      </div>` : '';
+    return `
+      <div class="wc-card"><div class="wc-card-body">
+        <div class="pet-nba">👉 <b>今天的一件事</b>：${VDGame.esc(nba.text)}　<button class="btn small" id="nbaGo" data-cta="${nba.cta}" data-pid="${nba.petId || ''}">出發</button></div>
+        ${feedHtml}
+        <div class="pet-season">${season.ico} 本週主題季・<b>${season.name}</b>：${season.desc}（當季家族有 ${season.ico} 標記）</div>
+      </div></div>`;
+  }
+  function bindTopCards() {
+    const $ = s => el.querySelector(s);
+    if ($('#feedClaim')) $('#feedClaim').onclick = () => {
+      const r = VDPets.claimFeed();
+      VDGame.toast(r.ok ? `🪙 +${r.reward} 字幣，${VDPets.dailyFeed().name} 吃飽了！` : r.msg);
+      renderList();
+    };
+    if ($('#feedGo')) $('#feedGo').onclick = () => { const f = VDPets.dailyFeed(); if (f) renderDetail(f.petId); };
+    if ($('#nbaGo')) $('#nbaGo').onclick = e => {
+      const cta = e.currentTarget.dataset.cta, pid = e.currentTarget.dataset.pid;
+      if (cta === 'pets' && pid) renderDetail(pid);
+      else VDApp.go(cta);
+    };
   }
 
   /* ── 詞源融合祭壇：兩隻滿級 → 幼靈 ── */
@@ -270,6 +310,8 @@ const VDPet = (() => {
           ${affixChips(p)}
           <div class="pg-hint">已學 ${fs.learned}/${fs.total} 字・精熟 ${fs.mastered}　<button class="btn small" id="doTrain">🃏 學這家族的字</button>　<button class="btn small ghost" id="doGraph">🌌 看星圖</button></div>
 
+          ${loreSection(id, p)}
+
           <button class="btn ghost" id="backList" style="margin-top:12px">← 回詞靈列表</button>
         </div>
       </div>`;
@@ -278,6 +320,26 @@ const VDPet = (() => {
 
   const affixChips = p => `<div class="pg-fam-tags">${p.affixes.map(a =>
     `<span class="pg-tag">${a.f}<span>${KNAME[a.k]}</span></span>`).join('')}</div>`;
+
+  /* P3-14 傳承銘文區：精通（滿級）詞靈可為家族的字寫例句 */
+  function loreSection(id, p) {
+    if (p.lv < VDPets.MAX_LV)
+      return `<div class="pg-sub">📜 傳承銘文</div><div class="pg-hint">詞靈精通（Lv${VDPets.MAX_LV}）後解鎖：親手為家族的字寫例句，傳給其他學徒當提示卡。</div>`;
+    const learned = [...VDPets.wordsOf(id)].filter(w => VDStore.box(w) >= 0).sort();
+    const mine = VDPets.loreOf(id);
+    return `
+      <div class="pg-sub">📜 傳承銘文　<span class="pg-hint">為家族的字寫例句，通過校驗＝刻下銘文並匿名分享</span></div>
+      ${learned.length ? `<div class="lore-form">
+        <select id="loreWord" class="rt-join-in" style="width:auto;letter-spacing:normal">${learned.slice(0, 200).map(w => `<option>${w}</option>`).join('')}</select>
+        <input id="loreText" class="rt-join-in" style="width:100%;margin-top:6px;letter-spacing:normal" maxlength="80" placeholder="用這個字造一句話（6–80 字，句中要含這個字）">
+        <div class="pet-actrow" style="margin-top:6px">
+          <button class="btn small" id="loreSave">✍️ 刻下銘文</button>
+          <button class="btn small ghost" id="loreOthers">🔎 看看別人的銘文</button>
+        </div>
+      </div>` : '<div class="pg-hint">先學會這家族至少一個字，才能寫銘文。</div>'}
+      ${mine.length ? `<div class="lore-list">${mine.map(l => `<div class="lore-item"><b>${VDGame.esc(l.word)}</b>：${VDGame.esc(l.text)}</div>`).join('')}</div>` : ''}
+      <div id="loreOthersBox"></div>`;
+  }
 
   /* P2-7 精通位階卡：滿級後才顯示，即時反映維持精熟的程度 */
   function masteryCard(p, fs) {
@@ -375,6 +437,20 @@ const VDPet = (() => {
       VDFlash.start(list, el.querySelector('#pet-flash'), { raw: true });
     };
     $('#doGraph').onclick = () => VDApp.go('graph');
+    if ($('#loreSave')) $('#loreSave').onclick = () => {
+      const w = ($('#loreWord') || {}).value || '', t = ($('#loreText') || {}).value || '';
+      const r = VDPets.addLore(id, w, t);
+      VDGame.toast(r.ok ? '📜 銘文已刻下並匿名分享！' : r.msg);
+      if (r.ok) renderDetail(id);
+    };
+    if ($('#loreOthers')) $('#loreOthers').onclick = async () => {
+      const box = $('#loreOthersBox');
+      box.innerHTML = '<div class="loading">讀取其他學徒的銘文…</div>';
+      const items = await VDPets.fetchLore(id);
+      box.innerHTML = items.length
+        ? `<div class="lore-list others"><div class="pg-hint">其他學徒為這家族留下的銘文：</div>${items.map(l => `<div class="lore-item"><b>${VDGame.esc(l.word)}</b>：${VDGame.esc(l.text)}<i>— ${VDGame.esc(l.hero || '無名學徒')}</i></div>`).join('')}</div>`
+        : '<div class="pg-hint">還沒有人留下銘文——你可以當第一個！</div>';
+    };
     $('#backList').onclick = renderList;
   }
 

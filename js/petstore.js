@@ -53,7 +53,7 @@ const VDPets = (() => {
   let g = null;      // 玩家狀態
   let wordsOfPet = {};   // petId → Set(word)：家族全部單字（小寫）
 
-  const DEFAULT = () => ({ owned: {}, active: '', rating: 0, wildFloor: 1, bag: [], eqdex: {}, fusions: [], seed: 13, bagLv: 0 });
+  const DEFAULT = () => ({ owned: {}, active: '', rating: 0, wildFloor: 1, bag: [], eqdex: {}, fusions: [], seed: 13, bagLv: 0, dailyFeed: null, lore: {} });
 
   function load() {
     try { g = Object.assign(DEFAULT(), JSON.parse(localStorage.getItem(KEY)) || {}); }
@@ -61,6 +61,7 @@ const VDPets = (() => {
     if (!Array.isArray(g.bag)) g.bag = [];
     if (!g.eqdex || typeof g.eqdex !== 'object') g.eqdex = {};
     if (!Array.isArray(g.fusions)) g.fusions = [];
+    if (!g.lore || typeof g.lore !== 'object') g.lore = {};
     // 舊存檔容錯：lifetime（累計勝場積分，只增不減）用 rating 與城鎮已兌換積分較大者補齊，避免老玩家兌換權縮水
     if (typeof g.lifetime !== 'number') {
       let redeemed = 0;
@@ -448,8 +449,169 @@ const VDPets = (() => {
     } catch { /* 離線不阻斷 */ }
   }
 
+  /* ── 小工具 ── */
+  function shuf(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+  function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
+  const ownedIds = () => data ? data.pets.filter(p => g.owned[p.id]).map(p => p.id).concat(g.fusions.filter(f => g.owned[f.id]).map(f => f.id)) : [];
+  const dispNameOf = id => nickOf(id) || (petDef(id) || {}).name || '';
+  // 家族「該處理的字」＝到期複習 + 尚未學（餵養 = 把這些顧好）
+  function actionable(id) {
+    const set = wordsOfPet[id] || new Set();
+    let due = 0, unlearned = 0;
+    for (const w of set) { const b = VDStore.box(w); if (b < 0) unlearned++; else if (VDStore.isDue(w)) due++; }
+    return { due, unlearned, total: due + unlearned };
+  }
+
+  /* ── P2-6 每日到期字綴任務：每天指派一隻「今日主打詞靈」，把牠家族的到期字複習完＝餵養 ── */
+  const FEED_REWARD = 30;
+  function dailyFeed() {
+    const ids = ownedIds();
+    if (!ids.length) return null;
+    const today = VDStore.today();
+    if (!g.dailyFeed || g.dailyFeed.date !== today || !g.owned[g.dailyFeed.petId]) {
+      // 挑今天最需要照顧的家族（可處理字數最多），同分用「當季主題家族優先」再用日期雜湊穩定挑選
+      const season = currentSeason();
+      const scored = ids.map(id => {
+        const act = actionable(id).total;
+        const inSeason = isInSeason(id, season) ? 1 : 0;
+        return { id, act, inSeason, tie: hashStr(id + today) };
+      }).sort((a, b) => b.act - a.act || b.inSeason - a.inSeason || a.tie - b.tie);
+      const pick = scored[0];
+      g.dailyFeed = { date: today, petId: pick.id, base: Math.min(pick.act, 8), claimed: false };
+      save();
+    }
+    const f = g.dailyFeed;
+    const remaining = actionable(f.petId).total;
+    const target = Math.max(1, f.base);
+    const doneCount = Math.min(target, Math.max(0, target - remaining));
+    const done = f.base === 0 ? true : remaining <= Math.max(0, f.base - target);
+    return {
+      petId: f.petId, name: dispNameOf(f.petId), ico: (petDef(f.petId) || {}).ico || '🐾',
+      theme: (petDef(f.petId) || {}).theme || '', target, doneCount, remaining,
+      done, claimed: !!f.claimed, reward: FEED_REWARD
+    };
+  }
+  function claimFeed() {
+    const f = dailyFeed();
+    if (!f) return { ok: false, msg: '還沒有詞靈' };
+    if (!f.done) return { ok: false, msg: `再複習 ${f.remaining} 個字就完成` };
+    if (f.claimed) return { ok: false, msg: '今天已領過了' };
+    g.dailyFeed.claimed = true; save();
+    VDGame.raw.coins += FEED_REWARD;
+    localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
+    return { ok: true, reward: FEED_REWARD, petId: f.petId };
+  }
+
+  /* ── P2-10 對戰構詞題：考「哪個字用到這個字綴」，把戰鬥從換皮測驗升級成構詞應用 ── */
+  function affixQuestion(id, allWords) {
+    const def = petDef(id);
+    if (!def || !def.affixes || !def.affixes.length || !affixData) return null;
+    const axs = [];
+    for (const a of def.affixes)
+      for (const ax of (affixData[KIND[a.k]] || []).filter(x => x.form === a.f))
+        if (ax.members && ax.members.length) axs.push({ form: ax.form, meaning: ax.meaning, kind: a.k, members: ax.members });
+    if (!axs.length) return null;
+    const ax = axs[Math.floor(Math.random() * axs.length)];
+    const learned = ax.members.filter(m => VDStore.box(m.toLowerCase()) >= 0);
+    const src = learned.length ? learned : ax.members;
+    const ansWord = src[Math.floor(Math.random() * src.length)];
+    const fam = wordsOfPet[id] || new Set();
+    const pool = (allWords || []).map(w => w.word).filter(w => w && !fam.has(String(w).toLowerCase()) && String(w).toLowerCase() !== String(ansWord).toLowerCase());
+    const ds = [...new Set(pool.map(w => w.toLowerCase()))].map(lw => pool.find(w => w.toLowerCase() === lw));
+    const picks = shuf(ds).slice(0, 3);
+    if (picks.length < 3) return null;
+    const kn = { p: '字首', s: '字尾', r: '字根' }[ax.kind] || '字綴';
+    return {
+      type: 'affix',
+      prompt: `${kn} ${ax.form}${ax.meaning ? `（${ax.meaning}）` : ''}`,
+      sub: '哪個字用到了這個字綴？（拆積木・構詞）',
+      options: shuf([ansWord, ...picks]), ans: ansWord, word: ansWord
+    };
+  }
+
+  /* ── P3-12 字綴主題季 LiveOps：每 14 天輪播主題，當季家族有標記與加成 ── */
+  const SEASONS = [
+    { name: '否定字首對決週', ico: '⚔️', forms: ['un-', 'dis-', 'mis-', 'in-'], desc: '這週主打「否定」字首家族' },
+    { name: '能力形容詞週', ico: '🛡️', forms: ['-able', '-ible', '-ful', '-less'], desc: '這週主打把動詞名詞變形容詞的字尾' },
+    { name: '字根探源週', ico: '🌳', forms: ['port', 'dict', 'form', 'spect/spic'], desc: '這週深挖拉丁字根家族' },
+    { name: '感官動詞週', ico: '👁️', forms: ['vis/vid', 'aud', 'graph/gram', 'phon'], desc: '這週主打看／聽／寫／說的字根' }
+  ];
+  function currentSeason() {
+    const t = VDStore.today();
+    const day = Math.floor(Date.parse(t + 'T00:00:00Z') / 86400000);
+    const idx = Math.abs(Math.floor(day / 14)) % SEASONS.length;
+    return { ...SEASONS[idx], idx };
+  }
+  function isInSeason(id, season) {
+    season = season || currentSeason();
+    const def = petDef(id);
+    if (!def || !def.affixes) return false;
+    return def.affixes.some(a => season.forms.includes(a.f));
+  }
+
+  /* ── P3-13「今天的一件事」：算出此刻最該做的單一動作 ── */
+  function nextBestAction() {
+    if (!ownedIds().length) return { text: '先去結緣你的第一隻詞靈（首隻免費）——牠會陪你把單字記牢。', cta: 'pets' };
+    const feed = dailyFeed();
+    if (feed && !feed.done) return { text: `今天餵養 ${feed.ico} ${feed.name}：把這家族 ${feed.remaining} 個到期字複習完，就升詞源之力。`, cta: 'pets', petId: feed.petId };
+    if (feed && feed.done && !feed.claimed) return { text: `${feed.ico} ${feed.name} 已餵飽——回詞靈頁領今天的 ${feed.reward} 字幣獎勵！`, cta: 'pets', petId: feed.petId };
+    // 找可升級（詞源夠但還沒升）或詞源最低、還有字沒學的寵
+    let upId = null, lowId = null, lowPw = 2;
+    for (const id of ownedIds()) {
+      const o = g.owned[id]; if (!o || o.lv >= MAX_LV) { }
+      const pw = power(id);
+      if (o && o.lv < MAX_LV && Math.round(pw * 100) >= o.lv * 3 && VDGame.raw.coins >= levelCost(o.lv)) upId = upId || id;
+      if (actionable(id).unlearned > 0 && pw < lowPw) { lowPw = pw; lowId = id; }
+    }
+    if (upId) return { text: `${dispNameOf(upId)} 詞源之力夠了，回詞靈頁按升級就變更強！`, cta: 'pets', petId: upId };
+    if (lowId) return { text: `${dispNameOf(lowId)} 詞源之力只有 ${Math.round(lowPw * 100)}%——去學這家族還沒學的字，牠會明顯變強。`, cta: 'pets', petId: lowId };
+    return { text: '今天的字都顧到了！去競技場用你的詞靈試身手吧。', cta: 'petbattle' };
+  }
+
+  /* ── P3-14 造詞／傳承銘文（UGC）：精通詞靈可為家族的字寫例句，通過規則校驗成「銘文」 ── */
+  function addLore(id, word, text) {
+    if (!g.owned[id]) return { ok: false, msg: '尚未領養' };
+    word = String(word || '').trim();
+    text = String(text || '').trim();
+    if (!wordsOfPet[id] || !wordsOfPet[id].has(word.toLowerCase())) return { ok: false, msg: '這個字不屬於這隻詞靈的家族' };
+    if (text.length < 6 || text.length > 80) return { ok: false, msg: '例句長度要 6–80 字' };
+    if (/[<>]/.test(text)) return { ok: false, msg: '例句不能含 < 或 >' };
+    if (!text.toLowerCase().includes(word.toLowerCase())) return { ok: false, msg: `例句要用到「${word}」這個字` };
+    if (!g.lore[id]) g.lore[id] = [];
+    if (g.lore[id].some(l => l.text.toLowerCase() === text.toLowerCase())) return { ok: false, msg: '這句已經寫過了' };
+    const entry = { word: word.toLowerCase(), text, ts: (VDGame.now ? VDGame.now() : 0) };
+    g.lore[id].unshift(entry);
+    g.lore[id] = g.lore[id].slice(0, 20);
+    save();
+    submitLore(id, entry);   // 非同步分享到雲端（離線不阻斷）
+    return { ok: true, entry };
+  }
+  const loreOf = id => (g.lore[id] || []).slice();
+  // 銘文共享後端在 CF D1（pages.dev）；從 vercel/netlify 鏡像也要打得到，比照 VDCloud 的 base 解析
+  const LORE_API = (typeof location !== 'undefined' && (location.hostname.includes('pages.dev') || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) ? '' : 'https://vocab-duel.pages.dev';
+  async function submitLore(id, entry) {
+    try {
+      await fetch(LORE_API + '/api/lore', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: 'submit', petId: id, word: entry.word, text: entry.text, hero: VDGame.heroName() })
+      });
+    } catch { /* 離線不阻斷 */ }
+  }
+  async function fetchLore(id) {
+    try {
+      const r = await fetch(LORE_API + '/api/lore', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: 'list', petId: id })
+      });
+      if (r.ok) return (await r.json()).lore || [];
+    } catch { /* 離線 */ }
+    return [];
+  }
+
   return {
     init, list, adopt, adoptCost, levelUp, levelCost, power, familyStats, atk, atkBreakdown, hp, stageOf, lvOf,
+    dailyFeed, claimFeed, affixQuestion, currentSeason, isInSeason, nextBestAction,
+    addLore, loreOf, submitLore, fetchLore, actionable, SEASONS,
     starRank, STAR_GATE, setNick, nickOf, shareCard, dispName,
     rollDrop, equip, unequip, skillsOf, setDeco, setActive, active, DECOS, SLOTS, SLOT_NAME,
     PERKS, hasPerk, activePerks, assist, bag, addToBag, dropBag, forge, forgeReq, equipFromBag, eqDex,
