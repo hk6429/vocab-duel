@@ -72,7 +72,7 @@ const VDPet = (() => {
     if (ready.length < 2) return `
       <div class="wc-card"><div class="wc-card-body">
         <div class="hero-sec">🐣 詞源融合祭壇</div>
-        <div class="pg-hint">再養滿兩隻 Lv25 詞靈，就能融合出第 21 隻「幼靈」（已有 ${fusions.length}/${VDPets.FUSE_MAX}）。</div>
+        <div class="pg-hint">再養兩隻 Lv${VDPets.FUSE_MIN_LV} 詞靈，就能融合出「幼靈」（已有 ${fusions.length}/${VDPets.FUSE_MAX}）。</div>
       </div></div>`;
     const cands = list.filter(p => ready.includes(p.id));
     const picked = fusePick.filter(id => ready.includes(id));
@@ -82,7 +82,7 @@ const VDPet = (() => {
     return `
       <div class="wc-card"><div class="wc-card-body">
         <div class="hero-sec">🐣 詞源融合祭壇　<span class="pg-hint">${fusions.length}/${VDPets.FUSE_MAX} 幼靈</span></div>
-        <div class="pg-hint">選兩隻 Lv25 詞靈融合出幼靈：守護字綴＝雙親聯集（分母變大→先變弱，補學就變強）。代價：雙親降回 Lv15＋${VDPets.FUSE_COST} 字幣。</div>
+        <div class="pg-hint">選兩隻 Lv${VDPets.FUSE_MIN_LV} 詞靈融合出幼靈：守護字綴＝雙親聯集（分母變大→先變弱，補學就變強）。代價：${VDPets.FUSE_COST} 字幣（雙親不降級，融合是擴張家族、不是懲罰）。</div>
         <div class="pg-fam-tags">${cands.map(p => `
           <button class="pg-tag fu-cand ${picked.includes(p.id) ? 'on' : ''}" data-id="${p.id}">${p.ico} ${p.name}</button>`).join('')}</div>
         ${picked.length === 2 ? `

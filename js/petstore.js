@@ -327,18 +327,18 @@ const VDPets = (() => {
     };
   }
 
-  /* ── 詞源融合：兩隻滿級本體寵 → 幼靈（雙親降回 Lv15＋500 字幣，上限 3 隻） ── */
-  const FUSE_COST = 500, FUSE_MAX = 3, FUSE_PARENT_LV = 15;
+  /* ── 詞源融合：兩隻 Lv15+ 本體寵 → 幼靈（P3-11 鬆綁：門檻 Lv25→Lv15、雙親「不再降級」，重定位為圖鑑收集） ── */
+  const FUSE_COST = 500, FUSE_MAX = 3, FUSE_MIN_LV = 15;
   function canFuse() {
     if (!data || g.fusions.length >= FUSE_MAX) return [];
-    return data.pets.filter(p => g.owned[p.id] && g.owned[p.id].lv >= MAX_LV).map(p => p.id);
+    return data.pets.filter(p => g.owned[p.id] && g.owned[p.id].lv >= FUSE_MIN_LV).map(p => p.id);
   }
   function fuse(a, b, name, skills) {
     if (g.fusions.length >= FUSE_MAX) return { ok: false, msg: `幼靈最多 ${FUSE_MAX} 隻` };
     if (a === b) return { ok: false, msg: '要選兩隻不同的詞靈' };
     for (const id of [a, b]) {
       if (!data.pets.some(p => p.id === id)) return { ok: false, msg: '幼靈不能再融合' };
-      if (!g.owned[id] || g.owned[id].lv < MAX_LV) return { ok: false, msg: '雙親都要滿級 Lv25' };
+      if (!g.owned[id] || g.owned[id].lv < FUSE_MIN_LV) return { ok: false, msg: `雙親都要 Lv${FUSE_MIN_LV} 以上` };
     }
     if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 4) return { ok: false, msg: '名字要 2–4 個字' };
     const pool = [...petDef(a).skills, ...petDef(b).skills];
@@ -347,8 +347,7 @@ const VDPets = (() => {
     if (VDGame.raw.coins < FUSE_COST) return { ok: false, msg: `字幣不足，需要 ${FUSE_COST}` };
     VDGame.raw.coins -= FUSE_COST;
     localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
-    g.owned[a].lv = FUSE_PARENT_LV;
-    g.owned[b].lv = FUSE_PARENT_LV;
+    // P3-11：雙親不再降級——融合是收集與擴張家族，不是懲罰
     const fid = 'fu_' + (g.fusions.length + 1) + '_' + Date.now().toString(36);
     const meta = { id: fid, name: name.trim(), parents: [a, b], skills };
     g.fusions.push(meta);
@@ -460,7 +459,7 @@ const VDPets = (() => {
     petWin, petLose, get rating() { return g.rating; }, get wildFloor() { return g.wildFloor; }, clearWild,
     lifetime: () => g.lifetime || 0,
     snapshot, submitBoard, wordsOf: id => wordsOfPet[id] || new Set(),
-    def: petDef, canFuse, fuse, FUSE_COST, FUSE_MAX,
+    def: petDef, canFuse, fuse, FUSE_COST, FUSE_MAX, FUSE_MIN_LV,
     fusions: () => g.fusions.slice(),
     wild: () => data.wild, MAX_LV
   };

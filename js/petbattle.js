@@ -134,7 +134,7 @@ const VDPetBattle = (() => {
     let d = state.me.atk * (0.55 + Math.random() * 0.2);
     if (state.skills.includes('combo')) d *= 1 + state.combo * 0.15;
     else d *= 1 + state.combo * 0.06;
-    if (state.skills.includes('lastres') && state.pHp < state.pMax * 0.3) d *= 1.5;
+    if (state.skills.includes('lastres') && state.combo >= 4) d *= 1.5;  // P2-9 連對觸發（不再獎勵殘血/答錯）
     if (state.skills.includes('resonate') && state.me.power > 0.6) d *= 1.25;
     return Math.max(1, Math.round(d));
   }
