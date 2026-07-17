@@ -126,3 +126,39 @@ test('P1-3 勝場照加 20、lifetime 累計', async () => {
   assert.equal(VDPets.petWin(), 70);
   assert.equal(VDPets.lifetime(), 70);
 });
+
+test('P2-7 精通位階：未滿級一律 0 星', async () => {
+  const petSave = { owned: { t1: { lv: 24, equip: {} } }, active: 't1' };
+  const { VDPets } = await loadPets({ boxMap: { alpha: 5, beta: 5, gamma: 5, delta: 5, omega: 5 }, petSave });
+  assert.equal(VDPets.starRank('t1'), 0, '未滿級不給星');
+});
+
+test('P2-7 精通位階：滿級後依精熟比例給星、掉盒會回落', async () => {
+  const petSave = { owned: { t1: { lv: 25, equip: {} } }, active: 't1' };
+  // 5 字全精熟(box3+) → 100% → ★5
+  let inst = await loadPets({ boxMap: { alpha: 3, beta: 3, gamma: 3, delta: 3, omega: 3 }, petSave });
+  assert.equal(inst.VDPets.starRank('t1'), 5);
+  // 3/5 精熟=60% → ★1（跨過 0.6 門檻）
+  inst = await loadPets({ boxMap: { alpha: 3, beta: 3, gamma: 3, delta: 0, omega: 0 }, petSave });
+  assert.equal(inst.VDPets.starRank('t1'), 1);
+  // 掉到 2/5=40% → 0 星（回落）
+  inst = await loadPets({ boxMap: { alpha: 3, beta: 3, gamma: 0, delta: 0, omega: 0 }, petSave });
+  assert.equal(inst.VDPets.starRank('t1'), 0);
+});
+
+test('P2-8 取名：設定/清除暱稱、超長擋下、list 與 shareCard 反映暱稱', async () => {
+  const petSave = { owned: { t1: { lv: 25, equip: {} } }, active: 't1' };
+  const { VDPets } = await loadPets({ boxMap: { alpha: 3, beta: 3, gamma: 3, delta: 3, omega: 3 }, petSave });
+  assert.equal(VDPets.setNick('t1', '小綴綴').ok, true);
+  assert.equal(VDPets.nickOf('t1'), '小綴綴');
+  assert.equal(VDPets.list().find(x => x.id === 't1').name, '小綴綴');
+  const card = VDPets.shareCard('t1');
+  assert.equal(card.name, '小綴綴');
+  assert.equal(card.baseName, '測靈');
+  assert.equal(card.star, 5);
+  assert.equal(card.mastered, 5);
+  assert.equal(VDPets.setNick('t1', '一二三四五六七').ok, false, '超過 6 字應擋下');
+  assert.equal(VDPets.setNick('t1', '').ok, true);
+  assert.equal(VDPets.nickOf('t1'), '', '空字串清除暱稱');
+  assert.equal(VDPets.list().find(x => x.id === 't1').name, '測靈');
+});

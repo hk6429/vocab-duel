@@ -4,6 +4,7 @@ const VDPet = (() => {
 
   const imgOf = (id, stage) => `img/pets/${id}_s${stage}.webp`;
   const KNAME = { p: '字首', s: '字尾', r: '字根' };
+  const starStr = n => n > 0 ? '⭐'.repeat(n) : '';
 
   /* 裝飾：水彩小圖優先，emoji 只做載入失敗的 fallback（美術規範） */
   const DECO_IMG = { '🎀': 'deco_bow', '👑': 'deco_crown', '🧣': 'deco_scarf', '👓': 'deco_glasses', '🌸': 'deco_flower', '⭐': 'deco_star' };
@@ -48,7 +49,7 @@ const VDPet = (() => {
             ${p.isFusion ? petImg(p, p.stage, 'wc-mcard-img') : `<img loading="lazy" decoding="async" class="wc-mcard-img ${p.owned ? '' : 'pet-sil'}" src="${imgOf(p.id, p.stage)}" alt=""
               onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">`}
             <div class="wc-mcard-cap">
-              <div class="wc-mcard-title">${decoHtml(p.deco, 'mini')}${p.name}</div>
+              <div class="wc-mcard-title">${decoHtml(p.deco, 'mini')}${p.name}${p.star ? `<span class="pet-stars">${starStr(p.star)}</span>` : ''}</div>
               <span class="wc-mcard-sub">${p.owned ? `Lv.${p.lv}　⚔️${p.atk}　❤️${p.hp}` : `${p.theme}・領養 ${cost === 0 ? '免費' : cost + ' 幣'}`}</span>
             </div>
           </button>`).join('')}
@@ -228,8 +229,8 @@ const VDPet = (() => {
           onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">`}
         ${decoHtml(p.deco)}
         <div class="wc-card-body">
-          <h2>${p.ico} ${p.name} <span class="pet-lv">Lv.${p.lv}</span>${p.isActive ? '<span class="wc-mcard-badge" style="position:static">出戰中</span>' : ''}</h2>
-          <p class="pg-hint">${p.theme}・第 ${p.stage} 階（${nextEvo}）</p>
+          <h2 id="petName">${p.ico} ${p.name}${p.star ? `<span class="pet-stars">${starStr(p.star)}</span>` : ''} <span class="pet-lv">Lv.${p.lv}</span><button class="pet-rename" id="doRename" title="幫牠取名">✏️</button>${p.isActive ? '<span class="wc-mcard-badge" style="position:static">出戰中</span>' : ''}</h2>
+          <p class="pg-hint">${p.theme}・第 ${p.stage} 階（${nextEvo}）${p.nick ? `・本名 ${p.baseName}` : ''}</p>
           <div class="pet-stats">
             <div class="pet-stat"><span>⚔️ 攻擊</span><b>${p.atk}</b></div>
             <div class="pet-stat"><span>❤️ 血量</span><b>${p.hp}</b></div>
@@ -238,10 +239,12 @@ const VDPet = (() => {
           ${(() => { const bd = VDPets.atkBreakdown(id); return `
           <div class="pet-atk-formula">⚔️ <b>${bd.total}</b> ＝（基礎 ${bd.base} ＋ 裝備 ${bd.equip}${bd.capped ? '<span class="atk-cap" title="裝備加成已達上限（≤基礎）——學習才是戰力主體">🔒封頂</span>' : ''}）× （1 ＋ 詞源之力 ${pw}%）
             <i>學越多字 → 詞源之力越高 → 整體攻擊翻倍，裝備只是糖霜</i></div>`; })()}
+          ${masteryCard(p, fs)}
           <div class="pet-actrow">
             ${p.lv < VDPets.MAX_LV ? `<button class="btn" id="doLv">⬆️ 升級（${lvCost} 字幣）</button>` : '<span class="pet-max">🌟 已滿級</span>'}
             ${p.isActive ? '' : '<button class="btn" id="doActive">🚩 出戰</button>'}
             <button class="btn ghost" id="doClose">🔍 特寫</button>
+            <button class="btn ghost" id="doCard">🪪 名片</button>
           </div>
 
           <div class="pg-sub">✨ 技能（Lv.5／12／20 解鎖）</div>
@@ -276,6 +279,46 @@ const VDPet = (() => {
   const affixChips = p => `<div class="pg-fam-tags">${p.affixes.map(a =>
     `<span class="pg-tag">${a.f}<span>${KNAME[a.k]}</span></span>`).join('')}</div>`;
 
+  /* P2-7 精通位階卡：滿級後才顯示，即時反映維持精熟的程度 */
+  function masteryCard(p, fs) {
+    if (p.lv < VDPets.MAX_LV) return '';
+    const m = fs.total ? fs.mastered / fs.total : 0;
+    const nextGate = VDPets.STAR_GATE.find(g => m < g);
+    return `
+      <div class="pet-mastery">
+        <div class="pg-sub">🌟 精通位階　<b class="pet-stars big">${starStr(p.star) || '（尚無星，繼續精熟）'}</b></div>
+        <div class="pg-hint">滿級後靠「維持家族精熟」升星——現在精熟 ${fs.mastered}/${fs.total}（${Math.round(m * 100)}%）。${nextGate ? `再把精熟推到 ${Math.round(nextGate * 100)}% 就升一星` : '已達 ★5 頂階，家族滾瓜爛熟！'}
+          <br><i>字若掉出精熟盒星數會回落——星星是「你一直記得」的勳章，不是一次達標的獎盃。</i></div>
+      </div>`;
+  }
+
+  /* P2-8 詞靈名片：可截圖分享（不能課金但想炫耀的唯一出口） */
+  function nameCard(id) {
+    const c = VDPets.shareCard(id);
+    if (!c) return;
+    const ov = document.createElement('div');
+    ov.className = 'vg-levelup';
+    const roomHint = '約戰房號：到競技場開房後填';
+    ov.innerHTML = `<div class="pet-namecard">
+      <div class="pnc-inner">
+        <div class="pnc-head"><span class="pnc-hero">${VDGame.esc ? VDGame.esc(c.hero) : c.hero}</span> 的詞靈</div>
+        ${c.isFusion
+        ? `<span class="fu-imgs pnc-img"><img src="${imgOf(c.parents[0], 3)}" alt="" onerror="this.remove()"><img src="${imgOf(c.parents[1], 3)}" class="fu-b" alt="" onerror="this.remove()"><b class="fu-egg">🐣</b></span>`
+        : `<img class="pnc-img" src="${imgOf(id, c.stage)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${c.ico}'}))">`}
+        <div class="pnc-name">${c.ico} ${c.name}${c.star ? `<span class="pet-stars">${starStr(c.star)}</span>` : ''}</div>
+        <div class="pnc-sub">Lv.${c.lv}${c.name !== c.baseName ? `・本名 ${c.baseName}` : ''}</div>
+        <div class="pnc-row"><span>⚔️ 攻擊</span><b>${c.atk}</b></div>
+        <div class="pnc-row"><span>📖 詞源之力</span><b>+${c.power}%</b></div>
+        <div class="pnc-row"><span>🎯 家族精熟</span><b>${c.mastered}/${c.total}</b></div>
+        <div class="pnc-row"><span>🐾 圖鑑</span><b>${c.dex}/${c.dexTotal}</b></div>
+        <div class="pnc-foot">字鬥英雄・${roomHint}</div>
+      </div>
+      <div class="pg-hint" style="color:#eee;margin-top:10px">📸 截圖分享你的詞靈・點任意處關閉</div>
+    </div>`;
+    ov.onclick = () => ov.remove();
+    document.body.appendChild(ov);
+  }
+
   function bindDetail(id, p) {
     const $ = s => el.querySelector(s);
     if ($('#doLv')) $('#doLv').onclick = () => {
@@ -296,6 +339,23 @@ const VDPet = (() => {
     };
     if ($('#doActive')) $('#doActive').onclick = () => { VDPets.setActive(id); VDGame.toast(`🚩 ${p.name} 出戰！`); renderDetail(id); };
     $('#doClose').onclick = () => closeUp(p);
+    if ($('#doCard')) $('#doCard').onclick = () => nameCard(id);
+    if ($('#doRename')) $('#doRename').onclick = () => {
+      const h = $('#petName');
+      if (h.querySelector('.pet-rename-in')) return;
+      h.innerHTML = `<input class="pet-rename-in" maxlength="6" placeholder="取個名字（最多 6 字）" value="${p.nick || ''}">
+        <button class="btn small" id="nickSave">✅</button><button class="btn small ghost" id="nickCancel">✕</button>`;
+      const inp = h.querySelector('.pet-rename-in'); inp.focus();
+      const commit = () => {
+        const r = VDPets.setNick(id, inp.value);
+        if (!r.ok) return VDGame.toast(r.msg);
+        VDGame.toast(r.name ? `✏️ 改名為「${r.name}」` : '已改回本名');
+        renderDetail(id);
+      };
+      h.querySelector('#nickSave').onclick = commit;
+      h.querySelector('#nickCancel').onclick = () => renderDetail(id);
+      inp.onkeydown = e => { if (e.key === 'Enter') commit(); };
+    };
     el.querySelectorAll('.pet-eq[data-sl]').forEach(b => {
       b.onclick = () => {
         const r = VDPets.unequip(id, b.dataset.sl);
@@ -338,7 +398,7 @@ const VDPet = (() => {
     ov.innerHTML = `<div class="pet-closeup">
       ${decoHtml(p.deco, 'big')}
       <img loading="lazy" decoding="async" src="${imgOf(p.id, p.stage)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${p.ico}'}))">
-      <div class="pet-evo-txt">${p.ico} ${p.name}　Lv.${p.lv}</div>
+      <div class="pet-evo-txt">${p.ico} ${p.name}${p.star ? `<span class="pet-stars">${starStr(p.star)}</span>` : ''}　Lv.${p.lv}</div>
       <div class="pg-hint" style="color:#eee">⚔️${p.atk}　❤️${p.hp}　詞源之力 +${Math.round(p.power * 100)}%</div>
     </div>`;
     ov.onclick = () => ov.remove();

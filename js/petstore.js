@@ -114,6 +114,19 @@ const VDPets = (() => {
     for (const w of set) { const b = VDStore.box(w); if (b >= 0) learned++; if (b >= 3) mastered++; }
     return { learned, mastered, total: set.size };
   }
+  /* ── P2-7 精通位階 ★1–5：滿級後開放，門檻＝「維持家族精熟比例」──
+     即時重算：字掉出精熟盒（box<3）星數就會回落，天然對應「維持精熟」而非一次達標永久保底。
+     純榮譽，不灌戰力（給榮譽不硬塞數值）。 */
+  const STAR_GATE = [0.6, 0.75, 0.85, 0.95, 1.0];   // ★1..★5 需要的精熟比例
+  function starRank(id) {
+    if (lvOf(id) < MAX_LV) return 0;
+    const fs = familyStats(id);
+    if (!fs.total) return 0;
+    const m = fs.mastered / fs.total;
+    let r = 0;
+    for (const g of STAR_GATE) if (m >= g) r++;
+    return r;
+  }
 
   /* ── 屬性 ── */
   const stageOf = lv => lv >= MAX_LV ? 3 : lv >= 10 ? 2 : 1;
@@ -344,6 +357,32 @@ const VDPets = (() => {
     save();
     return { ok: true, id: fid };
   }
+  /* ── P2-8 詞靈取名：自訂暱稱（情感綁定第一槓桿）── */
+  const nickOf = id => (g.owned[id] || {}).nick || '';
+  function setNick(id, name) {
+    const o = g.owned[id];
+    if (!o) return { ok: false, msg: '尚未領養' };
+    name = String(name || '').trim().replace(/\s+/g, ' ');
+    if (name.length > 6) return { ok: false, msg: '名字最多 6 個字' };
+    if (name) o.nick = name; else delete o.nick;
+    save();
+    return { ok: true, name };
+  }
+  const dispName = id => nickOf(id) || (petDef(id) || {}).name || '';
+  /* 可截圖分享的「詞靈名片」資料（立繪＋名字＋等級＋詞源＋★＋圖鑑完成度＋約戰房號留空給 UI 填） */
+  function shareCard(id) {
+    const p = petDef(id);
+    if (!p || !g.owned[id]) return null;
+    const fs = familyStats(id);
+    const dexN = data.pets.filter(x => g.owned[x.id]).length + g.fusions.filter(f => g.owned[f.id]).length;
+    return {
+      id, name: dispName(id), baseName: p.name, ico: p.ico, isFusion: !!p.parents, parents: p.parents || null,
+      lv: lvOf(id), stage: stageOf(lvOf(id)), atk: atk(id), hp: hp(id),
+      power: Math.round(power(id) * 100), star: starRank(id),
+      mastered: fs.mastered, total: fs.total, dex: dexN, dexTotal: data.pets.length,
+      hero: VDGame.heroName()
+    };
+  }
   function setDeco(id, deco) { if (g.owned[id] && DECOS.includes(deco)) { g.owned[id].deco = deco; save(); } }
   function setActive(id) { if (g.owned[id]) { g.active = id; save(); } }
   const active = () => g.active && g.owned[g.active] ? g.active : '';
@@ -355,6 +394,8 @@ const VDPets = (() => {
       const o = g.owned[p.id];
       return {
         ...p, owned: !!o, lv: o ? o.lv : 0, stage: o ? stageOf(o.lv) : 1,
+        name: (o && o.nick) || p.name, baseName: p.name, nick: o ? (o.nick || '') : '',
+        star: o ? starRank(p.id) : 0,
         power: power(p.id), atk: o ? atk(p.id) : 0, hp: o ? hp(p.id) : 0,
         equip: o ? o.equip : {}, deco: o ? o.deco : '', isActive: g.active === p.id,
         isFusion: !!p.parents
@@ -389,7 +430,7 @@ const VDPets = (() => {
     const id = active();
     if (!id) return null;
     return {
-      nick: VDGame.heroName(), petId: id, petName: (petDef(id) || {}).name,
+      nick: VDGame.heroName(), petId: id, petName: dispName(id),
       lv: lvOf(id), atk: atk(id), hp: hp(id),
       skills: skillsOf(id).filter(s => s.unlocked).map(s => s.id), rating: g.rating
     };
@@ -410,6 +451,7 @@ const VDPets = (() => {
 
   return {
     init, list, adopt, adoptCost, levelUp, levelCost, power, familyStats, atk, atkBreakdown, hp, stageOf, lvOf,
+    starRank, STAR_GATE, setNick, nickOf, shareCard, dispName,
     rollDrop, equip, unequip, skillsOf, setDeco, setActive, active, DECOS, SLOTS, SLOT_NAME,
     PERKS, hasPerk, activePerks, assist, bag, addToBag, dropBag, forge, forgeReq, equipFromBag, eqDex,
     bagMax, bagUpgradeCost, upgradeBag,
