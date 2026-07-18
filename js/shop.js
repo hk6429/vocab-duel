@@ -28,10 +28,12 @@ const VDShop = (() => {
         <div class="wc-card-body">
           <div class="hero-sec">字幣商店　<b class="shop-wallet">🪙 ${g.coins}</b></div>
           <div class="shop-list">${items}</div>
-          <div class="hero-shieldhint">頭像框買一次永久擁有；護盾與羽毛是消耗品，用掉再補。</div>
+          <div class="hero-shieldhint">頭像框買一次永久擁有；護盾與羽毛是消耗品，用掉再補。所有價格都是固定標價，沒有隨機抽卡。</div>
+          <div class="hero-shieldhint">🎁 寶箱公開機率：傳說 ${g.CHEST_ODDS ? g.CHEST_ODDS.legendary : 5}%（${g.CHEST_CONTENT ? g.CHEST_CONTENT.legendary : ''}）・稀有 ${g.CHEST_ODDS ? g.CHEST_ODDS.rare : 25}%（${g.CHEST_CONTENT ? g.CHEST_CONTENT.rare : ''}）・普通 ${g.CHEST_ODDS ? g.CHEST_ODDS.common : 70}%（${g.CHEST_CONTENT ? g.CHEST_CONTENT.common : ''}），每種稀有度內容固定，無隱藏加成。</div>
           ${g.frame ? '<button class="btn ghost sm" id="unframe">卸下頭像框</button>' : ''}
         </div>
       </div>
+      <div class="vg-disclaimer">${g.DISCLAIMER || ''}</div>
       ${VDGame.milestoneHtml()}
       <button class="btn ghost wide" onclick="VDApp.go('menu')">回主選單</button>`;
     el.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => {

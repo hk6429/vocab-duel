@@ -2,6 +2,11 @@
 const VDQuiz = (() => {
   const ROUND = 10;
   const SESSION_MAX = 20; // 畢業自測最多考一批閃卡的量
+  /* IEP 個別化調節：老師可為單一學生設「單次題數上限」，減少一次要面對的題量（注意力/挫折容忍度低的學生） */
+  function capItems(n) {
+    const m = (window.VDMode && VDMode.acc('maxItems'));
+    return (typeof m === 'number' && m > 0) ? Math.min(n, m) : n;
+  }
   let questions = [], idx = 0, score = 0, combo = 0;
   let wrongStreak = 0, rescue = false, curPool = []; // 連錯救援：連錯 3 題起後續誘答改隨機
   let session = 0; // 場次代號：自動下一題的計時器用來偵測「已離開這一輪」
@@ -55,7 +60,8 @@ const VDQuiz = (() => {
     return s + Math.random() * 0.9; // 微擾：避免每次固定同幾個誘答
   }
 
-  /* 挑 n 個誘答：依相似度排序取高分者（比隨機更能鑑別），去重同義／同字；easy=救援模式改純隨機 */
+  /* 挑 n 個誘答：依相似度排序取高分者（形近字／同詞性／語意相近為主，比純隨機更能鑑別，也更難靠刪去法猜對）；
+     easy=救援降階模式，改純隨機（真的變簡單，而非只是換個排序） */
   function pickDistractors(word, pool, n, keyFn, formal, easy) {
     const cands = pool.filter(x => x.word !== word.word && keyFn(x) !== keyFn(word));
     const scored = easy
@@ -74,16 +80,20 @@ const VDQuiz = (() => {
 
   /* 為單一字建一題，pool 供同 level 誘答；allowSpell 開啟產出型拼寫題（僅自測用，對戰不出）；easy=救援模式；
      bias=true 時優先挑這個字「還沒答對過」的題型（逼題型多樣性，防止只靠同一種題型騙過系統），僅自測模式傳入 */
-  function makeQuestionFor(w, pool, allowSpell, easy, bias) {
+  function makeQuestionFor(w, pool, allowSpell, easy, bias, forceType) {
     const sameLevel = pool.filter(x => x.level === w.level);
     const fam = VDStore.box(w.word) >= 2; // 盒 ≥2 = 已穩固；未穩固不出形近誘答、不出拼寫
+    const dn = easy ? 1 : 3; // 救援降階：4 選一 → 2 選一，選項變少也更容易鎖定
     const types = ['e2z', 'z2e'];
     const clz = cloze(w);
     if (clz) types.push('cloze');
-    // 拼寫題只給已穩固（盒 ≥2）、單一純字母、長度 3–12 的字（新字／片語／連字號不出），並提高權重
-    if (allowSpell && fam && /^[a-z]{3,12}$/i.test(w.word)) types.push('spell', 'spell');
+    // 拼寫題只給已穩固（盒 ≥2）、單一純字母、長度 3–12 的字（新字／片語／連字號不出），並提高權重；
+    // 救援降階時完全不出（產出題→辨識題，真降階而非只是換誘答）
+    if (allowSpell && !easy && fam && /^[a-z]{3,12}$/i.test(w.word)) types.push('spell', 'spell');
     let type;
-    if (bias && !easy) {
+    if (forceType) {
+      type = forceType; // 攻克輪強制拼寫產出題（不受 fam/字型限制），親手打對才算攻克
+    } else if (bias && !easy) {
       const seen = VDStore.correctTypes(w.word);
       const untested = types.filter(t => !seen.has(t));
       type = untested.length ? untested[Math.floor(Math.random() * untested.length)] : types[Math.floor(Math.random() * types.length)];
@@ -98,16 +108,16 @@ const VDQuiz = (() => {
       const enMode = localStorage.getItem('vd_quizmode') === 'en' && window.VDEnrich;
       const defOf = x => { const e = enMode ? VDEnrich.get(x.word) : null; return (e && e.def_en) || ''; };
       if (enMode && defOf(w)) {
-        const ds = pickDistractors(w, sameLevel.filter(x => defOf(x)), 3, x => defOf(x), false, easy);
-        if (ds.length === 3) { q = { type, prompt: w.word, sub: '哪個英文解釋符合？（英英模式）', options: shuffle([defOf(w), ...ds.map(defOf)]), ans: defOf(w) }; q.reveal = revMap([w, ...ds], defOf, x => x.word); }
+        const ds = pickDistractors(w, sameLevel.filter(x => defOf(x)), dn, x => defOf(x), false, easy);
+        if (ds.length === dn) { q = { type, prompt: w.word, sub: '哪個英文解釋符合？（英英模式）', options: shuffle([defOf(w), ...ds.map(defOf)]), ans: defOf(w) }; q.reveal = revMap([w, ...ds], defOf, x => x.word); }
       }
       if (!q) {
-        const ds = pickDistractors(w, sameLevel, 3, x => x.zh, false, easy);
+        const ds = pickDistractors(w, sameLevel, dn, x => x.zh, false, easy);
         q = { type, prompt: w.word, sub: '這個字是什麼意思？', options: shuffle([w.zh, ...ds.map(d => d.zh)]), ans: w.zh };
         q.reveal = revMap([w, ...ds], x => x.zh, x => x.word);
       }
     } else if (type === 'z2e') {
-      const ds = pickDistractors(w, sameLevel, 3, x => x.word, fam && !easy, easy);
+      const ds = pickDistractors(w, sameLevel, dn, x => x.word, fam && !easy, easy);
       /* 英英模式：題幹改用英文定義（缺 def_en 則 fallback 原中文） */
       const enMode = localStorage.getItem('vd_quizmode') === 'en' && window.VDEnrich;
       const e = enMode ? VDEnrich.get(w.word) : null;
@@ -116,7 +126,7 @@ const VDQuiz = (() => {
         : { type, prompt: w.zh, sub: '哪個英文字對應這個意思？', options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
       q.reveal = revMap([w, ...ds], x => x.word, x => x.zh);
     } else if (type === 'cloze') {
-      const ds = pickDistractors(w, sameLevel, 3, x => x.word, fam && !easy, easy);
+      const ds = pickDistractors(w, sameLevel, dn, x => x.word, fam && !easy, easy);
       q = { type, prompt: clz.text, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
       q.reveal = revMap([w, ...ds], x => x.word, x => x.zh);
     } else {
@@ -146,7 +156,7 @@ const VDQuiz = (() => {
       const pa = (ba === -1 ? 2.5 : ba) - (VDStore.isFakeMastery(a.word) ? 1.5 : 0);
       const pb = (bb === -1 ? 2.5 : bb) - (VDStore.isFakeMastery(b.word) ? 1.5 : 0);
       return pa - pb + (Math.random() - 0.5);
-    }).slice(0, ROUND);
+    }).slice(0, capItems(ROUND));
     return targets.map(w => makeQuestionFor(w, pool, true, false, true));
   }
 
@@ -164,14 +174,35 @@ const VDQuiz = (() => {
   let startOpts = null;
   function startWith(list, el, pool, opts) {
     curPool = (pool && pool.length ? pool : list).slice();
-    questions = list.slice(0, SESSION_MAX).map(w => makeQuestionFor(w, curPool, true, false, true));
+    questions = list.slice(0, capItems(SESSION_MAX)).map(w => makeQuestionFor(w, curPool, true, false, true));
     idx = 0; score = 0; combo = 0; wrongStreak = 0; rescue = false; render._awarded = false;
     startOpts = opts || null;
     session++;
     render(el);
   }
 
-  /* 連錯救援：連錯 3 題起，剩餘題目誘答改隨機（好排除），並安撫一句 */
+  /* 攻克輪：把「今天答錯且尚未攻克」的字全出成拼寫產出題，親手打對才清掉錯字（道具無法跳過）。
+     conquerMode 讓結算畫面收斂——攻克完再檢查是否還有殘留。 */
+  let conquerMode = false;
+  function conquer(el) {
+    el = el || document.getElementById('app');
+    const scope = (typeof VDApp !== 'undefined' && VDApp.scopeWords) ? VDApp.scopeWords() : [];
+    const todo = VDStore.todayWrongUnconquered(scope);
+    if (!todo.length) { render(el); return; }
+    curPool = scope.slice();
+    questions = todo.slice(0, capItems(SESSION_MAX)).map(w => makeQuestionFor(w, curPool, true, false, false, 'spell'));
+    idx = 0; score = 0; combo = 0; wrongStreak = 0; rescue = false; render._awarded = false;
+    startOpts = null; conquerMode = true;
+    session++;
+    render(el);
+  }
+  /* 今日待攻克清單（結算畫面用）：限 scope 範圍內今天答錯還沒拼對的字 */
+  function unconqueredNow() {
+    const scope = (typeof VDApp !== 'undefined' && VDApp.scopeWords) ? VDApp.scopeWords() : [];
+    return VDStore.todayWrongUnconquered(scope);
+  }
+
+  /* 連錯救援：連錯 3 題起，真降階——剩餘題目選項 4→2、拿掉拼寫產出題只留辨識題，並安撫一句 */
   function trackStreak(correct) {
     if (correct) { wrongStreak = 0; return; }
     wrongStreak++;
@@ -185,6 +216,13 @@ const VDQuiz = (() => {
     }
   }
 
+  /* 救援模式提示條：告知選項變少＋可退回閃卡重學這個字（不強迫，開放選項） */
+  function rescueBanner() {
+    if (!rescue) return '';
+    return `<div class="pg-hint qz-rescue">🪶 救援模式：選項變少、題型變簡單
+      <button class="btn ghost mini" onclick="VDApp.go('flash')">回閃卡重學</button></div>`;
+  }
+
   function render(el) {
     if (idx >= questions.length) {
       if (!render._awarded) {
@@ -196,8 +234,18 @@ const VDQuiz = (() => {
         el.innerHTML = startOpts.doneHtml(score, questions.length);
         return;
       }
+      conquerMode = false;
+      const unconq = unconqueredNow();
+      const conquerCard = unconq.length
+        ? `<div class="conquer-todo">
+             <div class="ct-title">🎯 今天還有 ${unconq.length} 個答錯的字沒攻克</div>
+             <div class="ct-sub">用拼寫題親手打對一次才算真的學會——復活羽毛／護盾不能跳過這關。</div>
+             <button class="btn ct-go" onclick="VDQuiz.conquer()">去攻克這 ${unconq.length} 個字 →</button>
+           </div>`
+        : `<div class="conquer-done">✅ 今天答錯的字都攻克了，紮實！</div>`;
       el.innerHTML = `<div class="card-done"><div class="big">${score >= 8 ? '🏆' : score >= 5 ? '💪' : '📖'}</div>
         <p>答對 ${score} / ${questions.length} 題！</p>
+        ${conquerCard}
         ${VDGame.milestoneHtml()}
         <button class="btn" onclick="VDApp.go('quiz')">再測一輪</button>
         <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button></div>`;
@@ -210,6 +258,7 @@ const VDQuiz = (() => {
     // 題幹是英文時（看英想中、例句挖空）給發音鈕；看中選英的題幹是中文不給
     const promptSpk = q.type !== 'z2e' ? VDSpeak.btn(q.word) : '';
     el.innerHTML = `
+      ${rescueBanner()}
       <div class="flash-progress">第 ${idx + 1} / ${questions.length} 題　得分 ${score}</div>
       <div class="quiz-prompt">${q.prompt} ${promptSpk}</div>
       <div class="quiz-sub">${q.sub}</div>
@@ -223,8 +272,9 @@ const VDQuiz = (() => {
         const v = decodeURIComponent(btn.dataset.v);
         const correct = v === q.ans;
         combo = correct ? combo + 1 : 0;
-        VDStore.record(q.word, correct, undefined, { qtype: q.type, ms: performance.now() - qStart });
-        VDGame.onAnswer(correct, 'quiz', combo);
+        // 救援狀態下答對要標記 source='rescue'：record() 不升盒、不清錯題本、不算精熟
+        const res = VDStore.record(q.word, correct, rescue ? 'rescue' : undefined, { qtype: q.type, ms: performance.now() - qStart });
+        VDGame.onAnswer(correct, 'quiz', combo, { graduated: !!(res && res.graduated) });
         trackStreak(correct);
         if (correct) score++;
         el.querySelectorAll('.opt').forEach(b => {
@@ -241,6 +291,7 @@ const VDQuiz = (() => {
   /* 拼寫產出題：只給中文＋例句提示，學生打出英文，比選項辨識更能測真實掌握 */
   function renderSpell(el, q) {
     el.innerHTML = `
+      ${rescueBanner()}
       <div class="flash-progress">第 ${idx + 1} / ${questions.length} 題　得分 ${score}</div>
       <div class="quiz-prompt">${q.prompt}</div>
       <div class="quiz-sub">${q.sub}</div>
@@ -259,8 +310,9 @@ const VDQuiz = (() => {
     const finish = correct => {
       locked = true;
       combo = correct ? combo + 1 : 0;
-      VDStore.record(q.word, correct, undefined, { qtype: q.type, ms: performance.now() - qStart });
-      VDGame.onAnswer(correct, 'spell', combo);
+      // 拼寫題在救援降階模式下本就不出（見 makeQuestionFor），這裡仍防呆比照 rescue 規則
+      const res = VDStore.record(q.word, correct, rescue ? 'rescue' : undefined, { qtype: q.type, ms: performance.now() - qStart });
+      VDGame.onAnswer(correct, 'spell', combo, { graduated: !!(res && res.graduated) });
       trackStreak(correct);
       if (correct) score++;
       input.disabled = true;
@@ -306,5 +358,5 @@ const VDQuiz = (() => {
     else fb.querySelector('.qz-next').onclick = next;
   }
 
-  return { start, startWith, randomQuestion };
+  return { start, startWith, randomQuestion, conquer, unconqueredNow };
 })();

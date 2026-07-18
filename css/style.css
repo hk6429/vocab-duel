@@ -492,6 +492,19 @@ body.dark .tts-help.warn b, body.dark .tts-lead b { color: #f0b878; }
 .sp-timer { position: relative; flex: 1; height: 24px; border-radius: 99px; background: rgba(43,43,43,.1); overflow: hidden; }
 .sp-timer-fill { height: 100%; background: linear-gradient(90deg,var(--green),#8fb8dd); transition: width 1s linear; }
 .sp-timer.danger .sp-timer-fill { background: var(--red); }
+/* 剩 10 秒告急：1Hz 淡入淡出（遠低於 3Hz 光敏安全門檻）；reduced-motion／簡化／IEP 無限時模式一律改靜態變色不閃 */
+.sp-timer.danger { animation: spDangerPulse 1s ease-in-out infinite; }
+@keyframes spDangerPulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) {
+  .sp-timer.danger { animation: none; }
+  .sp-timer.danger .sp-timer-fill { background: #a8433d; }
+}
+body.simplified .sp-timer.danger,
+body.iep-notimer .sp-timer.danger {
+  animation: none;
+}
+body.simplified .sp-timer.danger .sp-timer-fill,
+body.iep-notimer .sp-timer.danger .sp-timer-fill { background: #a8433d; }
 .sp-timer span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; font-family: var(--font-en); }
 .sp-score { font-weight: 800; font-size: 16px; color: #6f9fc9; flex: none; font-family: var(--font-en); }
 /* 對戰鎖定 */
@@ -553,6 +566,78 @@ body.fs-large .opt-text, body.fs-large .ex-stem, body.fs-large .ex-passage { fon
 body.fs-large .flash-word { font-size: 40px; }
 body.fs-large .flash-zh, body.fs-large .qz-zh, body.fs-large .sr-pos { font-size: 19px; }
 body.fs-large .sr-word, body.fs-large .sr-ex, body.fs-large .en-def, body.fs-large .qz-ex { font-size: 17px; }
+
+/* ── 字級放大：特大（fs-xlarge，第三段，涵蓋範圍與 fs-large 相同，數值再拉高） ── */
+body.fs-xlarge { font-size: 128%; }
+body.fs-xlarge .btn.main { font-size: 25px; }
+body.fs-xlarge .menu-group .btn.main .m-sub { font-size: 15px; }
+body.fs-xlarge .wc-mcard-title { font-size: 22px; }
+body.fs-xlarge .wc-mcard-sub { font-size: 15px; }
+body.fs-xlarge .wc-stage-name { font-size: 32px; }
+body.fs-xlarge .bt-name { font-size: 21px; }
+body.fs-xlarge .stat-num { font-size: 44px; }
+body.fs-xlarge .tw-bubble { font-size: 1.2rem; }
+body.fs-xlarge .tw-bopt { font-size: 1.14rem; }
+body.fs-xlarge .tw-quest { font-size: 1.14rem; }
+body.fs-xlarge .quiz-prompt { font-size: 34px; }
+/* 選項按鈕・題幹・例句・聽力題幹：特大模式的核心，不能只放大閃卡 */
+body.fs-xlarge .opt-text, body.fs-xlarge .ex-stem, body.fs-xlarge .ex-passage,
+body.fs-xlarge .quiz-sub, body.fs-xlarge .lst-icon { font-size: 20px; }
+body.fs-xlarge .flash-word { font-size: 46px; }
+body.fs-xlarge .flash-zh, body.fs-xlarge .qz-zh, body.fs-xlarge .sr-pos, body.fs-xlarge .flash-pos { font-size: 22px; }
+body.fs-xlarge .flash-ex, body.fs-xlarge .sr-word, body.fs-xlarge .sr-ex, body.fs-xlarge .en-def, body.fs-xlarge .qz-ex { font-size: 19px; }
+
+/* ── 易讀字型（dyslexia）：CSP 禁外連字型且無本地字型檔，改用系統易讀字型堆疊
+   TODO：日後若允許放本地字型檔，可換成 OpenDyslexic 或 Lexend webfont（@font-face + data: URI 內嵌），
+   目前先以加大字距／行高／字重取代專用易讀字型的效果 ── */
+body.dyslexia, body.dyslexia .quiz-prompt, body.dyslexia .flash-word, body.dyslexia .opt-text,
+body.dyslexia .flash-ex, body.dyslexia .ex-stem, body.dyslexia .ex-passage {
+  font-family: Verdana, Tahoma, "Trebuchet MS", var(--cjk), sans-serif;
+  letter-spacing: .04em;
+  line-height: 1.9;
+  font-weight: 500;
+}
+body.dyslexia .quiz-prompt, body.dyslexia .flash-word { font-weight: 700; }
+
+/* ── 高對比模式 ── */
+body.high-contrast { --bg: #ffffff; --panel: #ffffff; --text: #000000; --ink: #000000; --muted: #333333; --line: rgba(0,0,0,.4); }
+body.high-contrast .btn { background: #000; color: #fff; border: 2px solid #000; }
+body.high-contrast .btn.ghost { background: #fff; color: #000; border: 2px solid #000; }
+body.high-contrast .btn.opt { background: #fff; color: #000; border: 2px solid #000; }
+body.high-contrast .quiz-prompt, body.high-contrast .flash-card { border: 2px solid #000; }
+body.high-contrast.dark { --bg: #000; --panel: #000; --text: #fff; --ink: #fff; --muted: #ddd; --line: rgba(255,255,255,.5); }
+body.high-contrast.dark .btn { background: #fff; color: #000; border: 2px solid #fff; }
+body.high-contrast.dark .btn.ghost, body.high-contrast.dark .btn.opt { background: #000; color: #fff; border: 2px solid #fff; }
+
+/* ── 精簡／專注模式（simplified）：隱藏遊戲經濟層，只留核心練習
+   資料來自 app.js card()/lockCard() 加上的 data-view、menu-group 加上的 data-group ── */
+body.simplified .menu-group[data-group="battle"],
+body.simplified .menu-group[data-group="spirit"],
+body.simplified .menu-group[data-group="city"] { display: none; }
+/* 練習分組：只留閃卡／自測／聽力／弱字本／作業指派相關；收起寫作坊・限時衝刺・錯題複習等進階/PvP 玩法 */
+body.simplified .menu-group[data-group="practice"] [data-view="write"],
+body.simplified .menu-group[data-group="practice"] [data-view="sprint"],
+body.simplified .menu-group[data-group="practice"] [data-view="review"] { display: none; }
+/* 英雄分組：留英雄檔案（設定入口在裡面），收起字幣商店・圖鑑・攻略 */
+body.simplified .menu-group[data-group="hero"] [data-view="shop"],
+body.simplified .menu-group[data-group="hero"] [data-view="dex"],
+body.simplified .menu-group[data-group="hero"] [data-view="guide"] { display: none; }
+/* 更多工具：查單字・字綴・會考・雲端／班級榜（排行榜）・收藏 先收起，定位前測／跟我讀／Pre-A 解碼保留 */
+body.simplified .tools-fold [data-view="search"],
+body.simplified .tools-fold [data-view="affix"],
+body.simplified .tools-fold [data-view="exam"],
+body.simplified .tools-fold [data-view="cloud"],
+body.simplified .tools-fold [data-view="starred"] { display: none; }
+/* 首頁每日任務面板（寶箱／市場／抽卡週挑戰）與英雄橫幅字幣徽章：遊戲經濟層 */
+body.simplified .vg-daily { display: none; }
+body.simplified .vg-strip .vg-coins { display: none; }
+/* 英雄檔案內：段位／PvP 排名、字幣錢包（含商店捷徑）、產生挑戰連結（PvP） */
+body.simplified .hero-rank,
+body.simplified .hero-wallet { display: none; }
+body.simplified #chalBtn { display: none; }
+/* 英雄檔案分頁：班級榜／詞靈榜＝排行榜，收起只留本人戰績 */
+body.simplified .hero-tab[data-htab="class"],
+body.simplified .hero-tab[data-htab="pet"] { display: none; }
 
 /* ── 3D Pixel 配圖 ── */
 .m-img { width: 46px; height: 46px; flex: none; border-radius: 10px; object-fit: cover; }

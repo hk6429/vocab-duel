@@ -21,6 +21,19 @@ const VDWeak = (() => {
 
   const count = (words) => build(words).length;
 
+  /* 個人彙報快照：給雲端 selfReport 用的格式（已鞏固/複習中計數＋弱字清單 {word:reasons數}）
+     durable/learning 走 VDStore 新契約（isDurable≥5鞏固／isLearning≥3複習中）；
+     舊版 store.js 若尚未提供這兩個介面，就回傳 null 讓呼叫端自行決定要不要顯示 */
+  function studentWeak() {
+    const words = (window.VDApp && VDApp.words) ? VDApp.words() : [];
+    const list = build(words);
+    const weak = {};
+    for (const { w, reasons } of list.slice(0, 50)) weak[w.word] = reasons.length;
+    const durable = VDStore.durableCount ? VDStore.durableCount(words) : null;
+    const learning = VDStore.learningCount ? VDStore.learningCount(words) : null;
+    return { durable, learning, weak };
+  }
+
   function boxPips(word) {
     const b = VDStore.box(word);
     return `<span class="af-pos" title="熟悉度第 ${Math.max(0, b)} 盒">${'●'.repeat(Math.max(0, b))}${'○'.repeat(5 - Math.max(0, b))}</span>`;
@@ -62,6 +75,6 @@ const VDWeak = (() => {
     };
   }
 
-  return { start, count };
+  return { start, count, studentWeak };
 })();
 window.VDWeak = VDWeak;

@@ -102,7 +102,7 @@ const VDApp = (() => {
       const stageName = { E: '國小 1200', J: '國中 2000', S: '高中 6000' }[VDStore.stage];
       // 圖卡：上圖下字，水彩西洋文豪風；圖載入失敗退 emoji 佔位
       const card = (view, key, ico, title, sub, feature, badge) => `
-        <button class="wc-mcard${feature ? ' feature' : ''}" onclick="VDApp.go('${view}')">
+        <button class="wc-mcard${feature ? ' feature' : ''}" data-view="${view}" onclick="VDApp.go('${view}')">
           ${badge ? `<span class="wc-mcard-badge">${badge}</span>` : ''}
           <img loading="lazy" decoding="async" class="wc-mcard-img" src="img/ui/${key}.webp" alt=""
             onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'wc-mcard-ph',textContent:'${ico}'}))">
@@ -115,10 +115,10 @@ const VDApp = (() => {
       const starN = VDStore.starWords(words).length;
       // 漸進解鎖：依英雄等級分階開放功能，解鎖本身就是獎勵（老玩家等級高，全部照舊開著）
       const lv = VDGame.level();
-      const lockCard = (ico, title, need, feature) => {
+      const lockCard = (ico, title, need, feature, view) => {
         const pct = VDGame.progressToLevel(need);
         return `
-        <div class="wc-mcard menu-card locked${feature ? ' feature' : ''}" aria-disabled="true">
+        <div class="wc-mcard menu-card locked${feature ? ' feature' : ''}"${view ? ` data-view="${view}"` : ''} aria-disabled="true">
           <div class="wc-mcard-ph">${ico}</div>
           <div class="wc-mcard-cap">
             <div class="wc-mcard-title">${title}</div>
@@ -128,7 +128,7 @@ const VDApp = (() => {
         </div>`;
       };
       // 新手引導卡：還沒學過任何字（= 尚未入門）就置頂顯示；練過第一個字自動消失
-      const intro = VDStore.stats(allWords).seen === 0 ? `
+      const intro = (VDStore.stats(allWords).seen === 0 && !VDMode.simplified()) ? `
         <div class="wc-card" style="border:2px solid #e8a020;background:linear-gradient(135deg,#fff8ec,#fdefd2)">
           <div class="wc-card-body">
             <div class="hero-sec">👋 第一次來？先打一場</div>
@@ -160,57 +160,60 @@ const VDApp = (() => {
         ${dashboard(words, stageName)}
         ${lockChip}
         ${levelChips()}
-        <div class="menu-group">
+        <div class="menu-group" data-group="practice">
           <div class="menu-glabel">練習</div>
           <div class="wc-mgrid">
             ${card('flash', 'm_flash', '🃏', '閃卡練功', '五盒間隔複習，記得牢')}
             ${card('quiz', 'm_quiz', '✍️', '單字自測', '三題型隨機，一輪十題')}
             ${card('listen', 'm_listen', '🎧', '聽力理解', '聽音辨義／聽寫關鍵字')}
             ${card('write', 'm_write', '📝', '寫作坊', '造句・重組・填空，自己寫出來')}
-            ${lv >= 2 ? card('sprint', 'm_sprint', '⏱️', '限時衝刺', '60 秒搶答，衝高分') : lockCard('⏱️', '限時衝刺', 2)}
+            ${lv >= 2 ? card('sprint', 'm_sprint', '⏱️', '限時衝刺', '60 秒搶答，衝高分') : lockCard('⏱️', '限時衝刺', 2, false, 'sprint')}
             ${weakN ? card('weak', 'm_weak', '🩺', '弱字本', '錯過＋假熟練，一站補強', false, weakN) : ''}
             ${lv >= 2 && wrongN ? card('review', 'm_review', '🩹', '錯題複習', '只練你答錯過的字', false, wrongN) : ''}
           </div>
         </div>
-        <div class="menu-group">
+        <div class="menu-group" data-group="battle">
           <div class="menu-glabel">對戰</div>
           <div class="wc-mgrid">
             ${card('battle', 'm_battle', '🎭', '文學家對戰', '八位文豪闖關／同機雙人搶答', true)}
             ${localStorage.getItem('vd_classcode') ? card('live', 'm_live', '📡', '隨堂考', '老師開場，全班同步搶答') : ''}
           </div>
         </div>
-        <div class="menu-group">
+        <div class="menu-group" data-group="spirit">
           <div class="menu-glabel">詞靈</div>
           <div class="wc-mgrid">
             ${lv >= 3 ? `
             ${card('pets', 'm_pets', '🐾', '詞靈夥伴', '20 隻字綴守護獸，學字餵養', true)}
             ${card('graph', 'm_graph', '🌌', '詞源星圖', '172 字綴星空，越學越亮')}
             ${card('petbattle', 'm_arena', '⚔️', '詞靈競技', '野生試煉＋影子對戰掉裝備')}` :
-            lockCard('🐾', '詞靈系列', 3, true)}
+            lockCard('🐾', '詞靈系列', 3, true, 'spirit')}
           </div>
         </div>
-        <div class="menu-group">
+        <div class="menu-group" data-group="city">
           <div class="menu-glabel">城邦</div>
           <div class="wc-mgrid">
-            ${lv >= 4 ? card('town', 'm_town', '🏰', '單字之城', '背單字蓋出一座城，居民全講英文', true) : lockCard('🏰', '單字之城', 4, true)}
+            ${lv >= 4 ? card('town', 'm_town', '🏰', '單字之城', '背單字蓋出一座城，居民全講英文', true) : lockCard('🏰', '單字之城', 4, true, 'town')}
           </div>
         </div>
-        <div class="menu-group">
+        <div class="menu-group" data-group="hero">
           <div class="menu-glabel">英雄</div>
           <div class="wc-mgrid">
             ${card('hero', 'm_hero', '🦸', '英雄檔案', '稱號・徽章・字幣・自訂頭像', true)}
-            ${lv >= 5 ? card('shop', 'm_shop', '🏪', '字幣商店', '頭像框・護盾・復活羽毛') : lockCard('🏪', '字幣商店', 5)}
+            ${lv >= 5 ? card('shop', 'm_shop', '🏪', '字幣商店', '頭像框・護盾・復活羽毛') : lockCard('🏪', '字幣商店', 5, false, 'shop')}
             ${card('dex', 'm_dex', '🖼️', '單字圖鑑', `把 ${allWords.length} 個字一格一格點亮`)}
             ${card('guide', 'm_guide', '📖', '完全攻略', '玩法・獎勵・升級路線全解析')}
           </div>
         </div>
-        <details class="menu-group tools-fold">
-          <summary><span class="tf-ico">🧰</span> 更多工具 <span class="tf-sub">查單字・字綴・會考・雲端${starN ? '・收藏' : ''}</span></summary>
+        <details class="menu-group tools-fold" data-group="tools">
+          <summary><span class="tf-ico">🧰</span> 更多工具 <span class="tf-sub">查單字・字綴・會考・雲端・診斷${starN ? '・收藏' : ''}</span></summary>
           <div class="wc-mgrid">
             ${card('search', 'm_search', '🔍', '查單字', '打英文或中文，秒查秒收藏')}
             ${card('affix', 'm_affix', '🧩', '字綴心智圖', '字首字尾字根，成串記憶')}
             ${card('exam', 'm_exam', '📝', '會考考古題', '104–115 閱讀 445 題')}
             ${card('cloud', 'm_cloud', '☁️', '雲端／班級榜', '跨裝置存進度・拚排名')}
+            ${card('placement', 'm_placement', '📐', '定位前測', '分頻適性，先測出你的起點')}
+            ${card('repeat', 'm_repeat', '🗣️', '跟我讀', '語音跟讀，練發音')}
+            ${card('phonics', 'm_phonics', '🔤', 'Pre-A 解碼', '字母拼讀先修，打底再上路')}
             ${starN ? card('starred', 'm_starred', '⭐', '我的收藏', '只刷你加星的字', false, starN) : ''}
           </div>
         </details>
@@ -322,6 +325,18 @@ const VDApp = (() => {
       $view().innerHTML = header('查單字') + '<div id="mod"></div>';
       VDSearch.start(document.getElementById('mod'));
     },
+    placement() {
+      $view().innerHTML = header('定位前測') + '<div id="mod"></div>';
+      VDPlacement.start(document.getElementById('mod'));
+    },
+    repeat() {
+      $view().innerHTML = header('跟我讀') + '<div id="mod"></div>';
+      VDRepeat.start(document.getElementById('mod'));
+    },
+    phonics() {
+      $view().innerHTML = header('Pre-A 解碼') + '<div id="mod"></div>';
+      VDPhonics.start(document.getElementById('mod'));
+    },
     cloud() {
       $view().innerHTML = header('雲端／班級榜') + '<div id="mod"></div>';
       VDCloud.start(document.getElementById('mod'));
@@ -384,18 +399,9 @@ const VDApp = (() => {
     VDGame.toast(on ? `⭐ 收藏「${word}」` : `取消收藏「${word}」`);
   }
 
-  /* 字級：normal / large，套用 body class（放大主要閱讀文字） */
-  function applyFontScale() {
-    const fs = localStorage.getItem('vd_fontscale') || 'normal';
-    document.body.classList.toggle('fs-large', fs === 'large');
-  }
-  function toggleFontScale() {
-    const cur = localStorage.getItem('vd_fontscale') || 'normal';
-    const next = cur === 'large' ? 'normal' : 'large';
-    localStorage.setItem('vd_fontscale', next);
-    applyFontScale();
-    return next;
-  }
+  /* 字級：normal / large / xlarge，實際套用 body class 交給 VDMode（單一真相來源） */
+  function applyFontScale() { VDMode.apply(); }
+  function toggleFontScale() { return VDMode.cycleFontScale(); }
   /* 深色模式：自習室護眼用 */
   function applyTheme() {
     document.body.classList.toggle('dark', localStorage.getItem('vd_theme') === 'dark');

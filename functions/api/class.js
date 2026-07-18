@@ -5,6 +5,11 @@
 // POST { op:'get', code }                           → 學生端讀指派清單（公開，不含 PIN）
 // POST { op:'weakReport', code, words:{word:n} }    → 學生端批次上報錯字次數
 // POST { op:'weakTop', code, pin }                  → 老師讀全班弱字 Top 30
+// POST { op:'selfReport', code, name, durable, learning, weak:{word:n} } → 學生端上報個人已鞏固/複習中計數＋弱字
+// POST { op:'asgLog', code, name, asgId, results:{word:0|1} }           → 學生端上報單份指派逐字對錯
+// POST { op:'studentDetail', code, pin, name }      → 老師讀單一學生弱字/作答明細（PIN 驗證）
+// POST { op:'setAcc', code, pin, name, acc:{...} }  → 老師設定單一學生 IEP 調節（PIN 驗證）
+// POST { op:'getAcc', code, name }                  → 讀某暱稱目前調節設定（供學生端 VDMode 套用）
 import { redisFor, vercelToPages } from "./_redis.js";
 let redis;
 
@@ -13,6 +18,9 @@ const TTL = 240 * 24 * 60 * 60; // 一學年左右，跟 board.js 一致
 const KEY = (c) => `vd:class:${c}`;
 const ASG_KEY = (c) => `vd:class:${c}:asg`;
 const WEAK_KEY = (c) => `vd:weak:${c}`;
+const SW_KEY = (c) => `vd:class:${c}:sw`;   // per-student 弱字/已鞏固複習中計數（field=暱稱）
+const LOG_KEY = (c) => `vd:class:${c}:log`; // per-student 指派逐字對錯（field=暱稱::指派ID）
+const ACC_KEY = (c) => `vd:class:${c}:acc`; // per-student IEP 個別調節（field=暱稱）
 const MAX_ASG = 8;
 const okCode = (c) => typeof c === "string" && /^[一-鿿A-Za-z0-9_-]{2,16}$/.test(c);
 const okPin = (p) => typeof p === "string" && /^\d{4,8}$/.test(p);
@@ -57,6 +65,43 @@ function cleanAsg(a) {
   const module_ = ["", "quiz", "listen", "flash", "write"].includes(a.module) ? a.module : "";
   const due = typeof a.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(a.due) ? a.due : "";
   return { id, name: a.name.trim(), words: a.words.map((w) => w.trim().toLowerCase()), module: module_, due, lock: a.lock ? 1 : 0, ts: Date.now() };
+}
+
+/* 個人弱字清單清洗：{word:n} → 依 n 降序取前 20 筆 */
+function cleanWeakList(words) {
+  if (!words || typeof words !== "object") return [];
+  const entries = Object.entries(words)
+    .filter(([w]) => okWord(w))
+    .map(([w, n]) => ({ word: w.trim().toLowerCase(), n: Math.max(1, Math.min(999, Math.round(Number(n) || 1))) }));
+  entries.sort((a, b) => b.n - a.n);
+  return entries.slice(0, 20);
+}
+
+/* 指派逐字對錯清洗：{word:0|1} → 最多 200 筆，格式不對整筆拒收 */
+function cleanResults(results) {
+  if (!results || typeof results !== "object") return null;
+  const out = {};
+  let n = 0;
+  for (const [w, v] of Object.entries(results)) {
+    if (!okWord(w)) continue;
+    out[w.trim().toLowerCase()] = v ? 1 : 0;
+    if (++n >= 200) break;
+  }
+  return n ? out : null;
+}
+
+/* IEP 個別調節清洗：對齊 VDMode.acc 讀取格式 {extraTime,maxItems,noTimer,bigFont,hideEconomy} */
+function cleanAcc(a) {
+  const src = a && typeof a === "object" ? a : {};
+  const extraTime = [1, 1.5, 2].includes(Number(src.extraTime)) ? Number(src.extraTime) : 1;
+  const maxItems = src.maxItems == null || src.maxItems === "" ? null : Math.max(1, Math.min(200, Math.round(Number(src.maxItems) || 0)));
+  return {
+    extraTime,
+    maxItems,
+    noTimer: !!src.noTimer,
+    bigFont: !!src.bigFont,
+    hideEconomy: !!src.hideEconomy,
+  };
 }
 
 async function handler(req, res, env) {
@@ -130,6 +175,86 @@ async function handler(req, res, env) {
       const list = [];
       for (let i = 0; i < raw.length; i += 2) list.push({ word: raw[i], n: Number(raw[i + 1]) });
       return res.status(200).json({ ok: 1, list });
+    }
+
+    if (op === "selfReport") {
+      // 學生端自我彙報：已鞏固/複習中計數 + 個人弱字清單（無 PIN，比照 weakReport 公開寫入）
+      if (await rateLimited(req, "clsself", 20)) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
+      if (!(await redis.exists(KEY(code)))) return res.status(200).json({ ok: 0, error: "班級不存在" });
+      const { name, durable, learning, weak } = req.body || {};
+      if (!okName(name)) return res.status(200).json({ ok: 0, error: "暱稱格式不對" });
+      const rec = {
+        durable: Math.max(0, Math.min(6205, Math.round(Number(durable) || 0))),
+        learning: Math.max(0, Math.min(6205, Math.round(Number(learning) || 0))),
+        weak: cleanWeakList(weak),
+        ts: Date.now(),
+      };
+      await redis.hset(SW_KEY(code), { [name.trim()]: JSON.stringify(rec) });
+      await redis.expire(SW_KEY(code), TTL);
+      return res.status(200).json({ ok: 1 });
+    }
+
+    if (op === "asgLog") {
+      // 學生端上報某份指派的逐字對錯（無 PIN）
+      if (await rateLimited(req, "clslog", 20)) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
+      if (!(await redis.exists(KEY(code)))) return res.status(200).json({ ok: 0, error: "班級不存在" });
+      const { name, asgId, results } = req.body || {};
+      if (!okName(name)) return res.status(200).json({ ok: 0, error: "暱稱格式不對" });
+      if (!/^[a-z0-9]{1,8}$/.test(String(asgId || ""))) return res.status(200).json({ ok: 0, error: "指派 ID 不對" });
+      const cleaned = cleanResults(results);
+      if (!cleaned) return res.status(200).json({ ok: 0, error: "作答紀錄格式不對" });
+      await redis.hset(LOG_KEY(code), { [`${name.trim()}::${asgId}`]: JSON.stringify({ results: cleaned, ts: Date.now() }) });
+      await redis.expire(LOG_KEY(code), TTL);
+      return res.status(200).json({ ok: 1 });
+    }
+
+    if (op === "studentDetail") {
+      // 老師端讀單一學生：個人弱字 Top + 已鞏固/複習中計數 + 近期指派逐字對錯；PIN 驗證
+      if (await rateLimited(req, "clsdetail", 30)) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
+      const cls = await authed(code, req.body.pin);
+      if (!cls) return res.status(200).json({ ok: 0, error: "班級碼或 PIN 不對" });
+      const { name } = req.body || {};
+      if (!okName(name)) return res.status(200).json({ ok: 0, error: "暱稱格式不對" });
+      const nm = name.trim();
+      const swRaw = await redis.hget(SW_KEY(code), nm);
+      const sw = swRaw ? parse(swRaw) : null;
+      const allLogs = (await redis.hgetall(LOG_KEY(code))) || {};
+      const prefix = `${nm}::`;
+      const logs = Object.entries(allLogs)
+        .filter(([f]) => f.startsWith(prefix))
+        .map(([f, v]) => { const d = parse(v); return { asgId: f.slice(prefix.length), results: d.results, ts: d.ts }; })
+        .sort((a, b) => b.ts - a.ts)
+        .slice(0, 10);
+      return res.status(200).json({
+        ok: 1,
+        synced: !!(sw || logs.length),
+        durable: sw ? sw.durable : null,
+        learning: sw ? sw.learning : null,
+        weak: sw ? sw.weak : [],
+        logs,
+      });
+    }
+
+    if (op === "setAcc") {
+      // 老師端設定單一學生的 IEP 個別調節，PIN 驗證；格式對齊 VDMode.acc 讀取需求
+      if (await rateLimited(req, "clsacc", 20)) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
+      const cls = await authed(code, req.body.pin);
+      if (!cls) return res.status(200).json({ ok: 0, error: "班級碼或 PIN 不對" });
+      const { name, acc } = req.body || {};
+      if (!okName(name)) return res.status(200).json({ ok: 0, error: "暱稱格式不對" });
+      const cleaned = cleanAcc(acc);
+      await redis.hset(ACC_KEY(code), { [name.trim()]: JSON.stringify(cleaned) });
+      await redis.expire(ACC_KEY(code), TTL);
+      return res.status(200).json({ ok: 1, acc: cleaned });
+    }
+
+    if (op === "getAcc") {
+      // 學生端（或老師端預覽）讀某暱稱目前的調節設定；無 PIN，公開唯讀，不含任何機敏資料
+      if (await rateLimited(req, "clsacc", 30)) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
+      const { name } = req.body || {};
+      if (!okName(name)) return res.status(200).json({ ok: 0, error: "暱稱格式不對" });
+      const raw = await redis.hget(ACC_KEY(code), name.trim());
+      return res.status(200).json({ ok: 1, acc: raw ? parse(raw) : null });
     }
 
     return res.status(400).json({ error: "bad op" });

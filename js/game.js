@@ -7,7 +7,8 @@ const VDGame = (() => {
     '字鬥真君', '字鬥天尊', '字鬥劍仙', '字鬥文曲', '字鬥星主', '字鬥道尊', '字鬥聖尊', '字鬥帝尊', '字鬥天帝', '字鬥造化'];
   const AVATARS = ['🦸', '🥷', '🧙', '🦉', '🐉', '🦊', '🐯', '🦅', '🐺', '🦁', '👑', '⚔️'];
   const TIER_LV = { 入門: 1, 進階: 2, 高手: 4, 宗師: 6 };
-  const SHIELD_COST = 100;
+  // XP/等級/掌握字數僅為形成性練習指標，非成績依據；供等級/XP/圖鑑等顯示層引用同一份字串
+  const DISCLAIMER = '本平台為形成性練習工具，分數不作為學期成績依據';
 
   const DEFAULT = () => ({
     xp: 0, coins: 0, nick: '', avatar: '🦸',
@@ -67,7 +68,7 @@ const VDGame = (() => {
     { key: 'spell',     label: '本週拼寫答對 30 題', n: 30 },
     { key: 'newwords',  label: '本週點亮 40 個新字', n: 40 },
     { key: 'champion',  label: '本週擊敗擂主 3 次', n: 3 },
-    { key: 'days',      label: '本週連續練習 7 天', n: 7 },
+    { key: 'days',      label: '本週練習 5 天（不必連續，斷一天沒關係）', n: 5 },
     { key: 'battlewin', label: '本週對戰勝利 10 場', n: 10 },
     { key: 'review',    label: '本週複習閃卡 60 張', n: 60 },
     { key: 'sprint',    label: '本週限時衝刺破紀錄 1 次', n: 1 }
@@ -178,7 +179,10 @@ const VDGame = (() => {
   /* ── 答題事件（各模式共用） ── */
   const WRONG_XP_CAP = 30; // 每日前 30 次答錯才有參與分
   const WRONG_MSGS = ['+2 XP，錯的字才是經驗值！', '+2 XP，錯題本已幫你記下這個字！', '+2 XP，再看一眼，下次就是你的分！'];
-  function onAnswer(correct, kind, combo) {
+  // 大獎重綁：答對只發小額 XP/幣，只有 opts.graduated（該字這次首次達「已鞏固」）才發大額獎勵＋慶祝，
+  // 讓獎勵跟著真正記牢的字走，不是跟著「答對這一題」走
+  const GRADUATE_XP = 40, GRADUATE_COINS = 20;
+  function onAnswer(correct, kind, combo, opts) {
     rollDaily();
     restCheck();
     if (!g.seenIntro) g.seenIntro = true; // 答過題 → 解鎖每日任務面板
@@ -202,6 +206,8 @@ const VDGame = (() => {
       // 連擊大場面：平常 ×5、×10、×15…；連擊祭典週降到 ×3、×6、×9…
       const comboStep = weekTheme().key === 'combo' ? 3 : 5;
       if (combo && combo >= comboStep && combo % comboStep === 0) comboSplash(combo);
+      // 唯一的「大獎」出口：這個字這次真的鞏固了（撐過間隔複習仍答對），不是每題都給
+      if (opts && opts.graduated) graduateBonus();
     } else {
       if (window.VDSound) VDSound.wrong();
       const wn = (g.quests.wrongXp || 0) + 1;
@@ -330,26 +336,34 @@ const VDGame = (() => {
     return chest;
   }
 
-  /* ── 寶箱：稀有度隨機獎（CD7）——傳說5%/稀有25%/普通70%，開箱動畫；20 箱保底傳說 ── */
+  /* ── 寶箱：公開透明的固定機率獎勵表（CD7）——傳說5%/稀有25%/普通70%，內容逐項明列、無隱藏加成、
+     無「差一點就中」的保底倒數提示；20 箱保底傳說僅作安全網，不對外做近失（near-miss）催促 ── */
   const PITY_MAX = 20;
+  const CHEST_ODDS = { legendary: 5, rare: 25, common: 70 }; // 公開機率表，供 UI 引用
+  const CHEST_CONTENT = {
+    legendary: '四倍字幣／XP＋護盾 1 枚＋復活羽毛 1 枚',
+    rare: '雙倍字幣／XP＋護盾 1 枚',
+    common: '基礎字幣／XP'
+  };
   function openChest(baseCoins, forceRarity) {
     if (typeof g.pity !== 'number') g.pity = 0; // 舊存檔補欄位
     g.pity++;
     const r = Math.floor(seededRand() * 100);
-    let rarity = forceRarity || (r < 5 ? 'legendary' : r < 30 ? 'rare' : 'common');
-    if (!forceRarity && g.pity >= PITY_MAX) rarity = 'legendary'; // 保底：連 20 箱沒傳說必出
+    let rarity = forceRarity || (r < CHEST_ODDS.legendary ? 'legendary' : r < CHEST_ODDS.legendary + CHEST_ODDS.rare ? 'rare' : 'common');
+    if (!forceRarity && g.pity >= PITY_MAX) rarity = 'legendary'; // 保底：連 20 箱沒傳說必出（安全網，不做倒數催促）
     if (rarity === 'legendary') g.pity = 0;
     const mul = { legendary: 4, rare: 2, common: 1 }[rarity];
-    let coins = baseCoins * mul, xp = baseCoins * mul, extra = '';
-    if (rarity === 'legendary') { g.shield++; g.revive++; extra = '傳說寶箱！四倍獎勵＋護盾＋復活羽毛'; }
-    else if (rarity === 'rare') { if (seededRand() < 0.5) { g.shield++; extra = '稀有寶箱！雙倍獎勵＋護盾'; } else extra = '稀有寶箱！雙倍獎勵'; }
-    else extra = '普通寶箱';
+    let coins = baseCoins * mul, xp = baseCoins * mul;
+    // 固定明確內容，同稀有度必得同樣加碼，不再有隱藏的第二次擲骰
+    if (rarity === 'legendary') { g.shield++; g.revive++; }
+    else if (rarity === 'rare') { g.shield++; }
+    const extra = CHEST_CONTENT[rarity];
     g.coins += coins; g.xp += xp; save();
-    chestAnim(rarity, coins, xp, extra, PITY_MAX - g.pity);
+    chestAnim(rarity, coins, xp, extra);
     return { coins, xp, extra, rarity };
   }
-  /* 開箱動畫：全螢幕水彩寶箱卡，稀有度分色 */
-  function chestAnim(rarity, coins, xp, extra, pityLeft) {
+  /* 開箱動畫：全螢幕水彩寶箱卡，稀有度分色；只列公開機率表與實得內容，不做近失倒數提示 */
+  function chestAnim(rarity, coins, xp, extra) {
     const ICO = { legendary: '👑', rare: '💎', common: '🎁' };
     const NAME = { legendary: '傳說', rare: '稀有', common: '普通' };
     if (window.VDSound) VDSound.coin();
@@ -359,10 +373,21 @@ const VDGame = (() => {
       <div class="vg-chest-r">${NAME[rarity]}寶箱</div>
       <div class="vg-chest-loot">+${coins} 字幣　+${xp} XP</div>
       <div class="vg-chest-extra">${extra}</div>
-      <div class="vg-lu-sub">機率：傳說 5%・稀有 25%・普通 70%</div>
-      ${rarity === 'legendary' ? '<div class="vg-lu-sub">✨ 保底已重新計數</div>'
-        : typeof pityLeft === 'number' ? `<div class="vg-lu-sub">距傳說保底還差 ${pityLeft} 箱</div>` : ''}
+      <div class="vg-lu-sub">公開機率：傳說 ${CHEST_ODDS.legendary}%・稀有 ${CHEST_ODDS.rare}%・普通 ${CHEST_ODDS.common}%（每種稀有度內容固定）</div>
       <div class="vg-lu-sub">點一下繼續</div></div>`;
+    ov.onclick = () => ov.remove();
+    document.body.appendChild(ov);
+    setTimeout(() => { if (ov.parentNode) ov.remove(); }, 3200);
+  }
+
+  /* ── 已鞏固大獎：唯一的大額 XP/幣＋慶祝出口，掛鉤 durable，不掛鉤「答對」 ── */
+  function graduateBonus() {
+    g.xp += GRADUATE_XP; g.coins += GRADUATE_COINS; save();
+    if (window.VDSound) VDSound.levelup();
+    const ov = document.createElement('div'); ov.className = 'vg-levelup';
+    ov.innerHTML = `<div class="vg-lu-card"><div class="vg-lu-ico">🌟</div>
+      <div class="vg-lu-t">已鞏固！</div><div class="vg-lu-title">+${GRADUATE_XP} XP　+${GRADUATE_COINS} 字幣</div>
+      <div class="vg-lu-sub">這個字撐過複習間隔還記得，是真的記牢了　點一下繼續</div></div>`;
     ov.onclick = () => ov.remove();
     document.body.appendChild(ov);
     setTimeout(() => { if (ov.parentNode) ov.remove(); }, 3200);
@@ -401,14 +426,6 @@ const VDGame = (() => {
     const chest = openChest(base);
     save();
     return chest;
-  }
-
-  /* ── 護盾（CD8） ── */
-  function buyShield() {
-    if (g.coins < SHIELD_COST) return false;
-    g.coins -= SHIELD_COST; g.shield++; save();
-    toast('🛡️ 購得連續護盾一枚');
-    return true;
   }
 
   /* ── 字幣商店：頭像框（永久）＋消耗品，給字幣一個出口。價格跟著裝備鍛造的難度一起漲，種類也加多，別讓人太快集滿 ── */
@@ -662,14 +679,10 @@ function setNick(v) {
     shieldNotice(); // 護盾若剛頂過一天，進首頁就告訴玩家
     // 今日功課完成 = 三軌都達「易」檔：頂部收尾儀式卡，家長一眼看到「夠了，可以休息」
     const easyDone = qs.length > 0 && qs.every(q => q.tiers[0].done);
-    // FOMO：連續 2 天以上且今天還沒練 → 首屏警示，別讓火斷在今天（達標日不催）
-    const st = VDStore.stats([]);
-    const fomo = (!easyDone && streak >= 2 && st.todayCount === 0)
-      ? `<div class="vg-fomo">🔥 連續 <b>${streak}</b> 天——今天還沒練，別斷在這裡！</div>` : '';
-    // 斷檔修復窗：免費召回關卡與金幣即修並列，讓「努力」也是一條路
+    // 彈性週目標：斷一天不歸零、不催、不用花任何字幣——溫和提醒＋免費補簽，不做損失框架的高壓警示
     const rep = VDStore.streakRepairInfo();
     const repHtml = rep
-      ? `<div class="vg-fomo">🔥 連續 ${rep.was} 天斷掉了！<button class="vg-q-claim" onclick="VDApp.go('recall')">🏮 免費打 5 題接回</button></div>` : '';
+      ? `<div class="vg-fomo">😊 昨天沒練到沒關係，<button class="vg-q-claim" onclick="VDApp.go('recall')">🏮 免費打 5 題補簽</button></div>` : '';
     const doneCard = easyDone
       ? `<div class="vg-fomo" style="background:#e8f5e9;border-color:#66bb6a">✅ 今天的功課完成了，明天見！</div>` : '';
     const th = weekTheme();
@@ -708,7 +721,7 @@ function setNick(v) {
       : milestoneHtml();
     return `<div class="vg-daily wc-card">
       <img loading="lazy" decoding="async" class="wc-card-img" src="img/ui/h_daily.webp" alt="" onerror="this.remove()">
-      ${doneCard}${fomo}${repHtml}
+      ${doneCard}${repHtml}
       <div class="vg-cal">
         <div class="vg-cal-strip">${calHtml}</div>
         <div class="vg-cal-note">連續 <b>${streak}</b> 天　明天回來：首勝+30・神秘字・城鎮收成・招募×2</div>
@@ -721,6 +734,7 @@ function setNick(v) {
         ${g.mystery.opened ? `🔓 今日神秘字：<b>${mw ? mw.word : ''}</b>（已開啟）` : '🎁 開啟今日神秘字'}
       </button>
       <div id="vg-ms-slot">${msHtml}</div>
+      <div class="vg-disclaimer">${DISCLAIMER}</div>
     </div>`;
   }
   /* 三軌任務列（獨立函式：領獎後就地重繪用）；整列可點直達對應模式 */
@@ -854,9 +868,10 @@ function setNick(v) {
     quests, claimQuest, claimAndRefresh, openMystery, openMysteryUI, mysteryWord,
     weekQuest, claimWeek, claimWeekUI, weekVaultReady, openWeekVault, weekInfo, weekTheme,
     SHOP, buy, setFrame, get frame() { return g.shop.frame; }, get owned() { return g.shop.owned.slice(); },
+    DISCLAIMER, CHEST_ODDS, CHEST_CONTENT,
     rankInfo, rankWin, rankLose, useRevive,
     nextMilestone, milestoneHtml,
-    buyShield, tierUnlocked, tierNeed, setNick, setAvatar, AVATARS, avHtml,
+    tierUnlocked, tierNeed, setNick, setAvatar, AVATARS, avHtml,
     badges: () => BADGES.map(b => ({ ...b, got: !!g.badges[b.id], date: g.badges[b.id] })),
     badgeCount: () => ({ got: Object.keys(g.badges).length, total: BADGES.length }),
     bragText, challengeCode, decodeChallenge, setSprintBest, get sprintBest() { return g.best.sprint; },

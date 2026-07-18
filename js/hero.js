@@ -56,13 +56,19 @@ const VDHero = (() => {
           <div class="hero-sec">設定</div>
           <div class="hero-settings">
             <button class="set-toggle" id="sndToggle" aria-pressed="${VDSound.on}">🔊 音效：<b>${VDSound.on ? '開' : '關'}</b></button>
-            <button class="set-toggle" id="fsToggle" aria-pressed="${(localStorage.getItem('vd_fontscale') || 'normal') === 'large'}">🔠 字級：<b>${(localStorage.getItem('vd_fontscale') || 'normal') === 'large' ? '大' : '標準'}</b></button>
+            <button class="set-toggle" id="fsToggle" aria-pressed="${VDMode.fontScale() !== 'normal'}">🔠 字級：<b>${{ normal: '標準', large: '大', xlarge: '特大' }[VDMode.fontScale()]}</b></button>
             <button class="set-toggle" id="thToggle" aria-pressed="${localStorage.getItem('vd_theme') === 'dark'}">🌓 深色模式：<b>${localStorage.getItem('vd_theme') === 'dark' ? '開' : '關'}</b></button>
             <button class="set-toggle" id="qmToggle" aria-pressed="${localStorage.getItem('vd_quizmode') === 'en'}">🇬🇧 英英模式：<b>${localStorage.getItem('vd_quizmode') === 'en' ? '開' : '關'}</b></button>
             <button class="set-toggle" id="calmToggle" aria-pressed="${localStorage.getItem('vd_calm') === '1'}">🕊️ 安心模式：<b>${localStorage.getItem('vd_calm') === '1' ? '開' : '關'}</b></button>
+            <button class="set-toggle" id="simpToggle" aria-pressed="${VDMode.simplified()}">🎯 精簡／專注模式：<b>${VDMode.simplified() ? '開' : '關'}</b></button>
+            <button class="set-toggle" id="dysToggle" aria-pressed="${VDMode.dyslexia()}">🔡 易讀字型：<b>${VDMode.dyslexia() ? '開' : '關'}</b></button>
+            <button class="set-toggle" id="timerToggle" aria-pressed="${VDMode.noTimer()}">⏱️ 計時偏好：<b>${VDMode.noTimer() ? '無限時' : VDMode.timerDur() + ' 秒'}</b></button>
           </div>
           <div class="pg-hint">英英模式：單字自測的「字義題」改用英文定義當選項（學測練兵）。</div>
           <div class="pg-hint">安心模式：隱藏排行榜名次比較，只跟上週的自己比——資料照常同步給老師。</div>
+          <div class="pg-hint">精簡／專注模式：主選單只留閃卡・自測・聽力・弱字本等核心練習，收起市場・抽卡・裝備・詞靈競技・排行榜・PvP 等遊戲化入口，適合需要降低干擾的學生。</div>
+          <div class="pg-hint">易讀字型：換成無襯線大間距字型，加大字距與行高，減少閱讀障礙學生的辨識負擔。</div>
+          <div class="pg-hint">計時偏好：限時衝刺可切換 60／90／120 秒，或關掉計時只計答對數——按一下在三段秒數間循環，再按一下切到無限時。</div>
         </div>
       </div>
 
@@ -94,7 +100,7 @@ const VDHero = (() => {
     };
     // 設定
     el.querySelector('#sndToggle').onclick = () => { VDSound.setOn(!VDSound.on); render(el); };
-    el.querySelector('#fsToggle').onclick = () => { VDApp.toggleFontScale(); render(el); };
+    el.querySelector('#fsToggle').onclick = () => { VDMode.cycleFontScale(); render(el); };
     el.querySelector('#thToggle').onclick = () => {
       const next = localStorage.getItem('vd_theme') === 'dark' ? 'light' : 'dark';
       localStorage.setItem('vd_theme', next);
@@ -112,6 +118,31 @@ const VDHero = (() => {
       const on = localStorage.getItem('vd_calm') === '1';
       if (on) localStorage.removeItem('vd_calm'); else localStorage.setItem('vd_calm', '1');
       VDGame.toast(on ? '已關閉安心模式，排行榜恢復顯示' : '🕊️ 安心模式開啟——排行榜只顯示你自己的進步');
+      render(el);
+    };
+    el.querySelector('#simpToggle').onclick = () => {
+      const on = !VDMode.simplified();
+      VDMode.setSimplified(on);
+      VDGame.toast(on ? '🎯 精簡模式開啟——主選單只留核心練習' : '已關閉精簡模式，完整功能恢復顯示');
+      render(el);
+    };
+    el.querySelector('#dysToggle').onclick = () => {
+      const on = !VDMode.dyslexia();
+      VDMode.setDyslexia(on);
+      VDGame.toast(on ? '🔡 易讀字型開啟' : '已關閉易讀字型');
+      render(el);
+    };
+    el.querySelector('#timerToggle').onclick = () => {
+      if (VDMode.noTimer()) {
+        VDMode.setNoTimer(false);
+        VDMode.setTimerDur(60);
+        VDGame.toast('⏱️ 限時衝刺改回 60 秒計時');
+      } else {
+        const d = VDMode.timerDur();
+        if (d === 60) { VDMode.setTimerDur(90); VDGame.toast('⏱️ 限時衝刺改為 90 秒'); }
+        else if (d === 90) { VDMode.setTimerDur(120); VDGame.toast('⏱️ 限時衝刺改為 120 秒'); }
+        else { VDMode.setNoTimer(true); VDGame.toast('⏱️ 限時衝刺改為無限時，只計答對數'); }
+      }
       render(el);
     };
     // 分享

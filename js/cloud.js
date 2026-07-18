@@ -349,6 +349,7 @@ const VDCloud = (() => {
     const now = Date.now();
     if (now - (+localStorage.getItem('vd_autoup_ts') || 0) < AUTO_GAP) return;
     fetchAssignments(); // 每日一次領老師指派（自帶日期戳，不受 5 分鐘節流影響頻率）
+    fetchIep();         // 領老師設定的 IEP 個別化調節（快取給 VDMode 讀）
     flushWeak();        // 批次上傳錯字統計（佇列空就直接跳過）
     const sync = localStorage.getItem(LS.sync);
     const cc = localStorage.getItem(LS.ccode);
@@ -376,6 +377,29 @@ const VDCloud = (() => {
       }
     }
   }
+  /* IEP 個別化調節：老師端在班級後台為單一學生設定 → 學生端隨班級同步下發，快取進 localStorage vd_iep。
+     VDMode.acc() 會呼叫 VDCloud.iepAcc() 讀這份快取（同步、不阻塞）。班級碼＋暱稱都在才抓。 */
+  async function fetchIep() {
+    const cc = localStorage.getItem(LS.ccode);
+    const cn = localStorage.getItem(LS.cname);
+    if (!cc || !cn) return;
+    try {
+      const r = await api('/api/class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'getAcc', code: cc, name: cn }) });
+      const j = await r.json();
+      if (j && j.ok && j.acc) {
+        localStorage.setItem('vd_iep', JSON.stringify(j.acc));
+        if (window.VDMode && VDMode.apply) VDMode.apply(); // 拿到調節就立即套用 body class
+      } else {
+        localStorage.removeItem('vd_iep'); // 老師清掉調節就跟著撤
+        if (window.VDMode && VDMode.apply) VDMode.apply();
+      }
+    } catch (_) { /* 靜默：拿不到就沿用本機開關 */ }
+  }
+  /* 供 VDMode 同步讀取的 IEP 快取（VDMode.acc 優先用它，沒有就退回本機開關） */
+  function iepAcc() {
+    try { return JSON.parse(localStorage.getItem('vd_iep') || 'null'); } catch { return null; }
+  }
+
   // 掛在 VDApp.go 上：答題結算按「回主選單」時觸發（cloud.js 先於 app.js 載入，等 DOM ready 再包）
   document.addEventListener('DOMContentLoaded', () => {
     if (!window.VDApp || typeof VDApp.go !== 'function') return;
@@ -383,6 +407,6 @@ const VDCloud = (() => {
     VDApp.go = function (name) { const r = orig.apply(this, arguments); if (name === 'menu') setTimeout(autoSync, 400); return r; };
   });
 
-  return { start: render, myStats, autoSync, fetchAssignments, calm, api, API };
+  return { start: render, myStats, autoSync, fetchAssignments, fetchIep, iepAcc, calm, api, API };
 })();
 window.VDCloud = VDCloud;

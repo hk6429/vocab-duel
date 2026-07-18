@@ -608,10 +608,21 @@ const VDPets = (() => {
     return [];
   }
 
+  /* 檢舉一則銘文（不當內容）：以 word+text 內容比對定位，即時隱藏並暫存供老師覆核 */
+  async function reportLore(id, word, text) {
+    try {
+      const r = await fetch(LORE_API + '/api/lore', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: 'report', petId: id, word, text })
+      });
+      return r.ok;
+    } catch { return false; }
+  }
+
   return {
     init, list, adopt, adoptCost, levelUp, levelCost, power, familyStats, atk, atkBreakdown, hp, stageOf, lvOf,
     dailyFeed, claimFeed, affixQuestion, currentSeason, isInSeason, nextBestAction,
-    addLore, loreOf, submitLore, fetchLore, actionable, SEASONS,
+    addLore, loreOf, submitLore, fetchLore, reportLore, actionable, SEASONS,
     starRank, STAR_GATE, setNick, nickOf, shareCard, dispName,
     rollDrop, equip, unequip, skillsOf, setDeco, setActive, active, DECOS, SLOTS, SLOT_NAME,
     PERKS, hasPerk, activePerks, assist, bag, addToBag, dropBag, forge, forgeReq, equipFromBag, eqDex,

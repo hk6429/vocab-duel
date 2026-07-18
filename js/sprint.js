@@ -1,8 +1,21 @@
-/* 限時衝刺：60 秒搶答，衝高分（CD6 迫切＋CD8 倒數壓力）；可貼同學挑戰碼 PK（CD5） */
+/* 限時衝刺：可調 60/90/120 秒或無限時搶答，衝高分（CD6 迫切＋CD8 倒數壓力）；可貼同學挑戰碼 PK（CD5） */
 const VDSprint = (() => {
-  let DUR = 60; // 學習詞條 sprint5 生效時 65 秒
+  let DUR = 60; // 學習詞條 sprint5 生效時 +5 秒；INFINITE=無限時（只計答對數）
+  const INFINITE = Infinity;
   let el = null, words = [], score = 0, left = DUR, timer = null, q = null, locked = false, target = null;
   let wrongs = [], paused = false; // 本輪答錯題；閃現正解時暫停倒數 0.8s
+
+  let perkBonus = 0; // 詞靈加時 perk 實際加了幾秒（僅供 UI 標示，非計時偏好本身）
+  // 計時偏好：讀 VDMode（IEP／個人設定可調 60/90/120 秒或無限時）；無 VDMode 時退回 60 秒
+  function computeDur() {
+    if (window.VDMode && VDMode.noTimer()) { perkBonus = 0; return INFINITE; }
+    let d = (window.VDMode ? VDMode.timerDur() : 60) || 60;
+    // IEP 個別化調節：處理速度慢的學生延長作答時間 ×1.5／×2（老師端設定，隨班級下發）
+    const ext = (window.VDMode && VDMode.acc('extraTime')) || 1;
+    if (ext > 1) d = Math.round(d * ext);
+    perkBonus = (window.VDPets && VDPets.hasPerk('sprint5')) ? 5 : 0;
+    return d + perkBonus;
+  }
 
   function start(w, container) {
     el = container; words = w; target = null;
@@ -11,11 +24,12 @@ const VDSprint = (() => {
 
   function intro() {
     clearInterval(timer);
-    DUR = 60 + (window.VDPets && VDPets.hasPerk('sprint5') ? 5 : 0);
+    DUR = computeDur();
+    const durLabel = DUR === INFINITE ? '∞ 無限時（只計答對數）' : `${DUR} 秒${perkBonus ? '<span class="sp-perk">⏱️ 詞條加時 +5s</span>' : ''}`;
     el.innerHTML = `
       <div class="sp-intro">
-        <div class="sp-big">⏱️ ${DUR} 秒${DUR > 60 ? '<span class="sp-perk">⏱️ 詞條加時 +5s</span>' : ''}</div>
-        <p>時間內答對越多越好，答錯不扣分只耗時間。</p>
+        <div class="sp-big">⏱️ ${durLabel}</div>
+        <p>${DUR === INFINITE ? '沒有時間壓力，答完想結束時按「結束衝刺」即可。' : '時間內答對越多越好，答錯不扣分只耗時間。'}</p>
         <div class="sp-best">🏅 你的最佳：<b>${VDGame.sprintBest}</b> 分</div>
         <input class="sp-chal" id="chal" placeholder="（選填）貼上同學的挑戰碼來 PK">
         <button class="btn" id="go">開始衝刺</button>
@@ -30,7 +44,9 @@ const VDSprint = (() => {
 
   function run() {
     score = 0; left = DUR; locked = false; wrongs = []; paused = false;
-    tick(); timer = setInterval(() => { if (paused) return; left--; if (left <= 0) finish(); else paint(); }, 1000);
+    if (DUR !== INFINITE) {
+      timer = setInterval(() => { if (paused) return; left--; if (left <= 0) finish(); else paint(); }, 1000);
+    }
     next();
   }
 
@@ -41,10 +57,15 @@ const VDSprint = (() => {
   }
 
   function paint() {
-    const pct = left / DUR * 100;
+    const infinite = DUR === INFINITE;
+    const pct = infinite ? 100 : left / DUR * 100;
+    const timerHtml = infinite
+      ? `<div class="sp-timer"><div class="sp-timer-fill" style="width:100%"></div><span>∞</span></div>
+         <button class="btn ghost sm" id="spStop">結束衝刺</button>`
+      : `<div class="sp-timer ${left <= 10 ? 'danger' : ''}"><div class="sp-timer-fill" style="width:${pct}%"></div><span>${left}s</span></div>`;
     el.innerHTML = `
       <div class="sp-hud">
-        <div class="sp-timer ${left <= 10 ? 'danger' : ''}"><div class="sp-timer-fill" style="width:${pct}%"></div><span>${left}s</span></div>
+        ${timerHtml}
         <div class="sp-score">🎯 ${score}${target ? `　目標 ${target.s}` : ''}</div>
       </div>
       <div class="sp-q">
@@ -54,6 +75,8 @@ const VDSprint = (() => {
           `<button class="btn opt" data-v="${encodeURIComponent(o)}"><span class="opt-key">${'ABCD'[i]}</span><span class="opt-text">${o}</span></button>`).join('')}</div>
       </div>`;
     el.querySelectorAll('.opt').forEach(b => b.onclick = () => answer(decodeURIComponent(b.dataset.v)));
+    const stopBtn = el.querySelector('#spStop');
+    if (stopBtn) stopBtn.onclick = () => finish();
   }
 
   // 倒數不重繪整題，只更新 HUD

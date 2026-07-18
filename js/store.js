@@ -35,6 +35,7 @@ const VDStore = (() => {
     if (m.unitIdx == null) m.unitIdx = 0; // 20 字包進度：目前第幾包（0 起算）
     if (!m.assignments) m.assignments = {}; // 老師字表指派：code → {name, words, ts, due?, lock?}
     if (m.lockAsg === undefined) m.lockAsg = null; // 老師範圍鎖：作用中的指派 code 或 null
+    if (!m.conq) m.conq = {}; // 錯字真攻克：word → 最後一次「用拼寫題親手打對」的日期
     return m;
   }
   meta = normalize(meta);
@@ -137,14 +138,42 @@ const VDStore = (() => {
     return (typeof VDApp !== 'undefined' && VDApp.scopeWords) ? VDApp.scopeWords() : null;
   }
 
+  /* 信任度 0–1（獨立抽出，供 trustScore() 對外方法與 isDurableNow() 內部共用邏輯一致） */
+  function computeTrust(word) {
+    const h = prog[word] && prog[word].h;
+    if (!h) return 1;
+    const pairs = [];
+    for (let i = 0; i < h.length; i += 2) pairs.push(h.slice(i, i + 2));
+    const last = pairs.slice(-6);
+    if (!last.length) return 1;
+    let score = 1;
+    const correct = last.filter(p => p[1] === 'Y' || p[1] === 'y');
+    const correctTypeCount = new Set(correct.map(p => p[0]).filter(t => t !== 'x')).size;
+    if (correctTypeCount <= 1 && last.length >= 2) score -= 0.3;
+    const fastRatio = correct.length ? last.filter(p => p[1] === 'y').length / correct.length : 0;
+    if (fastRatio >= 0.5) score -= 0.3;
+    const last4 = last.slice(-4);
+    if (last4.some(p => p[1] === 'N') && last4.some(p => p[1] !== 'N')) score -= 0.2;
+    return Math.max(0, score);
+  }
+
+  /* 診斷誠實化：已鞏固＝box≥5（撐過長間隔仍答對）且曾有一次「產出題(spell/cloze)親手答對」(rec.p===1)
+     且近期信任度≥0.7（排除靠單一題型／快答／忽對忽錯撐起來的假熟練）。白帽：不改既有升降盒規則，只加這個更高標籤 */
+  function isDurableNow(word) {
+    const r = prog[word];
+    return !!r && r.b >= 5 && r.p === 1 && computeTrust(word) >= 0.7;
+  }
+
   return {
     INTERVALS,
     today,
     get stage() { return meta.stage; },
     set stage(v) { meta.stage = v; saveMeta(); },
     getWord: w => prog[w] || null,
-    /* 答題結果回寫：source 選填 — undefined/'quiz' 完整效果、'flash' 閃卡自評、'battle' 限時競技
-       opts 選填 — { qtype: 'e2z'|'z2e'|'cloze'|'spell', ms: 作答耗時毫秒 }，供信任度判讀用，不影響升降盒 */
+    /* 答題結果回寫：source 選填 — undefined/'quiz' 完整效果、'flash' 閃卡自評、'battle' 限時競技、
+       'rescue' 連錯救援降階（答對不升盒、不清錯題本、不算攻克，只記歷史供診斷參考，避免救援模式被拿來洗進度）
+       opts 選填 — { qtype: 'e2z'|'z2e'|'cloze'|'spell', ms: 作答耗時毫秒 }，供信任度判讀用，不影響升降盒
+       回傳 { graduated }：graduated=true 表示這次答對讓該字「首次」達到 isDurable（已鞏固） */
     record(word, correct, source, opts) {
       snapshotHist(today()); // 快照要在今天第一題「改動進度前」拍，週增量才不會少算
       const rec = prog[word] || { b: 0, d: today(), s: 0 };
@@ -158,11 +187,29 @@ const VDStore = (() => {
         queueWeak(word);
         saveProg();
         bumpDaily();
-        return;
+        return { graduated: false };
       }
+      if (source === 'rescue') {
+        // 救援降階：答錯照常降盒記錯題本（診斷要看見真實弱點）；答對「不」升盒、不清錯題本、不記產出攻克
+        rec.s += 1;
+        rec.h = appendHist(rec.h, correct, opts);
+        if (!correct) {
+          rec.b = rec.b >= 2 ? rec.b - 2 : 0;
+          rec.d = addDays(today(), INTERVALS[rec.b]);
+          meta.wrong[word] = today();
+          queueWeak(word);
+        }
+        prog[word] = rec;
+        saveProg();
+        bumpDaily();
+        return { graduated: false };
+      }
+      const wasDurable = isDurableNow(word);
       if (correct) {
         // 閃卡自評升盒上限 2（已在盒 2 以上則不動不降）；其餘上限 5
         rec.b = source === 'flash' ? (rec.b >= 2 ? rec.b : rec.b + 1) : Math.min(rec.b + 1, 5);
+        // 曾有一次「產出題」（拼寫／挖空）親手答對，才有資格被判定已鞏固（辨識題答對不算）
+        if (opts && (opts.qtype === 'spell' || opts.qtype === 'cloze')) rec.p = 1;
       } else {
         // 答錯降兩盒（不再歸零），盒 1 以下才回 0
         rec.b = rec.b >= 2 ? rec.b - 2 : 0;
@@ -174,8 +221,12 @@ const VDStore = (() => {
       // 錯題本：答錯記入；答對且已達熟練（盒 ≥3）才畢業移除
       if (!correct) { meta.wrong[word] = today(); queueWeak(word); }
       else if (rec.b >= 3 && meta.wrong[word]) delete meta.wrong[word];
+      // 錯字真攻克：當天答錯的字，必須用「拼寫題親手打對一次」才算清掉「待攻克」標記
+      if (correct && opts && opts.qtype === 'spell') meta.conq[word] = today();
       saveProg();
       bumpDaily();
+      const graduated = !wasDurable && isDurableNow(word);
+      return { graduated };
     },
     /* 這個字曾經「答對過」的題型集合，供自測出題偏好還沒測過的題型 */
     correctTypes(word) {
@@ -189,31 +240,32 @@ const VDStore = (() => {
       return out;
     },
     /* 信任度 0–1：近幾次作答只靠單一題型答對／過半是可疑快答／忽對忽錯，各扣分；資料不足回傳 1（不誤判） */
-    trustScore(word) {
-      const h = prog[word] && prog[word].h;
-      if (!h) return 1;
-      const pairs = [];
-      for (let i = 0; i < h.length; i += 2) pairs.push(h.slice(i, i + 2));
-      const last = pairs.slice(-6);
-      if (!last.length) return 1;
-      let score = 1;
-      const correct = last.filter(p => p[1] === 'Y' || p[1] === 'y');
-      const correctTypeCount = new Set(correct.map(p => p[0]).filter(t => t !== 'x')).size;
-      if (correctTypeCount <= 1 && last.length >= 2) score -= 0.3; // 只靠單一題型答對
-      const fastRatio = correct.length ? last.filter(p => p[1] === 'y').length / correct.length : 0;
-      if (fastRatio >= 0.5) score -= 0.3; // 過半正確答案是可疑快答
-      const last4 = last.slice(-4);
-      if (last4.some(p => p[1] === 'N') && last4.some(p => p[1] !== 'N')) score -= 0.2; // 忽對忽錯
-      return Math.max(0, score);
-    },
+    trustScore(word) { return computeTrust(word); },
     /* 假熟練：已達盒 3（系統認定熟練）但信任度偏低，自測出題該優先重測 */
     isFakeMastery(word) {
       const r = prog[word];
       return !!r && r.b >= 3 && this.trustScore(word) < 0.7;
     },
+    /* 複習中：短期記得（盒 ≥3），但不代表已鞏固 */
+    isLearning(word) { const r = prog[word]; return !!r && r.b >= 3; },
+    /* 已鞏固：見 isDurableNow() 說明（box≥5 且曾產出題答對且信任度足夠） */
+    isDurable(word) { return isDurableNow(word); },
+    durableCount(words) { return words.filter(w => isDurableNow(w.word)).length; },
+    learningCount(words) { return words.filter(w => { const r = prog[w.word]; return !!r && r.b >= 3; }).length; },
     isWrong: w => !!meta.wrong[w],
     /* 錯題清單：回傳仍在錯題本裡的字物件（限定 scope 範圍） */
     wrongWords(words) { return words.filter(w => meta.wrong[w.word]); },
+    /* 今天答錯且尚未用產出題（拼寫）親手攻克的字：回傳字物件陣列 */
+    todayWrongUnconquered(words) {
+      const t = today();
+      return words.filter(w => meta.wrong[w.word] === t && !this.isConquered(w.word));
+    },
+    /* 這個字今天的錯是否已被拼寫題攻克清掉；從沒答錯過（或錯題本已因其他規則畢業清除）視為沒有待攻克，回傳 true */
+    isConquered(word) {
+      const wrongDate = meta.wrong[word];
+      if (!wrongDate) return true;
+      return !!(meta.conq[word] && meta.conq[word] >= wrongDate);
+    },
     get sub() { return meta.sub; },
     set sub(v) { meta.sub = v; saveMeta(); },
     /* 我的收藏（加星）：任意字主動收藏，考前只刷圈起來的 */

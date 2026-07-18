@@ -448,8 +448,18 @@ const VDPet = (() => {
       box.innerHTML = '<div class="loading">讀取其他學徒的銘文…</div>';
       const items = await VDPets.fetchLore(id);
       box.innerHTML = items.length
-        ? `<div class="lore-list others"><div class="pg-hint">其他學徒為這家族留下的銘文：</div>${items.map(l => `<div class="lore-item"><b>${VDGame.esc(l.word)}</b>：${VDGame.esc(l.text)}<i>— ${VDGame.esc(l.hero || '無名學徒')}</i></div>`).join('')}</div>`
+        ? `<div class="lore-list others"><div class="pg-hint">其他學徒為這家族留下的銘文：</div>${items.map(l => `<div class="lore-item" data-w="${encodeURIComponent(l.word)}" data-t="${encodeURIComponent(l.text)}"><b>${VDGame.esc(l.word)}</b>：${VDGame.esc(l.text)}<i>— ${VDGame.esc(l.hero || '無名學徒')}</i><button class="lore-report" title="檢舉不當內容" aria-label="檢舉這則銘文">🚩</button></div>`).join('')}</div>`
         : '<div class="pg-hint">還沒有人留下銘文——你可以當第一個！</div>';
+      box.querySelectorAll('.lore-report').forEach(btn => {
+        btn.onclick = async () => {
+          const item = btn.closest('.lore-item');
+          const w = decodeURIComponent(item.dataset.w), t = decodeURIComponent(item.dataset.t);
+          btn.disabled = true;
+          await VDPets.reportLore(id, w, t);
+          item.style.opacity = '0.4';
+          item.innerHTML = '<span class="pg-hint">已檢舉，老師會覆核並處理，謝謝你 🙏</span>';
+        };
+      });
     };
     $('#backList').onclick = renderList;
   }
