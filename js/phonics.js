@@ -78,12 +78,18 @@ const VDPhonics = (() => {
   function menu() {
     const box = panel();
     box.innerHTML = `
-      <h2>🔤 Pre-A 解碼層</h2>
-      <p>從字母認讀，一路練到短母音家族拼讀。</p>
-      <button class="btn" id="l1">1️⃣ 字母大小寫 ${progress.letters ? '✅' : ''}</button>
-      <button class="btn" id="l2">2️⃣ 字母音 ${progress.sounds ? '✅' : ''}</button>
-      ${FAMILIES.map((f, i) => `<button class="btn" data-f="${f.rime}">3.${i + 1} -${f.rime} 家族 ${progress.families[f.rime] ? '✅' : ''}</button>`).join('')}
-      <button class="btn ghost" id="x">關閉</button>`;
+      <h2 style="margin:0 0 4px">🔤 Pre-A 解碼層</h2>
+      <p style="margin:0 0 14px;color:var(--muted,#888)">從字母認讀，一路練到短母音家族拼讀。</p>
+      <div style="font-size:13px;color:var(--muted,#888);margin-bottom:6px">基礎關</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <button class="btn" id="l1" style="width:100%">1️⃣ 字母大小寫${progress.letters ? ' ✅' : ''}</button>
+        <button class="btn" id="l2" style="width:100%">2️⃣ 字母音${progress.sounds ? ' ✅' : ''}</button>
+      </div>
+      <div style="font-size:13px;color:var(--muted,#888);margin-bottom:6px">短母音家族</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        ${FAMILIES.map((f, i) => `<button class="btn" data-f="${f.rime}" style="width:100%;padding:14px 4px;font-size:16px">-${f.rime}<span style="display:block;font-size:11px;font-weight:400;opacity:.8">家族 ${i + 1}${progress.families[f.rime] ? ' ✅' : ''}</span></button>`).join('')}
+      </div>
+      <button class="btn ghost" id="x" style="width:100%">關閉</button>`;
     box.querySelector('#l1').onclick = () => runLetters();
     box.querySelector('#l2').onclick = () => runSounds();
     box.querySelectorAll('[data-f]').forEach(b => b.onclick = () => runFamily(b.dataset.f));
