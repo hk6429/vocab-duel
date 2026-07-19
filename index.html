@@ -193,5 +193,27 @@
 <img src="https://visitor-badge.laobi.icu/badge?page_id=hk6429.vocab-duel" alt="訪客人數" loading="lazy" style="position:fixed;right:14px;bottom:14px;z-index:2147483000;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.35);">
 <script>window.goatcounter = {path: p => location.host + p}</script>
 <script data-goatcounter="https://hk6429.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script>
+// 舊網址遷移提醒：這台裝置的進度存在 localStorage，換網域無法帶走，
+// 一律先請玩家用同步碼備份，確認備份完才放行去新網址（不做強制轉址，避免資料回不來）。
+(function () {
+  if (location.hostname !== 'vocab-duel.vercel.app') return;
+  if (localStorage.getItem('vd_migrated_pagesdev')) return;
+  var bar = document.createElement('div');
+  bar.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:2147483647;background:#4a3b1f;color:#fff;padding:10px 14px;font-size:14px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+  bar.innerHTML = '這個網址即將停用，你的進度存在這台裝置裡，換網址前請先備份！' +
+    '<button id="vd-mig-backup" style="margin:0 6px;padding:4px 10px;border:none;border-radius:6px;background:#fff;color:#4a3b1f;font-weight:700;cursor:pointer">去備份（產生同步碼）</button>' +
+    '<button id="vd-mig-go" style="margin:0 6px;padding:4px 10px;border:none;border-radius:6px;background:#6f9fc9;color:#fff;font-weight:700;cursor:pointer">已備份，前往新網址</button>';
+  document.body.prepend(bar);
+  document.getElementById('vd-mig-backup').onclick = function () {
+    if (window.VDApp && VDApp.go) VDApp.go('cloud');
+    bar.querySelector('button:first-of-type') && bar.querySelector('button:first-of-type').blur();
+  };
+  document.getElementById('vd-mig-go').onclick = function () {
+    localStorage.setItem('vd_migrated_pagesdev', '1');
+    location.href = 'https://vocab-duel.pages.dev';
+  };
+})();
+</script>
 </body>
 </html>
