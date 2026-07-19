@@ -577,6 +577,13 @@ const VDTown = (() => {
     save();
     return { ok: true, ember: g.forgeEmber };
   }
+  // P2-7 收尾：詞靈鍛造之魂 → 抵免詞靈鍛造材料（供 VDPets.forge() 呼叫）
+  function spendEmber(n) {
+    const have = g.forgeEmber || 0;
+    const use = Math.max(0, Math.min(n, have));
+    if (use > 0) { g.forgeEmber = have - use; save(); }
+    return use;
+  }
 
   /* 世界觀彩蛋：從已擊敗的文豪語錄庫借一句，當委託人的靈感來源（純文字，不影響委託本身邏輯） */
   function pickLoreQuote() {
@@ -672,7 +679,7 @@ const VDTown = (() => {
     dailyOutput, harvestReady, harvest, streakInfo, nextBestAction,
     packInfo, claimPacks, coinPackInfo, coinToRes, battleLoot, lootDayInfo,
     tokenInfo, redeemTokens, tokenToRes, tokenResInfo,
-    prestige, wonderInfo, donateWonder, smeltInfo, smeltOre,
+    prestige, wonderInfo, donateWonder, smeltInfo, smeltOre, spendEmber,
     questInfo, fulfillQuest, npcLine,
     exportState, importState,
     buildings: () => data.buildings, jobs: () => data.jobs,

@@ -21,12 +21,16 @@ const VDPets = (() => {
   const tierUp = t => { const i = tierIdx(t); return i >= 0 && i < TIERS.length - 1 ? TIERS[i + 1] : t; };
   /* 鍛造門檻：目標階序位 step=1(稀有)…12(至尊)；材料件數 4→15、字幣成本每階倍增以上。
      P1-4 去賭博化：一律「必成」（chance=1），集滿材料確定升階、不吞料、不看臉——家長最敏感的「教孩子賭」觀感雷拆掉 */
-  function forgeReq(tier) {
+  // P2-7 收尾：城鎮鐵匠鋪煉出的「詞靈鍛造之魂」可抵免材料件數（至少留 1 件，不會變全免）
+  const currentEmber = () => (typeof VDTown !== 'undefined' && VDTown.raw) ? (VDTown.raw.forgeEmber || 0) : 0;
+  function forgeReq(tier, emberAvail) {
     const step = tierIdx(tier) + 1;
     if (step <= 0 || step >= TIERS.length) return null;
-    const items = 3 + step;
+    const base = 3 + step;
+    const avail = emberAvail != null ? emberAvail : currentEmber();
+    const emberUsed = Math.max(0, Math.min(avail, base - 1));
     const cost = step === 1 ? 50 : step === 2 ? 150 : Math.round(300 * Math.pow(1.85, step - 3) / 10) * 10;
-    return { items, chance: 1, cost, into: TIERS[step] };
+    return { items: base - emberUsed, baseItems: base, emberUsed, chance: 1, cost, into: TIERS[step] };
   }
   const DECOS = ['', '🎀', '👑', '🧣', '👓', '🌸', '⭐'];
   const MAX_LV = 25;
@@ -252,8 +256,9 @@ const VDPets = (() => {
     if (!items.every(x => x.tier === tier)) return { ok: false, msg: '必須同一階' };
     const req = forgeReq(tier);
     if (!req) return { ok: false, msg: `${tierName(tier)}裝備已是最高階` };
-    if (new Set(idxs).size !== req.items) return { ok: false, msg: `要選 ${req.items} 件同階裝備` };
+    if (new Set(idxs).size !== req.items) return { ok: false, msg: `要選 ${req.items} 件同階裝備${req.emberUsed ? `（詞靈鍛造之魂已抵免 ${req.emberUsed} 件）` : ''}` };
     if (VDGame.raw.coins < req.cost) return { ok: false, msg: `字幣不足，鍛造需要 ${req.cost}` };
+    if (req.emberUsed && typeof VDTown !== 'undefined' && VDTown.spendEmber) VDTown.spendEmber(req.emberUsed);
     VDGame.raw.coins -= req.cost;
     localStorage.setItem('vd_game', JSON.stringify(VDGame.raw));
     [...idxs].sort((a, b) => b - a).forEach(i => g.bag.splice(i, 1));

@@ -177,7 +177,7 @@ const VDPet = (() => {
     const sameTier = selItems.length && selItems.every(x => x.tier === selItems[0].tier) ? selItems[0].tier : null;
     const req = sameTier ? VDPets.forgeReq(sameTier) : null;
     const forgeLabel = req
-      ? `🔥 鍛造成 ${VDPets.tierName(req.into)}（需 ${req.items} 件・${req.cost} 字幣・必成）`
+      ? `🔥 鍛造成 ${VDPets.tierName(req.into)}（需 ${req.items} 件・${req.cost} 字幣・必成${req.emberUsed ? `・鍛造之魂抵免 ${req.emberUsed} 件` : ''}）`
       : '🔥 鍛造（先選同階裝備）';
     const forgeReady = sameTier && req && selItems.length === req.items;
     const bagCost = VDPets.bagUpgradeCost();
