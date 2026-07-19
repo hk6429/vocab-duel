@@ -520,6 +520,7 @@ body.iep-notimer .sp-timer.danger .sp-timer-fill { background: #a8433d; }
 .vg-cal-day.on { background: rgba(111,159,201,.14); }
 .vg-cal-day.today { outline: 2px solid #6f9fc9; }
 .vg-cal-note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 6px; } .vg-cal-note b { color: #6f9fc9; }
+.vg-disclaimer { text-align: center; font-size: 12px; color: var(--muted); font-family: var(--cjk); }
 
 /* ── 加星鈕 ── */
 .mini-star { background: none; border: none; cursor: pointer; font-size: 18px; padding: 8px; vertical-align: middle; }
@@ -816,7 +817,9 @@ body.simplified .hero-tab[data-htab="pet"] { display: none; }
 /* 每日面板卡內圖不留邊距 */
 .vg-daily.wc-card { padding: 0; }
 .vg-daily.wc-card > .vg-cal, .vg-daily.wc-card > .vg-daily-head,
-.vg-daily.wc-card > .vg-quest, .vg-daily.wc-card > .vg-mystery { margin-left: 16px; margin-right: 16px; }
+.vg-daily.wc-card > .vg-quest, .vg-daily.wc-card > .vg-mystery,
+.vg-daily.wc-card > .vg-disclaimer { margin-left: 16px; margin-right: 16px; }
+.vg-daily.wc-card > .vg-disclaimer { margin-bottom: 14px; }
 .vg-daily.wc-card > .vg-cal { margin-top: 14px; }
 .vg-daily.wc-card > .vg-mystery { margin-bottom: 16px; width: calc(100% - 32px); }
 .vg-daily-head { font-family: var(--font-serif); letter-spacing: 2px; font-size: 16px;
