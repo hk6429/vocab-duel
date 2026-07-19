@@ -40,10 +40,9 @@ const cors = (req, res) => {
 
 // 輕量限流：每 IP 每 60 秒 cap 次寫入，超過回 429
 async function rateLimited(req, scope, cap = 30) {
-  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  const ip = String((req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"]) || "").split(",")[0].trim() || "unknown";
   const k = `vd:rl:${scope}:${ip}`;
-  const n = await redis.incr(k);
-  if (n === 1) await redis.expire(k, 60);
+  const n = await redis.incr(k, 60);
   return n > cap;
 }
 

@@ -24,9 +24,12 @@ export function redisFor(db) {
       await db.prepare('INSERT INTO kv (k,v,exp) VALUES (?1,?2,?3) ON CONFLICT(k) DO UPDATE SET v=?2, exp=?3').bind(k, val, exp).run();
       return 'OK';
     },
-    async incr(k) {
+    // ttlSec 給定時：第一次建立當下就把 exp 一併寫入同一條 INSERT，避免「先 incr 再另外呼叫 expire」
+    // 兩步驟之間的 race condition — 若第二步沒執行到，exp 會永遠停在 NULL、計數器永久卡死不過期。
+    async incr(k, ttlSec) {
       await db.prepare('DELETE FROM kv WHERE k=?1 AND exp IS NOT NULL AND exp<=?2').bind(k, now()).run();
-      await db.prepare("INSERT INTO kv (k,v,exp) VALUES (?1,'1',NULL) ON CONFLICT(k) DO UPDATE SET v=CAST((CAST(v AS INTEGER)+1) AS TEXT)").bind(k).run();
+      const exp = ttlSec ? now() + ttlSec * 1000 : null;
+      await db.prepare("INSERT INTO kv (k,v,exp) VALUES (?1,'1',?2) ON CONFLICT(k) DO UPDATE SET v=CAST((CAST(v AS INTEGER)+1) AS TEXT)").bind(k, exp).run();
       const v = await db.prepare('SELECT v FROM kv WHERE k=?1').bind(k).first('v');
       return Number(v);
     },

@@ -39,10 +39,9 @@ const cors = (req, res) => {
 
 // 輕量限流：每 IP 每 60 秒 30 次寫入，超過回 429
 async function rateLimited(req, scope) {
-  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  const ip = String((req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"]) || "").split(",")[0].trim() || "unknown";
   const k = `vd:rl:${scope}:${ip}`;
-  const n = await redis.incr(k);
-  if (n === 1) await redis.expire(k, 60);
+  const n = await redis.incr(k, 60);
   return n > 30;
 }
 
@@ -132,7 +131,7 @@ async function handler(req, res, env) {
       if (!GIFT_RES.includes(resType)) return res.status(200).json({ ok: 0, error: "資源種類不合法" });
       const owner = await redis.get(VISIT(v));
       if (!owner) return res.status(200).json({ ok: 0, error: "找不到這座城" });
-      const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+      const ip = String((req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"]) || "").split(",")[0].trim() || "unknown";
       const today = new Date().toISOString().slice(0, 10);
       const giftKey = `vd:town:giftday:${v}:${ip}`;
       if ((await redis.get(giftKey)) === today) return res.status(200).json({ ok: 0, error: "今天已經贈送過了，明天再來吧" });

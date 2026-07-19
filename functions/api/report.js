@@ -17,10 +17,9 @@ const cors = (req, res) => {
 
 // 輕量限流：每 IP 每 5 分鐘最多 5 次回報，擋洗版（比一般寫入 API 嚴，這是低頻動作）
 async function rateLimited(req) {
-  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  const ip = String((req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"]) || "").split(",")[0].trim() || "unknown";
   const k = `vd:rl:report:${ip}`;
-  const n = await redis.incr(k);
-  if (n === 1) await redis.expire(k, 300);
+  const n = await redis.incr(k, 300);
   return n > 5;
 }
 

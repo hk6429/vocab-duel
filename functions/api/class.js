@@ -38,10 +38,9 @@ const cors = (req, res) => {
 };
 
 async function rateLimited(req, scope, limit) {
-  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  const ip = String((req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"]) || "").split(",")[0].trim() || "unknown";
   const k = `vd:rl:${scope}:${ip}`;
-  const n = await redis.incr(k);
-  if (n === 1) await redis.expire(k, 60);
+  const n = await redis.incr(k, 60);
   return n > limit;
 }
 

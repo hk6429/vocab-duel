@@ -24,10 +24,9 @@ const cors = (req, res) => {
 
 // 每 IP 每 5 分鐘最多 30 次讀取（比照 lore 的限流桶，防一組 6 碼被拿去暴力掃/濫讀）
 async function rateLimited(req, scope) {
-  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  const ip = String((req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"]) || "").split(",")[0].trim() || "unknown";
   const k = `vd:rl:sync:${scope}:${ip}`;
-  const n = await redis.incr(k);
-  if (n === 1) await redis.expire(k, 300);
+  const n = await redis.incr(k, 300);
   return n > 30;
 }
 

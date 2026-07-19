@@ -25,10 +25,9 @@ const cors = (req, res) => {
 
 // 輕量限流：每 IP 每 60 秒 10 次發文（比其他寫入端點更嚴，語錄是自由文字，濫發風險較高）
 async function rateLimited(req, scope, limit) {
-  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  const ip = String((req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"]) || "").split(",")[0].trim() || "unknown";
   const k = `vd:rl:${scope}:${ip}`;
-  const n = await redis.incr(k);
-  if (n === 1) await redis.expire(k, 60);
+  const n = await redis.incr(k, 60);
   return n > limit;
 }
 

@@ -83,10 +83,9 @@ const memberOf = (rec) => JSON.stringify(
 
 // 輕量限流：每 IP 每 60 秒 30 次寫入，超過回 429
 async function rateLimited(req, scope) {
-  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  const ip = String((req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"]) || "").split(",")[0].trim() || "unknown";
   const k = `vd:rl:${scope}:${ip}`;
-  const n = await redis.incr(k);
-  if (n === 1) await redis.expire(k, 60);
+  const n = await redis.incr(k, 60);
   return n > 30;
 }
 
@@ -153,8 +152,7 @@ async function handler(req, res, env) {
       const sigNew = sigOf({ item: rec.item, price: rec.price, seller: rec.seller, id: rec.id });
       if (sigNew !== rec.sig && sigOf(rec.item) !== rec.sig) return res.status(200).json({ ok: 0, error: "簽章不符，掛單作廢" });
       // 每日限購：所有驗證通過後才計數，買失敗不燒配額
-      const buys = await redis.incr(BUYS(nick.trim()));
-      if (buys === 1) await redis.expire(BUYS(nick.trim()), 86400);
+      const buys = await redis.incr(BUYS(nick.trim()), 86400);
       if (buys > DAILY_BUY_CAP) return res.status(200).json({ ok: 0, error: "每日限購 3 件（保護自己打寶的樂趣）" });
       // 殺價：由掛單 id 決定固定折扣 0/5/10/15%（不含暱稱，杜絕改名重抽）；賣家收款按折後價 ×0.9
       let disc = 0;
