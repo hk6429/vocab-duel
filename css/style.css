@@ -1132,8 +1132,9 @@ body.dark .lore-item i { color: rgba(255,255,255,.5); }
 .vg-petav { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; margin-left: -8px;
   border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.2); align-self: center; }
 
-/* 競技 */
-.pb-floors { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; margin-bottom: 4px; }
+/* 競技：無限爬塔層數會一路長，用固定高度＋捲動收住，不然頁面隨玩家爬層越拉越長 */
+.pb-floors { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; margin-bottom: 4px;
+  max-height: 258px; overflow-y: auto; padding-right: 2px; scroll-behavior: smooth; }
 .pb-floor { padding: 10px 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel);
   text-align: center; font-size: 13px; cursor: pointer; color: var(--ink); }
 .pb-floor i { display: block; font-style: normal; font-size: 12px; color: var(--ink-55); margin: 2px 0; }

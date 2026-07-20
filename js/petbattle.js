@@ -67,6 +67,9 @@ const VDPetBattle = (() => {
     el.querySelectorAll('.pb-floor:not(.locked)').forEach(b => {
       b.onclick = () => startWild(+b.dataset.f);
     });
+    // 層數清單收進固定高度捲動框後，預設把畫面捲到玩家目前進度層，不用每次都手動滑到最下面
+    const curFloor = el.querySelector(`.pb-floor[data-f="${floor}"]`);
+    if (curFloor) curFloor.scrollIntoView({ block: 'nearest' });
     el.querySelector('#doShadow').onclick = startShadow;
     el.querySelector('#doBoard').onclick = showBoard;
     el.querySelector('#doMarket').onclick = () => VDMarket.render(el);
