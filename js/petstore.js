@@ -10,10 +10,17 @@ const VDPets = (() => {
   const TIER_NAME = ['普通', '稀有', '傳說', '神話', '天位', '帝皇', '永恆', '創世', '星辰', '宇宙', '太初', '超凡', '至尊'];
   const TIER_ICO = ['🎁', '💠', '👑', '🔮', '🌠', '🐲', '♾️', '🌋', '✨', '🌌', '🌑', '🕊️', '🏆'];
   const TIER_GROW = 1.25;   // 每階數值倍率（原 1.8，頂裝約 1157×；壓平後頂裝約 24×，不再輾壓學習乘數）
+  /* 區間必須不重疊：舊算法各階直接乘 1.25，寬度也跟著放大，導致相鄰階距永遠小於寬度、
+     高階隨機出的數值反而可能低於低階（天位隨到 16 輸給神話隨到 19）。改成新階下限＝前階上限+1，
+     上限＝前階上限×TIER_GROW，確定「高階最低分」也贏「低階最高分」（P？ 修裝備數值倒掛）。 */
   const TIER_RANGE = (() => {
     const out = { common: [2, 4], rare: [5, 8], legendary: [10, 15] };
-    let [lo, hi] = out.legendary;
-    for (let i = 3; i < TIERS.length; i++) { lo = Math.round(lo * TIER_GROW); hi = Math.round(hi * TIER_GROW); out[TIERS[i]] = [lo, hi]; }
+    let hi = out.legendary[1];
+    for (let i = 3; i < TIERS.length; i++) {
+      const lo = hi + 1;
+      hi = Math.max(lo + 1, Math.round(hi * TIER_GROW));
+      out[TIERS[i]] = [lo, hi];
+    }
     return out;
   })();
   const tierIdx = t => TIERS.indexOf(t);
@@ -175,9 +182,17 @@ const VDPets = (() => {
     const o = g.owned[id];
     if (!o) return { ok: false, msg: '尚未領養' };
     if (o.lv >= MAX_LV) return { ok: false, msg: '已滿級' };
-    // 學習門檻：詞源之力（家族已學比例）要跟得上等級——升級的正道是學字
+    // 學習門檻：詞源之力（家族已學比例、依 Leitner 盒號加權）要跟得上等級——升級的正道是學字
     const pw = Math.round(power(id) * 100), need = o.lv * 3;
-    if (pw < need) return { ok: false, needStudy: true, msg: `先學會這家族更多字（現在 ${pw}%，需要 ${need}%）` };
+    if (pw < need) {
+      // 家族的字全學過一輪了（沒有新字可學）但還沒精熟複習到位：提示要改成「複習」不是「學更多字」，
+      // 不然玩家會誤以為卡死——其實只是還要靠時間＋答對把 box 練到 3 以上，不是真的無路可走
+      const fs = familyStats(id);
+      const msg = fs.total && fs.learned >= fs.total
+        ? `這個家族的字都學過了，繼續複習到精熟（現在 ${pw}%，需要 ${need}%）`
+        : `先學會這家族更多字（現在 ${pw}%，需要 ${need}%）`;
+      return { ok: false, needStudy: true, msg };
+    }
     const cost = levelCost(o.lv);
     if (VDGame.raw.coins < cost) return { ok: false, msg: `字幣不足，需要 ${cost}` };
     const before = stageOf(o.lv);

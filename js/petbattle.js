@@ -308,12 +308,19 @@ const VDPetBattle = (() => {
 
   /* ── 野生：無限爬塔敵人公式生成 ──
      1–10 層照 pets.json；第 11 層起以 10 層一循環（名字加「・輪迴 N」），
-     血/攻按 1 + 0.15*(floor-10) 放大；每 3 輪迴掉落底階往上爬一階，跟著新裝備天花板走 */
+     血按 1 + 0.15*(floor-10) 放大；每 3 輪迴掉落底階往上爬一階，跟著新裝備天花板走。
+     攻擊力改參考玩家出戰詞靈「當下實際攻擊力」而非固定等級公式——舊制怪物攻擊力只綁 wild.json 的 lv，
+     跟玩家裝備/詞源之力練得快慢無關，導致低裝低練玩家打到第 10 層（遠古辭靈 lv28⇒atk66）時被電爆。
+     改成怪物攻擊＝玩家攻擊×難度比例，比例隨層數爬升，永遠貼著玩家自己的實力，不會脫節。 */
   function floorDef(n) {
     const wild = VDPets.wild();
     const base = wild[(n - 1) % wild.length];
-    if (n <= wild.length)
-      return { name: base.name, ico: base.ico, lv: base.lv, acc: base.acc, dropTier: base.dropTier, floorNo: n, atk: 10 + 2 * base.lv, hp: 80 + 6 * base.lv };
+    const active = VDPets.active();
+    const myAtk = Math.max(1, active ? VDPets.atk(active) : 30);
+    if (n <= wild.length) {
+      const ratio = 0.5 + 0.05 * (n - 1);   // 第1層≈玩家攻擊力一半，第10層追平玩家攻擊力
+      return { name: base.name, ico: base.ico, lv: base.lv, acc: base.acc, dropTier: base.dropTier, floorNo: n, atk: Math.round(myAtk * ratio), hp: 80 + 6 * base.lv };
+    }
     // 40 層前線性 +15%/層（原手感）；40 層後怪也走幾何成長，追上裝備每 30 層升 1 階（數值×1.8）的曲線，
     // 否則深層會被一擊秒殺。血 ×1.65/30層＝耐打但磨得死；攻 ×1.5/30層＝容錯隨深度緩慢回升
     const lin = 1 + 0.15 * (Math.min(n, 40) - 10);
@@ -329,7 +336,7 @@ const VDPetBattle = (() => {
       dropTier,
       legBonus: Math.min(0.5, 0.05 * (n - 10)),   // 掉落時有機會再升一階
       floorNo: n,
-      atk: Math.round((10 + 2 * base.lv) * kAtk),
+      atk: Math.round(myAtk * kAtk),
       hp: Math.round((80 + 6 * base.lv) * kHp)
     };
   }
