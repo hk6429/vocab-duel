@@ -308,7 +308,7 @@ const VDPet = (() => {
 
           <div class="pg-sub">📚 守護字綴（學這家族＝餵養牠）</div>
           ${affixChips(p)}
-          <div class="pg-hint">已學 ${fs.learned}/${fs.total} 字・精熟 ${fs.mastered}　<button class="btn small" id="doTrain">🃏 學這家族的字</button>　<button class="btn small ghost" id="doGraph">🌌 看星圖</button></div>
+          <div class="pg-hint">已學 ${fs.learned}/${fs.total} 字・精熟 ${fs.mastered}　<button class="btn small" id="doTrain">🃏 學這家族的字</button>${fs.total && fs.learned >= fs.total && fs.mastered < fs.total ? `　<button class="btn small" id="doReview">🔁 複習這家族的字</button>` : ''}　<button class="btn small ghost" id="doGraph">🌌 看星圖</button></div>
 
           ${loreSection(id, p)}
 
@@ -387,11 +387,13 @@ const VDPet = (() => {
       const r = VDPets.levelUp(id);
       if (!r.ok) {
         VDGame.toast(r.msg);
-        // 學習門檻擋下：升級鈕旁補一顆「學這家族的字」捷徑（複用下方 doTrain 入口）
+        // 學習門檻擋下：升級鈕旁補一顆捷徑（複用下方 doTrain/doReview 入口）；
+        // 字都學完了就導去複習（doTrain 這時按了只會白目提示「都學過了」），還有新字才導去學
         if (r.needStudy && !$('#lvTrain')) {
+          const toReview = !!$('#doReview');
           const b = document.createElement('button');
-          b.className = 'btn small'; b.id = 'lvTrain'; b.textContent = '🃏 學這家族的字';
-          b.onclick = () => $('#doTrain').click();
+          b.className = 'btn small'; b.id = 'lvTrain'; b.textContent = toReview ? '🔁 複習這家族的字' : '🃏 學這家族的字';
+          b.onclick = () => $(toReview ? '#doReview' : '#doTrain').click();
           $('#doLv').after(b);
         }
         return;
@@ -433,6 +435,17 @@ const VDPet = (() => {
       const wmap = {}; for (const w of VDApp.words()) wmap[w.word.toLowerCase()] = w;
       const list = unlearned.map(w => wmap[w]).filter(Boolean).slice(0, 10);
       if (!list.length) return VDGame.toast('這家族的字都學過了！');
+      el.innerHTML = '<div id="pet-flash"></div><button class="btn ghost" onclick="VDApp.go(\'pets\')">← 回詞靈</button>';
+      VDFlash.start(list, el.querySelector('#pet-flash'), { raw: true });
+    };
+    // 家族的字都學過但還沒精熟（box<3）：複習未精熟的字，越生疏（box 越低）越先出，幫忙練到升級門檻
+    if ($('#doReview')) $('#doReview').onclick = () => {
+      const wmap = {}; for (const w of VDApp.words()) wmap[w.word.toLowerCase()] = w;
+      const list = [...VDPets.wordsOf(id)]
+        .filter(w => { const b = VDStore.box(w); return b >= 0 && b < 3; })
+        .sort((a, b) => VDStore.box(a) - VDStore.box(b))
+        .map(w => wmap[w]).filter(Boolean).slice(0, 10);
+      if (!list.length) return VDGame.toast('這家族已經全部精熟了！');
       el.innerHTML = '<div id="pet-flash"></div><button class="btn ghost" onclick="VDApp.go(\'pets\')">← 回詞靈</button>';
       VDFlash.start(list, el.querySelector('#pet-flash'), { raw: true });
     };
