@@ -1161,6 +1161,7 @@ body.dark .lore-item i { color: rgba(255,255,255,.5); }
   padding: 8px 12px; border-radius: 10px; background: var(--paper2); border: 1px solid var(--line); font-size: 14px; }
 .pb-brow.me { border-color: var(--accent2); background: rgba(111,159,201,.12); }
 .pb-rank { text-align: center; font-weight: 700; }
+.pb-bnick i { display: block; font-style: normal; font-size: 11.5px; color: var(--ink-55); font-weight: 400; }
 .pb-bpet { font-size: 12.5px; color: var(--ink-55); }
 .pb-brow b { text-align: right; font-variant-numeric: tabular-nums; }
 

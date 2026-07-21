@@ -30,6 +30,7 @@ function cleanSnap(s) {
     petId: s.petId,
     petName: typeof s.petName === "string" ? s.petName.slice(0, 8) : "詞靈",
     lv: clamp(s.lv, 25) || 1,
+    heroLv: clamp(s.heroLv, 99) || 1,
     atk: clamp(s.atk, 300) || 10,
     hp: clamp(s.hp, 800) || 100,
     skills: Array.isArray(s.skills) ? s.skills.filter(okId).slice(0, 3) : [],
@@ -52,7 +53,7 @@ async function handler(req, res, env) {
       await redis.ltrim(POOL, 0, POOL_MAX - 1);
       // 以暱稱為唯一 key：同一玩家只佔一列，積分隨最新戰績覆寫（過去用 {nick,lv} 當 key 會讓升等後多出殭屍列）
       await redis.zadd(BOARD, { score: snap.rating, member: snap.nick });
-      await redis.hset(BOARDMETA, { [snap.nick]: JSON.stringify({ petName: snap.petName, lv: snap.lv }) });
+      await redis.hset(BOARDMETA, { [snap.nick]: JSON.stringify({ petName: snap.petName, lv: snap.lv, heroLv: snap.heroLv }) });
       await redis.zremrangebyrank(BOARD, 0, -101);   // 榜只留前 100 名
       return res.status(200).json({ ok: 1 });
     }
@@ -90,7 +91,7 @@ async function handler(req, res, env) {
           const m = await redis.hget(BOARDMETA, nick);
           meta = m ? (typeof m === "string" ? JSON.parse(m) : m) : {};
         } catch { /* 無 meta 就只顯示暱稱 */ }
-        rows.push({ nick, petName: meta.petName || "詞靈", lv: meta.lv || 1, rating });
+        rows.push({ nick, petName: meta.petName || "詞靈", lv: meta.lv || 1, heroLv: meta.heroLv || 1, rating });
       }
       const best = new Map();   // 同暱稱只留最高分那列，清掉升等/舊格式造成的殭屍重複
       for (const r of rows) {

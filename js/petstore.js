@@ -451,7 +451,7 @@ const VDPets = (() => {
     if (!id) return null;
     return {
       nick: VDGame.heroName(), petId: id, petName: dispName(id),
-      lv: lvOf(id), atk: atk(id), hp: hp(id),
+      lv: lvOf(id), heroLv: VDGame.level(), atk: atk(id), hp: hp(id),
       skills: skillsOf(id).filter(s => s.unlocked).map(s => s.id), rating: g.rating
     };
   }

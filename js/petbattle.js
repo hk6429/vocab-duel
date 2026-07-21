@@ -397,7 +397,7 @@ const VDPetBattle = (() => {
         ${rows.length ? `<div class="pb-board">${rows.map((b, i) => `
           <div class="pb-brow ${b.nick === VDGame.heroName() ? 'me' : ''}">
             <span class="pb-rank">${['🥇', '🥈', '🥉'][i] || i + 1}</span>
-            <span class="pb-bnick">${b.nick}</span>
+            <span class="pb-bnick">${b.nick}<i>人物 Lv.${b.heroLv || 1}</i></span>
             <span class="pb-bpet">${b.petName} Lv.${b.lv}</span>
             <b>${b.rating}</b>
           </div>`).join('')}</div>` : '<p class="pg-hint">還沒有人上榜——去打一場影子對戰，你就是第一名！</p>'}
@@ -421,7 +421,7 @@ const VDPetBattle = (() => {
         ${rows.length ? `<div class="pb-board">${rows.map((b, i) => `
           <div class="pb-brow ${b.nick === VDGame.heroName() ? 'me' : ''}">
             <span class="pb-rank">${['🥇', '🥈', '🥉'][i] || i + 1}</span>
-            <span class="pb-bnick">${b.nick}</span>
+            <span class="pb-bnick">${b.nick}<i>人物 Lv.${b.heroLv || 1}</i></span>
             <span class="pb-bpet">${b.petName} Lv.${b.lv}</span>
             <b>${b.rating}</b>
           </div>`).join('')}</div>` : '<p class="pg-hint">還沒有人上榜——去打一場影子對戰，你就是第一名！</p>'}
