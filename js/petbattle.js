@@ -229,6 +229,8 @@ const VDPetBattle = (() => {
       if (Math.random() < state.foe.acc) {
         let d = Math.round(state.foe.atk * (0.5 + Math.random() * 0.25));
         if (state.skills.includes('guard')) d = Math.max(1, Math.round(d * 0.8));
+        // 保底：不管敵方攻擊力算出多高，單次反擊最多扣玩家滿血的 35%，杜絕「一擊必殺」打壞小朋友信心
+        d = Math.min(d, Math.max(1, Math.round(state.pMax * 0.35)));
         state.pHp = Math.max(0, state.pHp - d);
         state.log = `💢 答錯！${state.foe.name} 反擊 −${d}${state.skills.includes('guard') ? '（🛡️已減傷）' : ''}`;
       } else {
@@ -321,7 +323,7 @@ const VDPetBattle = (() => {
     const active = VDPets.active();
     const myAtk = Math.max(1, active ? VDPets.atk(active) : 30);
     if (n <= wild.length) {
-      const ratio = 0.5 + 0.05 * (n - 1);   // 第1層≈玩家攻擊力一半，第10層追平玩家攻擊力
+      const ratio = 0.35 + 0.03 * (n - 1);   // 第1層≈玩家攻擊力 1/3，第10層約玩家攻擊力 6 成（原追平太兇，小朋友會被電到沒信心）
       return { name: base.name, ico: base.ico, lv: base.lv, acc: base.acc, dropTier: base.dropTier, floorNo: n, atk: Math.round(myAtk * ratio), hp: 80 + 6 * base.lv };
     }
     // 40 層前線性 +15%/層（原手感）；40 層後怪也走幾何成長，追上裝備每 30 層升 1 階（數值×1.8）的曲線，
