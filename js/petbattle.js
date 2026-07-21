@@ -1,5 +1,8 @@
 /* 詞靈競技 VDPetBattle：野生試煉 10 層＋影子對戰。答題驅動：答對寵物出招、答錯敵方反擊。 */
 const VDPetBattle = (() => {
+  // 後端遷到 CF Pages（D1）後 API 實際跑在 pages.dev；同源就相對路徑，其餘平台打絕對網址（比照 cloud/town/report.js）
+  const API = location.hostname.includes('pages.dev') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? '' : 'https://vocab-duel.pages.dev';
   let el = null, words = [], state = null, locked = false;
 
   async function render(container) {
@@ -356,7 +359,7 @@ const VDPetBattle = (() => {
     submitSnapshot();   // 先把自己丟進池子——否則池子空了永遠配不到人、大家都卡在練習賽
     let opp = null, connected = false;
     try {
-      const r = await fetch('api/pets', {
+      const r = await fetch(`${API}/api/pets`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ op: 'opponent', rating: VDPets.rating })
       });
@@ -385,7 +388,7 @@ const VDPetBattle = (() => {
     container.innerHTML = '<div class="loading">讀取排行榜…</div>';
     let rows = [];
     try {
-      const r = await fetch('api/pets', {
+      const r = await fetch(`${API}/api/pets`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ op: 'board' })
       });
@@ -409,7 +412,7 @@ const VDPetBattle = (() => {
     el.innerHTML = '<div class="loading">讀取排行榜…</div>';
     let rows = [];
     try {
-      const r = await fetch('api/pets', {
+      const r = await fetch(`${API}/api/pets`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ op: 'board' })
       });

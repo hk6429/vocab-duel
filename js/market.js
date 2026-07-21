@@ -2,6 +2,9 @@
    上架＝從背包挑一件＋定價（各階有價格帶）；買到直接進背包；賣出領貨款抽 10% 稅。
    claimKey 存本機 vd_market_claims，憑券下架／領款。 */
 const VDMarket = (() => {
+  // 後端遷到 CF Pages（D1）後 API 實際跑在 pages.dev；同源就相對路徑，其餘平台打絕對網址（比照 cloud/town/report.js）
+  const API = location.hostname.includes('pages.dev') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? '' : 'https://vocab-duel.pages.dev';
   const CKEY = 'vd_market_claims';
   /* 價格帶：前三階比舊版高（拉開難度），傳說之上每階再放大 ~1.9 倍，跟鍛造成本一起漲 */
   const BAND = (() => {
@@ -30,7 +33,7 @@ const VDMarket = (() => {
 
   async function api(body) {
     try {
-      const r = await fetch('api/market', {
+      const r = await fetch(`${API}/api/market`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });

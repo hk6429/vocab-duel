@@ -2,6 +2,9 @@
    傷害權威在攻擊方：各自上報累計輸出 dmg，對方血量 = 對方最大血 − 我的 dmg。
    速度加成：剩越多秒傷害越高。對方 20 秒無心跳判勝。 */
 const VDRT = (() => {
+  // 後端遷到 CF Pages（D1）後 API 實際跑在 pages.dev；同源就相對路徑，其餘平台打絕對網址（比照 cloud/town/report.js）
+  const API = location.hostname.includes('pages.dev') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? '' : 'https://vocab-duel.pages.dev';
   const ROUNDS = 20, ROUND_SEC = 15, POLL_MS = 1500, DEAD_MS = 20000;
   let el = null, room = null, my = null, oppSnap = null, qs = [], st = null;
   let pollTimer = 0, tickTimer = 0;

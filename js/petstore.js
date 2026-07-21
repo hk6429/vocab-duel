@@ -1,5 +1,8 @@
 /* 詞靈純邏輯層 VDPets：狀態(vd_pets)、詞源之力、屬性/經濟計算、裝備、積分。零 DOM。 */
 const VDPets = (() => {
+  // 後端遷到 CF Pages（D1）後 API 實際跑在 pages.dev；同源就相對路徑，其餘平台打絕對網址（比照 cloud/town/report.js）
+  const API = location.hostname.includes('pages.dev') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? '' : 'https://vocab-duel.pages.dev';
   const KEY = 'vd_pets';
   const KIND = { p: 'prefixes', s: 'suffixes', r: 'roots' };
   const SLOTS = ['weapon', 'armor', 'trinket', 'crest'];
@@ -462,7 +465,7 @@ const VDPets = (() => {
     const snap = snapshot();
     if (!snap) return;
     try {
-      await fetch('api/pets', {
+      await fetch(`${API}/api/pets`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ op: 'submit', snap })
       });
