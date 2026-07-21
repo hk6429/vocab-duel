@@ -394,17 +394,22 @@ const VDPetBattle = (() => {
       });
       if (r.ok) rows = (await r.json()).board || [];
     } catch { /* 離線 */ }
+    const myIdx = rows.findIndex(b => b.nick === VDGame.heroName());
     container.innerHTML = `
       <div class="wc-card"><div class="wc-card-body">
         <div class="hero-sec">🏆 詞靈排行榜</div>
+        ${myIdx >= 0 ? `<div class="pb-myrank">📍 你目前排名第 ${myIdx + 1} 名（${rows[myIdx].rating} 分）</div>`
+          : rows.length ? `<div class="pb-myrank">你還沒上榜，或名次在前 ${rows.length} 名之外——打一場影子對戰衝榜！</div>` : ''}
         ${rows.length ? `<div class="pb-board">${rows.map((b, i) => `
-          <div class="pb-brow ${b.nick === VDGame.heroName() ? 'me' : ''}">
+          <div class="pb-brow ${b.nick === VDGame.heroName() ? 'me' : ''}" data-me="${b.nick === VDGame.heroName() ? '1' : ''}">
             <span class="pb-rank">${['🥇', '🥈', '🥉'][i] || i + 1}</span>
             <span class="pb-bnick">${b.nick}<i>人物 Lv.${b.heroLv || 1}</i></span>
             <span class="pb-bpet">${b.petName} Lv.${b.lv}</span>
             <b>${b.rating}</b>
           </div>`).join('')}</div>` : '<p class="pg-hint">還沒有人上榜——去打一場影子對戰，你就是第一名！</p>'}
       </div></div>`;
+    const meRow = container.querySelector('[data-me="1"]');
+    if (meRow) meRow.scrollIntoView({ block: 'center' });
   }
 
   /* ── 排行榜 ── */
@@ -418,11 +423,14 @@ const VDPetBattle = (() => {
       });
       if (r.ok) rows = (await r.json()).board || [];
     } catch { /* 離線 */ }
+    const myIdx = rows.findIndex(b => b.nick === VDGame.heroName());
     el.innerHTML = `
       <div class="wc-card"><div class="wc-card-body">
         <h2>🏆 詞靈排行榜</h2>
+        ${myIdx >= 0 ? `<div class="pb-myrank">📍 你目前排名第 ${myIdx + 1} 名（${rows[myIdx].rating} 分）</div>`
+          : rows.length ? `<div class="pb-myrank">你還沒上榜，或名次在前 ${rows.length} 名之外——打一場影子對戰衝榜！</div>` : ''}
         ${rows.length ? `<div class="pb-board">${rows.map((b, i) => `
-          <div class="pb-brow ${b.nick === VDGame.heroName() ? 'me' : ''}">
+          <div class="pb-brow ${b.nick === VDGame.heroName() ? 'me' : ''}" data-me="${b.nick === VDGame.heroName() ? '1' : ''}">
             <span class="pb-rank">${['🥇', '🥈', '🥉'][i] || i + 1}</span>
             <span class="pb-bnick">${b.nick}<i>人物 Lv.${b.heroLv || 1}</i></span>
             <span class="pb-bpet">${b.petName} Lv.${b.lv}</span>
@@ -431,6 +439,8 @@ const VDPetBattle = (() => {
         <button class="btn ghost" id="backMode">← 回競技場</button>
       </div></div>`;
     el.querySelector('#backMode').onclick = chooseMode;
+    const meRow = el.querySelector('[data-me="1"]');
+    if (meRow) meRow.scrollIntoView({ block: 'center' });
   }
 
   return { render, boardOnly };
