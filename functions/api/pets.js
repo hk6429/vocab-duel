@@ -54,7 +54,7 @@ async function handler(req, res, env) {
       // 以暱稱為唯一 key：同一玩家只佔一列，積分隨最新戰績覆寫（過去用 {nick,lv} 當 key 會讓升等後多出殭屍列）
       await redis.zadd(BOARD, { score: snap.rating, member: snap.nick });
       await redis.hset(BOARDMETA, { [snap.nick]: JSON.stringify({ petName: snap.petName, lv: snap.lv, heroLv: snap.heroLv }) });
-      await redis.zremrangebyrank(BOARD, 0, -101);   // 榜只留前 100 名
+      await redis.zremrangebyrank(BOARD, 0, -501);   // 榜只留前 500 名
       return res.status(200).json({ ok: 1 });
     }
 
@@ -73,8 +73,8 @@ async function handler(req, res, env) {
     }
 
     if (op === "board") {
-      // 多抓一些（含新舊格式殭屍列），依暱稱去重留最高分後再取 Top 50
-      const raw = await redis.zrange(BOARD, 0, 99, { rev: true, withScores: true });
+      // 多抓一些（含新舊格式殭屍列），依暱稱去重留最高分後再取 Top 500
+      const raw = await redis.zrange(BOARD, 0, 599, { rev: true, withScores: true });
       const rows = [];
       for (let i = 0; i < raw.length; i += 2) {
         const member = raw[i];
@@ -98,7 +98,7 @@ async function handler(req, res, env) {
         const cur = best.get(r.nick);
         if (!cur || r.rating > cur.rating) best.set(r.nick, r);
       }
-      const board = [...best.values()].sort((a, b) => b.rating - a.rating).slice(0, 50);
+      const board = [...best.values()].sort((a, b) => b.rating - a.rating).slice(0, 500);
       return res.status(200).json({ ok: 1, board });
     }
 
