@@ -85,8 +85,9 @@ const VDTown = (() => {
   const countOf = (b) => cells().filter(x => x.b === b).length;
   const sumLv = (b) => cells().filter(x => x.b === b).reduce((s, x) => s + (x.lv || 1), 0); // 同類建築總等級＝升級加成的計量單位
   const thLevel = () => (cells().find(x => x.b === 'townhall') || { lv: 1 }).lv;
-  // P2-1 倉儲上限也綁精熟字數（廣度沾學習）：每精熟 1 字 +1，最多 +500
-  const resCap = () => 300 + 200 * thLevel() + 2 * sumLv('statue') + Math.min(500, mastered());
+  // P2-1 倉儲上限也綁精熟字數（廣度沾學習）：每精熟 1 字 +1，最多 +800
+  // 2026-07-22 玩家反映早期倉庫太小、資源常被浪費，全面調高（基底/市政廳/雕像/精熟上限皆加大）
+  const resCap = () => 600 + 300 * thLevel() + 4 * sumLv('statue') + Math.min(800, mastered());
   const popCap = () => HOUSE_CAP * sumLv('house');                    // 民房每級多住 4 人（Lv5=20）
   const profCount = (job) => g.pop.filter(p => p.job === job).length;
   const idle = () => g.pop.filter(p => !p.job);

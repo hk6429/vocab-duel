@@ -49,7 +49,7 @@ const VDTownUI = (() => {
   }
   const resbarHtml = () =>
     VDTown.RES.map(r => `<span class="tw-res">${VDTown.RES_META[r].ico} ${VDTown.raw.res[r] || 0}</span>`).join('') +
-    `<span class="tw-res" title="倉庫上限＝300＋市政廳每級200＋雕像每級2＋每精熟1字1（上限500）；升市政廳、蓋雕像或多背單字都能擴充">📦 上限 ${VDTown.resCap()}</span>` +
+    `<span class="tw-res" title="倉庫上限＝600＋市政廳每級300＋雕像每級4＋每精熟1字1（上限800）；升市政廳、蓋雕像或多背單字都能擴充">📦 上限 ${VDTown.resCap()}</span>` +
     `<span class="tw-res">🪙 ${VDTown.raw.tokens} 代幣</span><span class="tw-res">💰 ${VDGame.raw.coins}</span>`;
   function refreshRes() { const b = el && el.querySelector('#tw-resbar'); if (b) b.innerHTML = resbarHtml(); }
   function supplyHtml() {
