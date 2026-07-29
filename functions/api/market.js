@@ -17,12 +17,17 @@ const ITEM_TTL = 7 * 86400;   // 掛單／貨款保留 7 天
 const DAILY_BUY_CAP = 3;
 const TAX = 0.1;
 
-// 裝備階梯：與前端 js/petstore.js 的 TIERS/TIER_RANGE 同步，傳說之上再 10 階，數值與價格逐階放大
+// 裝備階梯：與前端 js/petstore.js 的 TIERS/TIER_RANGE 同步。
+// 傳說以上採不重疊的 ×1.25 區間，避免市場把新版合法掉落誤判成修改器神裝。
 const TIERS = ["common", "rare", "legendary", "mythic", "celestial", "emperor", "eternal", "genesis", "stellar", "cosmic", "primordial", "transcendent", "supreme"];
 const TIER_RANGE = (() => {
   const out = { common: [2, 4], rare: [5, 8], legendary: [10, 15] };
-  let [lo, hi] = out.legendary;
-  for (let i = 3; i < TIERS.length; i++) { lo = Math.round(lo * 1.8); hi = Math.round(hi * 1.8); out[TIERS[i]] = [lo, hi]; }
+  let hi = out.legendary[1];
+  for (let i = 3; i < TIERS.length; i++) {
+    const lo = hi + 1;
+    hi = Math.max(lo + 1, Math.round(hi * 1.25));
+    out[TIERS[i]] = [lo, hi];
+  }
   return out;
 })();
 const PRICE_BAND = (() => {
