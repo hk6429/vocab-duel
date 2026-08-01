@@ -192,13 +192,34 @@ body.dark .tts-help.warn b, body.dark .tts-lead b { color: #f0b878; }
 
 /* ── 文學家對戰 ── */
 .bt-pick { display: grid; gap: 14px; margin-top: 20px; }
+.bt-modegrid { grid-template-columns: 1fr; }
+.bt-modecard {
+  position: relative; min-height: 190px; padding: 0; overflow: hidden; cursor: pointer;
+  border: 1px solid rgba(111,82,39,.48); border-radius: 18px; background: #171712; color: #fff;
+  box-shadow: 0 14px 32px rgba(42,30,18,.2); text-align: left;
+}
+.bt-modecard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s ease; }
+.bt-modecard::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 25%, rgba(8,8,7,.88) 100%); }
+.bt-modecard:hover img { transform: scale(1.035); }
+.bt-modecopy { position: absolute; z-index: 1; left: 20px; right: 20px; bottom: 17px; display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.bt-modecopy b { font: 800 23px/1.15 var(--font-serif); letter-spacing: 2px; text-shadow: 0 2px 8px #000; }
+.bt-modecopy small { font-size: 12px; color: rgba(255,247,220,.76); letter-spacing: 1px; }
 .bt-oppgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
 .bt-oppcard {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
-  padding: 16px 10px; text-align: center; cursor: pointer; color: var(--text);
-  box-shadow: 0 6px 18px rgba(43,43,43,.06);
+  position: relative; min-height: 280px; overflow: hidden;
+  background: #171712; border: 1px solid rgba(111,82,39,.48); border-radius: 18px;
+  padding: 0; text-align: left; cursor: pointer; color: #fff;
+  box-shadow: 0 8px 22px rgba(43,43,43,.14);
   transition: transform .12s, box-shadow .12s;
 }
+.bt-oppcard > .bt-portrait { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 0; object-fit: cover; box-shadow: none; }
+.bt-oppveil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(6,8,10,.04) 30%, rgba(9,10,10,.92) 100%); }
+.bt-oppcopy { position: absolute; z-index: 2; left: 15px; right: 15px; bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.bt-oppcopy .bt-name { margin: 0; color: #fff8df; font-size: 19px; text-shadow: 0 2px 7px #000; }
+.bt-oppcopy .bt-tier { margin: 0; background: rgba(11,11,9,.72); border: 1px solid rgba(242,220,159,.35); color: #f0d894; }
+.bt-opptaunt { flex-basis: 100%; font-size: 10px; line-height: 1.35; color: rgba(255,249,229,.68); }
+.bt-oppcard.locked > .bt-portrait { filter: grayscale(1) brightness(.48); }
+.bt-oppcard.locked .bt-oppveil { background: linear-gradient(180deg, rgba(8,8,8,.48), rgba(8,8,8,.94)); }
 .bt-oppcard:active { transform: scale(.97); }
 .bt-oppcard:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(74,123,166,.18); }
 .bt-face { font-size: 40px; }
@@ -238,6 +259,38 @@ body.dark .tts-help.warn b, body.dark .tts-lead b { color: #f0b878; }
 .bt-portrait.big { width: 120px; height: 120px; }
 .bt-face-emoji { font-size: 40px; }
 .bt-face-emoji.big { font-size: 54px; }
+
+/* 文學家對戰：雙方圖片撐滿戰場，所有資料直接疊在立繪上 */
+.bt-literary-arena {
+  --lit-gold: #d7b65d; display: block; overflow: hidden; position: relative;
+  border: 1px solid rgba(111,82,39,.62); border-radius: 18px; background: #15130f;
+  box-shadow: 0 18px 42px rgba(42,28,15,.24); color: #fff8df;
+}
+.bt-literary-stage { position: relative; display: grid; grid-template-columns: 1fr 1fr; min-height: clamp(310px, 49vw, 430px); }
+.bt-duelist { position: relative; min-width: 0; overflow: hidden; isolation: isolate; }
+.bt-duelist:first-child { border-right: 1px solid rgba(216,183,95,.48); }
+.bt-duelist > .bt-portrait, .bt-duelist > .bt-player-art {
+  position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; border: 0; border-radius: 0;
+  object-fit: cover; display: block; filter: saturate(.9) contrast(1.06); transform: scale(1.015);
+}
+.bt-duelist.foe > .bt-portrait { object-position: 50% 30%; }
+.bt-duelist.me > .bt-player-art { object-position: 50% 35%; }
+.bt-duelist-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,7,5,.02) 28%, rgba(10,8,5,.38) 58%, rgba(8,7,5,.96) 100%); }
+.bt-duelist.foe .bt-duelist-shade { background: linear-gradient(180deg, rgba(64,16,12,.04) 24%, rgba(72,19,14,.42) 58%, rgba(34,10,8,.97) 100%); }
+.bt-duelist.me .bt-duelist-shade { background: linear-gradient(180deg, rgba(8,37,52,.03) 24%, rgba(8,45,62,.4) 58%, rgba(4,23,32,.97) 100%); }
+.bt-duelist-copy { position: absolute; z-index: 2; left: 14px; right: 14px; bottom: 13px; }
+.bt-duelist-copy .bt-camp { display: block; margin-bottom: 4px; color: rgba(255,244,210,.68); }
+.bt-duelist-copy .bt-name { display: flex; align-items: center; gap: 6px; margin: 0 0 7px; color: #fff7db; font-size: 20px; text-shadow: 0 2px 7px #000; }
+.bt-duelist-copy .bt-name small { font: 700 10px/1 var(--font-sans); color: #f0cf72; }
+.bt-duelist-copy .bt-tier { margin: 0; background: rgba(0,0,0,.48); border: 1px solid rgba(216,183,95,.5); color: #f0d589; }
+.bt-literary-vs { position: absolute; z-index: 4; left: 50%; top: 42%; transform: translate(-50%,-50%) rotate(-7deg); width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid rgba(240,206,112,.8); border-radius: 50%; background: radial-gradient(circle,#74400f 0 30%,#21150b 68%); color: #ffdf87; font: 900 17px/1 var(--font-serif); box-shadow: 0 0 22px rgba(255,176,33,.38); text-shadow: 0 0 8px #ff9e16; }
+.bt-literary-arena > .bt-log { margin: 0; padding: 10px 14px; min-height: 40px; border-top: 1px solid rgba(216,183,95,.36); background: rgba(15,13,9,.96); color: #f0d37d; }
+.bt-literary-arena .bt-hp { height: 17px; border-color: rgba(234,210,145,.48); background: rgba(4,5,5,.7); }
+.bt-literary-arena .bt-hp span { color: #fff8df; text-shadow: 0 1px 2px #000; }
+.bt-literary-arena .bt-assist { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; color: rgba(255,249,228,.86); }
+.bt-literary-arena .bt-assist img { width: 34px; height: 34px; flex: none; border-radius: 50%; object-fit: cover; border: 1px solid rgba(216,183,95,.58); background: #ede7d8; }
+.bt-literary-arena .bt-assist span { font-size: 10px; line-height: 1.15; }
+.bt-literary-arena .bt-assist small { color: rgba(255,249,228,.6); }
 
 /* ── 字綴心智圖 ── */
 .af-tabs { display: flex; gap: 8px; margin: 6px 0 12px; }
@@ -1198,30 +1251,28 @@ body.dark .lore-item i { color: rgba(255,255,255,.5); }
   text-shadow: 0 1px 8px rgba(255,196,62,.42); }
 .bt-round-banner i { margin-top: 4px; font-style: normal; font-size: 10px; letter-spacing: 1px; color: rgba(247,237,207,.65); }
 .bt-stage {
-  position: relative; display: grid; grid-template-columns: minmax(0,1fr) 48px minmax(0,1fr);
-  gap: 4px; align-items: end; padding: 14px 14px 12px;
+  position: relative; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: 0; align-items: stretch; margin-top: 10px; padding: 0;
+  min-height: clamp(300px, 48vw, 420px); border-top: 1px solid rgba(217,183,99,.32); border-bottom: 1px solid rgba(217,183,99,.32);
 }
 .bt-petbattle .bt-side {
-  min-width: 0; padding: 9px 10px 10px; gap: 5px; align-items: stretch;
-  border: 1px solid rgba(217,183,99,.3); border-radius: 10px;
-  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
-  box-shadow: inset 0 0 24px rgba(0,0,0,.22), 0 8px 18px rgba(0,0,0,.2);
+  position: relative; min-width: 0; padding: 0; gap: 0; align-items: stretch; overflow: hidden; isolation: isolate;
+  border: 0; border-radius: 0; box-shadow: inset 0 0 28px rgba(0,0,0,.28);
 }
-.bt-petbattle .bt-side.me { order: 0; background: linear-gradient(145deg, rgba(10,66,82,.88), rgba(4,29,40,.8)); }
-.bt-petbattle .bt-side.foe { order: 2; background: linear-gradient(215deg, rgba(108,37,28,.9), rgba(48,18,16,.82)); }
+.bt-petbattle .bt-side.me { order: 0; background: #19485e; border-right: 1px solid rgba(217,183,99,.42); }
+.bt-petbattle .bt-side.foe { order: 2; background: #702c24; }
+.bt-fighter-art { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; display: block; filter: saturate(1.04) contrast(1.08); transform: scale(1.02); }
+.bt-petbattle .me .bt-fighter-art { mix-blend-mode: multiply; filter: saturate(1.18) contrast(1.12) brightness(1.18); }
+.bt-fighter-shade { position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, transparent 25%, rgba(5,14,18,.18) 48%, rgba(3,18,25,.98) 100%); }
+.bt-petbattle .foe .bt-fighter-shade { background: linear-gradient(180deg, transparent 25%, rgba(43,10,8,.15) 48%, rgba(34,9,7,.98) 100%); }
+.bt-fighter-copy { position: absolute; z-index: 2; left: 12px; right: 12px; bottom: 12px; }
 .bt-camp { font-size: 9px; font-weight: 800; letter-spacing: 2px; color: rgba(247,237,207,.7); text-transform: uppercase; }
 .bt-petbattle .foe .bt-camp { text-align: right; }
-.bt-figure { min-height: 112px; display: flex; align-items: end; justify-content: center; }
-.bt-petbattle .pb-face {
-  width: 112px; height: 112px; border: 0; border-radius: 8px; overflow: visible; background: transparent;
-  filter: drop-shadow(0 12px 10px rgba(0,0,0,.48));
-}
-.bt-petbattle .pb-face img { object-fit: contain; border-radius: 6px; mix-blend-mode: screen; }
-.bt-petbattle .pb-face.me img { transform: scaleX(-1); }
 .bt-petbattle .bt-name {
-  min-height: 31px; margin: 0; display: flex; align-items: center; justify-content: center; gap: 6px;
-  font-size: 16px; color: #fff4cf; text-align: center; text-shadow: 0 2px 5px #000;
+  min-height: 28px; margin: 2px 0 3px; display: flex; align-items: center; justify-content: flex-start; gap: 6px;
+  font-size: 18px; color: #fff4cf; text-align: left; text-shadow: 0 2px 6px #000;
 }
+.bt-petbattle .foe .bt-name { justify-content: flex-end; text-align: right; }
 .bt-petbattle .bt-tier {
   flex: none; margin: 0; padding: 2px 6px; border: 1px solid rgba(217,183,99,.45);
   background: rgba(0,0,0,.3); color: #e7ca7e; font: 700 9px/1.2 var(--font-en); letter-spacing: 0;
@@ -1237,9 +1288,9 @@ body.dark .lore-item i { color: rgba(255,255,255,.5); }
 .bt-petbattle .bt-hp.low .bt-hp-fill { background: linear-gradient(90deg, #9c231d, #ff7b58); }
 .bt-petbattle .bt-hp span { top: 0; right: 5px; line-height: 14px; color: #fff8df; font: 700 9px/14px var(--font-en); text-shadow: 0 1px 2px #000; }
 .bt-versus {
-  order: 1; align-self: center; z-index: 2; width: 48px; height: 48px; display: grid; place-items: center;
+  position: absolute; z-index: 4; left: 50%; top: 43%; transform: translate(-50%,-50%) rotate(-8deg); width: 50px; height: 50px; display: grid; place-items: center;
   border: 1px solid rgba(238,202,111,.72); border-radius: 50%;
-  background: radial-gradient(circle, #754116 0 30%, #21160d 66%); transform: rotate(-8deg);
+  background: radial-gradient(circle, #754116 0 30%, #21160d 66%);
   box-shadow: 0 0 20px rgba(255,180,47,.28), inset 0 0 9px rgba(255,208,99,.2);
 }
 .bt-versus span { color: #ffd97c; font: 900 17px/1 var(--font-serif); text-shadow: 0 0 9px #ff9d16; transform: rotate(8deg); }
@@ -1258,12 +1309,22 @@ body.dark .lore-item i { color: rgba(255,255,255,.5); }
 .bt-pet-question .quiz-sub { color: #765e3e; font-weight: 600; letter-spacing: .4px; }
 .bt-pet-question .btn.opt { border: 1px solid rgba(43,68,83,.13); box-shadow: 0 3px 9px rgba(32,40,48,.05); }
 @media (max-width: 520px) {
-  .bt-stage { grid-template-columns: minmax(0,1fr) 34px minmax(0,1fr); padding: 11px 7px 9px; }
-  .bt-petbattle .bt-side { padding: 7px 6px 8px; }
-  .bt-figure { min-height: 88px; }
-  .bt-petbattle .pb-face { width: 88px; height: 88px; }
-  .bt-petbattle .bt-name { font-size: 13px; gap: 3px; }
-  .bt-stats { gap: 5px; font-size: 8px; }
+  .bt-modecard { min-height: 170px; }
+  .bt-modecopy { left: 14px; right: 14px; bottom: 13px; }
+  .bt-modecopy b { font-size: 20px; }
+  .bt-oppgrid { gap: 9px; }
+  .bt-oppcard { min-height: 240px; }
+  .bt-oppcopy { left: 11px; right: 11px; bottom: 11px; }
+  .bt-oppcopy .bt-name { font-size: 16px; }
+  .bt-opptaunt { display: none; }
+  .bt-literary-stage { min-height: 300px; }
+  .bt-duelist-copy { left: 9px; right: 9px; bottom: 10px; }
+  .bt-duelist-copy .bt-name { font-size: 16px; gap: 4px; }
+  .bt-literary-vs { width: 40px; height: 40px; font-size: 13px; }
+  .bt-stage { min-height: 270px; }
+  .bt-fighter-copy { left: 8px; right: 8px; bottom: 9px; }
+  .bt-petbattle .bt-name { font-size: 14px; gap: 3px; }
+  .bt-stats { gap: 6px; font-size: 8px; }
   .bt-versus { width: 34px; height: 34px; }
   .bt-versus span { font-size: 13px; }
   .bt-round-banner { margin-top: 10px; padding-inline: 18px; }

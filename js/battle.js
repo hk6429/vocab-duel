@@ -74,20 +74,26 @@ const VDBattle = (() => {
     return a;
   }
 
-  /* 作家頭像：3D Pixel Q版圖，載入失敗自動退回 emoji */
+  /* 作家立繪：所有主要對戰畫面都使用圖片，不以 emoji 代替角色 */
   function face(o, big) {
     const cls = 'bt-portrait' + (big ? ' big' : '');
     return `<img loading="lazy" decoding="async" src="img/authors/${o.id}.webp" alt="${o.name}" class="${cls}"
-      onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${o.emoji}',className:'bt-face-emoji${big ? ' big' : ''}'}))">`;
+      onerror="this.onerror=null;this.src='img/ui/h_avatar.webp'">`;
   }
 
   /* ── 選單：模式 → 對手 ── */
   function chooseMode(container) {
     el = container;
     el.innerHTML = `
-      <div class="bt-pick">
-        <button class="btn main" id="mCpu">🤖 挑戰文學家<br><span>單人闖八關</span></button>
-        <button class="btn main" id="mPvp">👥 同機雙人<br><span>兩人輪流搶答</span></button>
+      <div class="bt-pick bt-modegrid">
+        <button class="bt-modecard main" id="mCpu">
+          <img src="img/ui/m_battle.webp" alt="兩位文學家以羽毛筆對決" loading="eager" decoding="async">
+          <span class="bt-modecopy"><b>挑戰文學家</b><small>單人闖八關</small></span>
+        </button>
+        <button class="bt-modecard" id="mPvp">
+          <img src="img/ui/h_arena.webp" alt="水墨競技場" loading="lazy" decoding="async">
+          <span class="bt-modecopy"><b>同機雙人</b><small>兩人輪流搶答</small></span>
+        </button>
       </div>`;
     el.querySelector('#mCpu').onclick = () => { mode = 'cpu'; chooseOpponent(); };
     el.querySelector('#mPvp').onclick = () => { mode = 'pvp'; startPvp(); };
@@ -146,10 +152,13 @@ const VDBattle = (() => {
       const open = VDGame.tierUnlocked(o.tier);
       return `<button class="bt-oppcard ${open ? '' : 'locked'}${champ === o.id ? ' champ' : ''}" data-id="${o.id}" data-open="${open ? 1 : 0}">
         ${champ === o.id ? '<div class="bt-champ">👑 本週擂主・段位分×2</div>' : ''}
-        <div class="bt-face">${open ? face(o) : '<span class="bt-face-emoji">🔒</span>'}</div>
-        <div class="bt-name">${o.name}</div>
-        <div class="bt-tier t-${o.tier}">${o.tier}</div>
-        ${open ? '' : `<div class="bt-locknote">Lv${VDGame.tierNeed(o.tier)} 解鎖</div>`}
+        ${face(o)}
+        <span class="bt-oppveil"></span>
+        <span class="bt-oppcopy">
+          <span class="bt-name">${o.name}</span>
+          <span class="bt-tier t-${o.tier}">${o.tier}</span>
+          ${open ? `<span class="bt-opptaunt">${o.taunt}</span>` : `<span class="bt-locknote">Lv${VDGame.tierNeed(o.tier)} 解鎖</span>`}
+        </span>
       </button>`;
     }).join('')}</div>
     <div class="bt-lockhint">升等（練習／對戰賺 XP）就能解鎖更強的文學家。</div>
@@ -264,7 +273,9 @@ const VDBattle = (() => {
 
   function assistTag() {
     const as = window.VDPets ? VDPets.assist() : null;
-    return as ? `<div class="bt-assist">${as.ico} ${as.name} 助戰（追擊 ${as.atk}${as.leech ? '・回血' : ''}）</div>` : '';
+    if (!as) return '';
+    const stage = VDPets.stageOf(VDPets.lvOf(as.id));
+    return `<div class="bt-assist"><img src="img/pets/${as.id}_s${stage}.webp" alt="${as.name}" loading="lazy" decoding="async"><span>${as.name} 助戰<br><small>追擊 ${as.atk}${as.leech ? '・回血' : ''}</small></span></div>`;
   }
 
   function hpBar(hp, cls) {
@@ -276,18 +287,30 @@ const VDBattle = (() => {
     const q = state.q;
     const opts = optsHtml(q, midTurn);
     el.innerHTML = `
-      <div class="bt-arena">
-        <div class="bt-side foe">
-          <div class="bt-face big">${face(opp, true)}</div>
-          <div class="bt-name">${opp.name}<span class="bt-tier t-${opp.tier}">${opp.tier}</span></div>
-          ${hpBar(state.oHp, 'foe')}
+      <div class="bt-arena bt-literary-arena">
+        <div class="bt-literary-stage">
+          <section class="bt-duelist foe">
+            ${face(opp, true)}
+            <span class="bt-duelist-shade"></span>
+            <div class="bt-duelist-copy">
+              <span class="bt-camp">文學家</span>
+              <div class="bt-name">${opp.name}<span class="bt-tier t-${opp.tier}">${opp.tier}</span></div>
+              ${hpBar(state.oHp, 'foe')}
+            </div>
+          </section>
+          <div class="bt-literary-vs" aria-hidden="true">VS</div>
+          <section class="bt-duelist me">
+            <img class="bt-player-art" src="img/ui/h_avatar.webp" alt="玩家英雄" loading="eager" decoding="async">
+            <span class="bt-duelist-shade"></span>
+            <div class="bt-duelist-copy">
+              <span class="bt-camp">挑戰者</span>
+              <div class="bt-name">你 ${state.pHp < 30 ? '<small>背水一戰</small>' : state.combo >= 2 ? `<small>聚氣 ×${state.combo}</small>` : ''}</div>
+              ${assistTag()}
+              ${hpBar(state.pHp, 'me')}
+            </div>
+          </section>
         </div>
         <div class="bt-log" role="status" aria-live="polite">${state.log}</div>
-        <div class="bt-side me">
-          ${hpBar(state.pHp, 'me')}
-          <div class="bt-name">你 ${state.pHp < 30 ? '💢背水一戰' : state.combo >= 2 ? `🔥聚氣 ×${state.combo}` : ''}</div>
-          ${assistTag()}
-        </div>
       </div>
       <div class="bt-q">
         <div class="quiz-prompt">${q.prompt}</div>
