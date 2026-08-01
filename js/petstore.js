@@ -90,7 +90,7 @@ const VDPets = (() => {
     if (data) return;
     load();
     [data, affixData] = await Promise.all([
-      (await fetch('data/pets.json')).json(),
+      (await fetch('data/pets.json?v=20260802b')).json(),
       (await fetch('data/affixes.json')).json()
     ]);
     // 預計算每寵家族單字集合（同 form 的重複條目一併納入）
