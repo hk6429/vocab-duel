@@ -8,6 +8,7 @@
 // POST { op:'accept', code }                          → 領戰帖，回 { seed, scope, challenger, score }
 // POST { op:'challengeResult', code, nick, score }    → 回報應戰成績，回 { ok, challenger, accepter }
 import { redisFor, vercelToPages } from "./_redis.js";
+import { isEducationSafeName, reviewEducationName } from "./name-policy.js";
 let redis;
 
 
@@ -23,9 +24,7 @@ const genChCode = () => {
   return s;
 };
 const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
-// 暱稱黑名單：常見中英文辱罵字詞（非窮舉），暱稱會顯示在對戰畫面與戰帖，擋掉明顯攻擊性暱稱
-const BAD_WORDS = /笨蛋|白癡|智障|廢物|去死|三小|幹你|靠北|媽的|垃圾|腦殘|fuck|shit|bitch|asshole|idiot|stupid|retard/i;
-const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !BAD_WORDS.test(n);
+const okNick = (n) => isEducationSafeName(n);
 const okCode = (c) => typeof c === "string" && /^\d{4}$/.test(c);
 const okRole = (r) => r === "p1" || r === "p2";
 
@@ -146,11 +145,12 @@ async function handler(req, res, env) {
     if (op === "challenge") {
       if (await rateLimited(req, "room")) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
       const { seed, scope, nick, score } = req.body;
-      if (!okNick(nick)) return res.status(400).json({ error: "bad req" });
+      const nickReview = reviewEducationName(nick);
+      if (!nickReview.ok) return res.status(400).json({ error: nickReview.error });
       const rec = {
         seed: clamp(seed, 1e9),
         scope: typeof scope === "string" ? stripBad(scope).slice(0, 4) : "E",
-        nick: stripBad(nick).trim().slice(0, 12),
+        nick: nickReview.name,
         score: clamp(score, 999999),
         ts: Date.now(),
       };

@@ -3,6 +3,7 @@
 // GET  ?code=班級碼&sort=week          → 依本週新掌握字數（weekMastered）排序
 // POST { action:'sync', code, name, ... } → 學生上傳自己的戰績
 import { redisFor, vercelToPages } from "./_redis.js";
+import { isEducationSafeName, reviewEducationName } from "./name-policy.js";
 let redis;
 
 
@@ -10,7 +11,6 @@ const TTL = 240 * 24 * 60 * 60;          // 一學年左右
 const MAX_MEMBERS = 60;
 const key = (c) => `vd:board:${c}`;
 const okCode = (c) => typeof c === "string" && /^[一-鿿A-Za-z0-9_-]{2,16}$/.test(c);
-const okName = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n); // 拒收危險字元
 const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
 
 /* 指派進度清洗：cloud.js myStats() 送上來的 {code,name,done,total}；格式不對回 null（不擋整筆同步） */
@@ -21,9 +21,6 @@ function cleanAssign(a) {
   if (!code || !name) return null;
   return { code, name, done: clamp(a.done, 500), total: clamp(a.total, 500) };
 }
-
-// 暱稱黑名單：常見中英文辱罵字詞（非窮舉），排行榜公開可見，擋掉明顯攻擊性暱稱
-const BAD_WORDS = /笨蛋|白癡|智障|廢物|去死|三小|幹你|靠北|媽的|垃圾|腦殘|fuck|shit|bitch|asshole|idiot|stupid|retard/i;
 
 // 進度合理性檢查（防端點灌數，非完整答題紀錄重建）：對照上次同步紀錄，
 // 拒絕短時間內暴增到不合理的數值；沒有前次紀錄（第一次同步）一律放行
@@ -62,7 +59,7 @@ async function rateLimited(req, scope) {
 }
 
 async function handler(req, res, env) {
-  redis = redisFor(env.DB);
+  redis = env.__redis || redisFor(env.DB);
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   try {
@@ -70,7 +67,7 @@ async function handler(req, res, env) {
       const code = req.query.code;
       if (!okCode(code)) return res.status(400).json({ error: "bad code" });
       const all = (await redis.hgetall(key(code))) || {};
-      const rows = Object.entries(all).map(([name, v]) => {
+      const rows = Object.entries(all).filter(([name]) => isEducationSafeName(name)).map(([name, v]) => {
         const d = typeof v === "string" ? JSON.parse(v) : v;
         return { name, mastered: d.mastered, level: d.level, streak: d.streak, badges: d.badges, weekMastered: d.weekMastered || 0, assign: d.assign || null, ts: d.ts };
       });
@@ -83,9 +80,9 @@ async function handler(req, res, env) {
       const { action, code, name } = req.body || {};
       if (!okCode(code)) return res.status(400).json({ error: "班級代碼須為 2–16 個中英數字" });
       if (action === "sync") {
-        if (!okName(name)) return res.status(400).json({ error: "名字須為 1–12 字" });
-        if (BAD_WORDS.test(name)) return res.status(400).json({ error: "名字含不當字詞，請更換" });
-        const nm = name.trim();
+        const nameReview = reviewEducationName(name);
+        if (!nameReview.ok) return res.status(400).json({ error: nameReview.error });
+        const nm = nameReview.name;
         const k = key(code);
         const prevRaw = await redis.hget(k, nm);
         const prev = prevRaw ? (typeof prevRaw === "string" ? JSON.parse(prevRaw) : prevRaw) : null;

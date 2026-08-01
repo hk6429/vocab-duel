@@ -1636,3 +1636,6 @@ body.dark .vd-guide.vd-guide-page{box-shadow:none}
 .btn.opt.wrong .opt-reveal{color:#fff;opacity:.95;margin-right:6px}  /* 紅底：白色 */
 body.dark .btn.opt .opt-reveal{color:#ff9b8a}  /* 深色中性底：亮紅 */
 body.dark .btn.opt.right .opt-reveal{color:#0b3320}
+.tw-board-head{display:flex;justify-content:space-between;gap:12px;margin:10px 4px 6px;color:var(--muted);font-size:.82rem;font-weight:800}
+.tw-board-scroll{max-height:520px;overflow:auto;overscroll-behavior:contain;padding-right:4px;margin-bottom:10px}
+.tw-board-scroll .pb-brow{grid-template-columns:48px minmax(0,1fr) minmax(48px,auto)}

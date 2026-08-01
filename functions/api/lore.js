@@ -6,6 +6,7 @@
 // POST { op:'classoff', adminKey, classcode, on } → 老師關閉/開啟全班 UGC
 // POST { op:'approve', adminKey, petId, index }   → （選用預審模式才需要）核可 pending 單則
 import { redisFor, vercelToPages } from "./_redis.js";
+import { isEducationSafeName, reviewEducationName } from "./name-policy.js";
 let redis;
 
 const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
@@ -106,7 +107,8 @@ async function handler(req, res, env) {
       }
       // 只回已核可（vd:lore:{petId}），從不回 pending 佇列
       const raw = await redis.lrange(key, 0, 199);
-      const items = raw.map(x => { try { return JSON.parse(x); } catch { return null; } }).filter(Boolean);
+      const items = raw.map(x => { try { return JSON.parse(x); } catch { return null; } })
+        .filter(x => x && isEducationSafeName(x.hero, { max: 20 }));
       // 隨機挑最多 12 則（Fisher–Yates 前 12）
       for (let i = items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[items[i], items[j]] = [items[j], items[i]]; }
       return res.status(200).json({ ok: 1, lore: items.slice(0, 12) });
@@ -117,14 +119,16 @@ async function handler(req, res, env) {
       const word = clean(req.body?.word, 40).toLowerCase();
       const text = clean(req.body?.text, 80);
       const hero = clean(req.body?.hero, 20) || "無名學徒";
+      const heroReview = reviewEducationName(hero, { max: 20 });
       if (!/^[a-z][a-z' -]*$/.test(word)) return res.status(200).json({ ok: 0, error: "bad word" });
       if (text.length < 6) return res.status(200).json({ ok: 0, error: "too short" });
       if (!text.toLowerCase().includes(word)) return res.status(200).json({ ok: 0, error: "must contain word" });
-      if (BAD_WORDS.test(text) || BAD_WORDS.test(hero)) return res.status(200).json({ ok: 0, reason: "blocked" });
-      if (CONTACT_LIKE.test(text) || CONTACT_LIKE.test(hero)) return res.status(200).json({ ok: 0, reason: "blocked" });
+      if (!heroReview.ok) return res.status(200).json({ ok: 0, reason: "blocked", error: heroReview.error });
+      if (BAD_WORDS.test(text)) return res.status(200).json({ ok: 0, reason: "blocked" });
+      if (CONTACT_LIKE.test(text)) return res.status(200).json({ ok: 0, reason: "blocked" });
       // 過濾通過即發布（寫入即過濾模型）：髒話/連結/個資已擋在寫入端，其餘走「檢舉即隱藏＋教師下架/關班」後審。
       // （若日後要改預審，把 key 換回 pendingKey、並用 approve op 逐則核可即可。）
-      await redis.lpush(key, { word, text, hero });
+      await redis.lpush(key, { word, text, hero: heroReview.name });
       await redis.ltrim(key, 0, 199);
       await redis.expire(key, 60 * 60 * 24 * 400);
       return res.status(200).json({ ok: 1 });

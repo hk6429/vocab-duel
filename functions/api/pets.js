@@ -3,6 +3,7 @@
 // POST { op:'opponent', rating }        → 從快照池抽一個接近積分的對手
 // POST { op:'board' }                   → 全站 Top 50
 import { redisFor, vercelToPages } from "./_redis.js";
+import { isEducationSafeName, reviewEducationName } from "./name-policy.js";
 let redis;
 
 
@@ -11,7 +12,7 @@ const BOARD = "vd:petboard:global";      // ZSET member=nick → rating，取 To
 const BOARDMETA = "vd:petboard:meta";    // HASH nick → {petName,lv}，配合 BOARD 顯示
 const POOL_MAX = 200;
 const clamp = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
-const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12;
+const okNick = (n) => isEducationSafeName(n);
 const okId = (s) => typeof s === "string" && /^[a-z][a-z0-9_]{2,24}$/.test(s); // 幼靈 id 帶 fu_ 前綴
 
 // CORS 白名單：只回信任的來源，其餘退回主站
@@ -39,7 +40,7 @@ function cleanSnap(s) {
 }
 
 async function handler(req, res, env) {
-  redis = redisFor(env.DB);
+  redis = env.__redis || redisFor(env.DB);
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
@@ -47,6 +48,8 @@ async function handler(req, res, env) {
     const { op } = req.body || {};
 
     if (op === "submit") {
+      const nameReview = reviewEducationName(req.body?.snap?.nick);
+      if (!nameReview.ok) return res.status(400).json({ error: nameReview.error });
       const snap = cleanSnap(req.body.snap);
       if (!snap) return res.status(400).json({ error: "bad snap" });
       await redis.lpush(POOL, JSON.stringify(snap));
@@ -63,7 +66,7 @@ async function handler(req, res, env) {
       const raw = await redis.lrange(POOL, 0, POOL_MAX - 1);
       const pool = raw
         .map((x) => { try { return typeof x === "string" ? JSON.parse(x) : x; } catch { return null; } })
-        .filter(Boolean);
+        .filter((x) => x && isEducationSafeName(x.nick));
       if (!pool.length) return res.status(200).json({ ok: 1, opponent: null });
       // 依積分距離取最近 10 個再隨機，避免每次都同一人
       pool.sort((a, b) => Math.abs(a.rating - myRating) - Math.abs(b.rating - myRating));
@@ -81,11 +84,18 @@ async function handler(req, res, env) {
         const rating = Math.round(Number(raw[i + 1]) || 0);
         // 舊資料 member 是 JSON {nick,petName,lv}；新資料 member 就是暱稱、meta 另存 hash
         if (typeof member === "string" && member[0] === "{") {
-          try { rows.push({ ...JSON.parse(member), rating }); } catch { /* skip */ }
+          try {
+            const old = JSON.parse(member);
+            if (isEducationSafeName(old.nick)) rows.push({ ...old, rating });
+          } catch { /* skip */ }
           continue;
         }
-        if (member && typeof member === "object") { rows.push({ ...member, rating }); continue; }
+        if (member && typeof member === "object") {
+          if (isEducationSafeName(member.nick)) rows.push({ ...member, rating });
+          continue;
+        }
         const nick = String(member);
+        if (!isEducationSafeName(nick)) continue;
         let meta = {};
         try {
           const m = await redis.hget(BOARDMETA, nick);

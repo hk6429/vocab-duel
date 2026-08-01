@@ -5,6 +5,7 @@
 // POST { op:'cheer', visitCode, nick, emoji }   → 訪客留言（LPUSH 保 20 筆）
 // POST { op:'guestbook', code }                 → 城主憑本體碼讀訪客簿，回 { list }
 import { redisFor, vercelToPages } from "./_redis.js";
+import { isEducationSafeName, reviewEducationName } from "./name-policy.js";
 let redis;
 
 
@@ -13,11 +14,12 @@ const KEY = (code) => `vd:town:${code}`;
 const VISIT = (v) => `vd:town:visit:${v}`;       // 參觀碼 → 本體 code
 const VISIT_OF = (code) => `vd:town:visitof:${code}`; // 本體 code → 參觀碼（冪等）
 const GUEST = (code) => `vd:town:guest:${code}`; // 訪客簿（LPUSH，保 20 筆）
+const TOWN_BOARD = "vd:townboard:global";       // ZSET playerId → 精熟字數
+const TOWN_BOARD_META = "vd:townboard:meta";    // HASH playerId → 公開城鎮資料
 const okCode = (c) => typeof c === "string" && /^[A-Za-z0-9_-]{4,32}$/.test(c.trim());
 const okVisit = (v) => typeof v === "string" && /^[A-Z0-9]{6}$/.test(String(v).trim().toUpperCase());
-// 暱稱黑名單：常見中英文辱罵字詞（非窮舉），暱稱/城名會顯示在訪客簿與城鎮頁，擋掉明顯攻擊性字詞
-const BAD_WORDS = /笨蛋|白癡|智障|廢物|去死|三小|幹你|靠北|媽的|垃圾|腦殘|fuck|shit|bitch|asshole|idiot|stupid|retard/i;
-const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n) && !BAD_WORDS.test(n); // 拒收危險字元
+const okPlayerId = (id) => typeof id === "string" && /^[A-Za-z0-9_-]{12,64}$/.test(id);
+const clamp = (value, min, max) => Math.max(min, Math.min(max, Math.round(Number(value) || 0)));
 const EMOJIS = ["👍", "🎉", "🏰", "💪", "🌟", "❤️", "😆", "👏"]; // 留言表情白名單
 const GIFT_RES = ["wood", "stone", "ore", "rice"]; // 需與 js/townstore.js RES 一致
 const GIFT_N = 10; // 每次贈禮固定數量，別讓贈禮取代自己蓋城的成就感
@@ -46,7 +48,7 @@ async function rateLimited(req, scope) {
 }
 
 async function handler(req, res, env) {
-  redis = redisFor(env.DB);
+  redis = env.__redis || redisFor(env.DB);
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "method" });
@@ -56,14 +58,51 @@ async function handler(req, res, env) {
     if ((op === "save" || op === "load" || op === "guestbook") && !okCode(code))
       return res.status(200).json({ ok: 0, error: "同步碼格式不對" });
 
+    if (op === "rank") {
+      if (await rateLimited(req, "townrank")) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
+      const nickReview = reviewEducationName(req.body.nick);
+      const townReview = reviewEducationName(req.body.townName);
+      if (!okPlayerId(req.body.playerId)) return res.status(200).json({ ok: 0, error: "玩家識別碼格式不正確" });
+      if (!nickReview.ok) return res.status(200).json({ ok: 0, error: nickReview.error });
+      if (!townReview.ok) return res.status(200).json({ ok: 0, error: `城名：${townReview.error}` });
+      const playerId = req.body.playerId;
+      const mastered = clamp(req.body.mastered, 0, 6205);
+      const meta = { nick: nickReview.name, townName: townReview.name, townLv: clamp(req.body.townLv, 1, 5), ts: Date.now() };
+      await redis.zadd(TOWN_BOARD, { score: mastered, member: playerId });
+      await redis.hset(TOWN_BOARD_META, { [playerId]: JSON.stringify(meta) });
+      await redis.zremrangebyrank(TOWN_BOARD, 0, -501);
+      return res.status(200).json({ ok: 1, mastered });
+    }
+
+    if (op === "ranklist") {
+      const raw = await redis.zrange(TOWN_BOARD, 0, 599, { rev: true, withScores: true });
+      const board = [];
+      for (let i = 0; i < raw.length && board.length < 500; i += 2) {
+        const playerId = String(raw[i]);
+        const mastered = clamp(raw[i + 1], 0, 6205);
+        let meta = null;
+        try {
+          const value = await redis.hget(TOWN_BOARD_META, playerId);
+          meta = value ? (typeof value === "string" ? JSON.parse(value) : value) : null;
+        } catch { /* 資料損壞直接略過 */ }
+        if (!meta || !isEducationSafeName(meta.nick) || !isEducationSafeName(meta.townName)) {
+          await redis.zrem(TOWN_BOARD, playerId);
+          await redis.hdel(TOWN_BOARD_META, playerId);
+          continue;
+        }
+        board.push({ playerId, nick: meta.nick, townName: meta.townName, townLv: clamp(meta.townLv, 1, 5), mastered });
+      }
+      return res.status(200).json({ ok: 1, board });
+    }
+
     if (op === "save") {
       if (await rateLimited(req, "town")) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
       const town = req.body.town;
       if (!town || !town.grid || !town.res) return res.status(200).json({ ok: 0, error: "城鎮資料不完整" });
-      // 城名淨化：濾掉危險字元並限長；含黑名單字詞直接拒絕（不靜默截斷）
       if (typeof town.name === "string") {
-        town.name = town.name.replace(/[<>&"']/g, "").slice(0, 12);
-        if (BAD_WORDS.test(town.name)) return res.status(200).json({ ok: 0, error: "城名含不當字詞，請更換" });
+        const townReview = reviewEducationName(town.name);
+        if (!townReview.ok) return res.status(200).json({ ok: 0, error: `城名：${townReview.error}` });
+        town.name = townReview.name;
       }
       const s = JSON.stringify(town);
       if (s.length > 60000) return res.status(200).json({ ok: 0, error: "資料過大" });
@@ -101,7 +140,9 @@ async function handler(req, res, env) {
       const raw = await redis.get(KEY(owner));
       if (!raw) return res.status(200).json({ ok: 0, error: "找不到這座城" });
       // 唯讀：只回城鎮資料本身，絕不回傳本體同步碼
-      return res.status(200).json({ ok: 1, town: typeof raw === "string" ? JSON.parse(raw) : raw });
+      const publicTown = typeof raw === "string" ? JSON.parse(raw) : structuredClone(raw);
+      if (!isEducationSafeName(publicTown.name)) publicTown.name = "未命名之城";
+      return res.status(200).json({ ok: 1, town: publicTown });
     }
 
     if (op === "cheer") {
@@ -109,12 +150,13 @@ async function handler(req, res, env) {
       const v = String(req.body.visitCode || "").trim().toUpperCase();
       const { nick, emoji } = req.body;
       if (!okVisit(v)) return res.status(200).json({ ok: 0, error: "參觀碼格式不對" });
-      if (!okNick(nick)) return res.status(200).json({ ok: 0, error: "暱稱須為 1–12 字" });
+      const nickReview = reviewEducationName(nick);
+      if (!nickReview.ok) return res.status(200).json({ ok: 0, error: nickReview.error });
       if (!EMOJIS.includes(emoji)) return res.status(200).json({ ok: 0, error: "表情不合法" });
       const owner = await redis.get(VISIT(v));
       if (!owner) return res.status(200).json({ ok: 0, error: "找不到這座城" });
       const gk = GUEST(owner);
-      await redis.lpush(gk, JSON.stringify({ nick: nick.trim(), emoji, ts: Date.now() }));
+      await redis.lpush(gk, JSON.stringify({ nick: nickReview.name, emoji, ts: Date.now() }));
       await redis.ltrim(gk, 0, 19); // 訪客簿只保最新 20 筆
       await redis.expire(gk, TTL);
       return res.status(200).json({ ok: 1 });
@@ -149,7 +191,7 @@ async function handler(req, res, env) {
       const raw = await redis.lrange(GUEST(code.trim()), 0, 19);
       const list = raw
         .map((x) => { try { return typeof x === "string" ? JSON.parse(x) : x; } catch { return null; } })
-        .filter(Boolean);
+        .filter((x) => x && isEducationSafeName(x.nick));
       return res.status(200).json({ ok: 1, list });
     }
 

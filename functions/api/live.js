@@ -6,6 +6,7 @@
 // POST { op:'answer', code, nick, qNo, correct } → 學生回報作答（qNo=0 為報到）
 // POST { op:'roster', code }                   → 名冊與逐題答對（公開，暱稱分數本就班內公開）
 import { redisFor, vercelToPages } from "./_redis.js";
+import { isEducationSafeName, reviewEducationName } from "./name-policy.js";
 let redis;
 
 
@@ -15,7 +16,6 @@ const KEY = (c) => `vd:live:${c}`;
 const P_KEY = (c) => `vd:live:${c}:p`;
 const okCode = (c) => typeof c === "string" && /^[一-鿿A-Za-z0-9_-]{2,16}$/.test(c);
 const okPin = (p) => typeof p === "string" && /^\d{4,8}$/.test(p);
-const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 20 && !/[<>&"']/.test(n);
 const okWord = (w) => typeof w === "string" && /^[a-z' .-]{1,24}$/i.test(w);
 
 const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
@@ -82,24 +82,25 @@ async function handler(req, res, env) {
       // 全班共用學校出口 IP：限流放寬到 120/min（30 人同秒作答也扛得住）
       if (await rateLimited(req, "liveans", 120)) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
       const nick = req.body.nick;
-      if (!okNick(nick)) return res.status(200).json({ ok: 0, error: "暱稱須為 1–20 字" });
+      const nickReview = reviewEducationName(nick, { max: 20 });
+      if (!nickReview.ok) return res.status(200).json({ ok: 0, error: nickReview.error });
       const qNo = Math.round(Number(req.body.qNo) || 0);
       if (qNo < 0 || qNo > 20) return res.status(200).json({ ok: 0, error: "bad qNo" });
       const k = P_KEY(code);
-      const rec = parse(await redis.hget(k, nick.trim())) || { qNo: 0, score: 0, hist: "" };
+      const rec = parse(await redis.hget(k, nickReview.name)) || { qNo: 0, score: 0, hist: "" };
       if (qNo > rec.qNo) { // 只收新題，重送不重計；跳過的題補 '-' 讓 hist 與題號對位
         rec.hist = (rec.hist + "-".repeat(Math.max(0, qNo - rec.qNo - 1)) + (req.body.correct ? "1" : "0")).slice(-20);
         rec.qNo = qNo;
         rec.score += req.body.correct ? 1 : 0;
       }
-      await redis.hset(k, { [nick.trim()]: JSON.stringify(rec) });
+      await redis.hset(k, { [nickReview.name]: JSON.stringify(rec) });
       await redis.expire(k, TTL);
       return res.status(200).json({ ok: 1, score: rec.score });
     }
 
     if (op === "roster") {
       const all = (await redis.hgetall(P_KEY(code))) || {};
-      const list = Object.entries(all).map(([nick, v]) => {
+      const list = Object.entries(all).filter(([nick]) => isEducationSafeName(nick, { max: 20 })).map(([nick, v]) => {
         const d = parse(v) || {};
         return { nick, qNo: d.qNo || 0, score: d.score || 0, hist: d.hist || "" };
       }).sort((a, b) => b.score - a.score);

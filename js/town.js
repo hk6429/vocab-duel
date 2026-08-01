@@ -4,6 +4,11 @@ const VDTownUI = (() => {
   let el = null;
   let moving = null;       // 搬移模式：待搬建築的格 key
   let lastTh = 0;          // 偵測市政廳升級 → 建城史詩卡
+  let townBoardRows = [];
+  let townBoardLoading = false;
+  let townBoardError = '';
+  let townBoardLastSig = '';
+  let townBoardLoadedAt = 0;
   const ERA = { 2: '拓荒村落', 3: '學者小鎮', 4: '智慧之城', 5: '單字王都' };
   /* 後端只在 Vercel：CF／Netlify 前端自動指回 vercel API */
   const API = location.hostname.includes('pages.dev') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
@@ -15,6 +20,75 @@ const VDTownUI = (() => {
     if (!wmap) { wmap = {}; for (const w of VDApp.words()) wmap[w.word.toLowerCase()] = w; }
     return wmap;
   };
+
+  function townBoardId() {
+    let id = localStorage.getItem('vd_town_board_id');
+    if (!id) {
+      const token = crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : Math.random().toString(36).slice(2) + Date.now().toString(36);
+      id = `town_${token}`;
+      localStorage.setItem('vd_town_board_id', id);
+    }
+    return id;
+  }
+
+  const townBoardPayload = () => ({
+    op: 'rank', playerId: townBoardId(), nick: VDGame.heroName(),
+    townName: VDTown.raw.name || '未命名之城', mastered: VDTown.mastered(), townLv: VDTown.thLevel()
+  });
+
+  function townBoardHtml() {
+    if (townBoardLoading && !townBoardRows.length) return '<div class="loading">讀取全站城榜…</div>';
+    if (townBoardError) return `<div class="pg-hint">⚠️ ${VDGame.esc(townBoardError)}</div><button class="btn small ghost" id="twBoardRefresh">重新檢查名稱並更新</button>`;
+    if (!townBoardRows.length) return '<div class="pg-hint">還沒有人上榜——先為城命名並精熟第一個字吧！</div>';
+    const me = townBoardId();
+    const myIdx = townBoardRows.findIndex(row => row.playerId === me);
+    return `${myIdx >= 0 ? `<div class="pb-myrank">📍 你目前排名第 ${myIdx + 1} 名・精熟 ${townBoardRows[myIdx].mastered} 字</div>` : '<div class="pg-hint">目前尚未進入前 500 名，繼續把快精熟的字練上去！</div>'}
+      <div class="tw-board-head"><span>名次與城鎮</span><b>精熟字數</b></div>
+      <div class="pb-board tw-board-scroll">${townBoardRows.map((row, i) => `
+        <div class="pb-brow ${row.playerId === me ? 'me' : ''}">
+          <span class="pb-rank">${['🥇', '🥈', '🥉'][i] || i + 1}</span>
+          <span class="pb-bnick">${VDGame.esc(row.nick)}<i>${VDGame.esc(row.townName)}・市政廳 Lv.${row.townLv}</i></span>
+          <b>${row.mastered}</b>
+        </div>`).join('')}</div>
+      <button class="btn small ghost" id="twBoardRefresh">更新排行榜</button>`;
+  }
+
+  function renderTownBoard() {
+    const box = el && el.querySelector('#tw-town-board');
+    if (!box) return;
+    box.innerHTML = townBoardHtml();
+    const refresh = box.querySelector('#twBoardRefresh');
+    if (refresh) refresh.onclick = () => loadTownBoard(true);
+  }
+
+  async function loadTownBoard(force = false) {
+    if (townBoardLoading) return;
+    const payload = townBoardPayload();
+    const signature = [payload.nick, payload.townName, payload.mastered, payload.townLv].join('|');
+    if (!force && signature === townBoardLastSig && Date.now() - townBoardLoadedAt < 60000) return renderTownBoard();
+    townBoardLoading = true; townBoardError = ''; renderTownBoard();
+    try {
+      if (force || signature !== townBoardLastSig) {
+        const synced = await fetch(API + '/api/town', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        }).then(response => response.json());
+        if (!synced.ok) throw new Error(synced.error || '名稱未通過教育場域審核');
+        townBoardLastSig = signature;
+      }
+      const ranked = await fetch(API + '/api/town', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: 'ranklist' })
+      }).then(response => response.json());
+      if (!ranked.ok || !Array.isArray(ranked.board)) throw new Error(ranked.error || '排行榜暫時無法讀取');
+      townBoardRows = ranked.board;
+      townBoardLoadedAt = Date.now();
+    } catch (error) {
+      townBoardError = error?.message || '排行榜暫時無法連線';
+    } finally {
+      townBoardLoading = false;
+      renderTownBoard();
+    }
+  }
 
   async function render(container) {
     el = container;
@@ -208,6 +282,12 @@ const VDTownUI = (() => {
       </div></div>
 
       <div class="wc-card"><div class="wc-card-body">
+        <div class="hero-sec">🏆 單字之城排行榜</div>
+        <div class="pg-hint">只比較真正進入精熟狀態的單字數，取全站前 500 名；城鎮裝飾、資源與道具不影響名次。</div>
+        <div id="tw-town-board">${townBoardHtml()}</div>
+      </div></div>
+
+      <div class="wc-card"><div class="wc-card-body">
         <div class="hero-sec">☁️ 雲端綁定・參觀好友城</div>
         <div class="pg-hint">把城綁到你的同步碼跨裝置繼續蓋；輸入好友的「參觀碼」可以去他的城參觀（只能看不能改）。</div>
         <div class="pet-actrow">
@@ -225,6 +305,7 @@ const VDTownUI = (() => {
       ${VDGame.milestoneHtml()}
       <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>`;
     bind();
+    loadTownBoard();
     loadGuestbook();   // 訪客簿非同步載入，沒資料或沒後端就保持隱藏
   }
 
@@ -502,7 +583,7 @@ const VDTownUI = (() => {
         ${cell.b === 'school' ? '<button class="btn small" id="twTrain">🎓 職業訓練</button>' : ''}
         ${cell.b === 'townhall' && near.length ? '<button class="btn small" id="twNear">⚡ 去練快精熟的字</button>' : ''}
         ${cell.b === 'townhall' && cell.lv >= VDTown.MAX_LV ? `<button class="btn small" id="twWonder">🏯 興建世界奇觀（${VDTown.wonderInfo().cost.tokens}🪙＋${VDTown.wonderInfo().cost.ore}⛏️＋${VDTown.wonderInfo().cost.rice}🌾・已建 ${VDTown.wonderInfo().level} 層）</button>` : ''}
-        ${cell.b === 'smithy' ? `<button class="btn small" id="twSmelt">⚒️ 爐火煉魂（${VDTown.smeltInfo().cost}⛏️→詞靈鍛造之魂・今日剩 ${VDTown.smeltInfo().todayLeft} 次）</button>` : ''}
+        ${cell.b === 'smithy' ? `<button class="btn small" id="twSmelt" ${cell.up ? 'disabled' : ''}>⚒️ ${cell.up ? '升級完成後可煉魂' : `爐火煉魂（${VDTown.smeltInfo().cost}⛏️→詞靈鍛造之魂・今日剩 ${VDTown.smeltInfo().todayLeft} 次）`}</button>` : ''}
         ${cell.b === 'house' && VDTown.raw.pop.length ? '<button class="btn small ghost" id="twKnock">🙋 敲門聊聊</button>' : ''}
         ${cell.b !== 'townhall' ? `<button class="btn small ghost" id="twMove">🚚 搬移</button>
           <button class="btn small ghost" id="twDemo">🧨 拆除（退一半建材）</button>` : ''}

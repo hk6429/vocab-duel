@@ -465,10 +465,12 @@ const VDPets = (() => {
     const snap = snapshot();
     if (!snap) return;
     try {
-      await fetch(`${API}/api/pets`, {
+      const response = await fetch(`${API}/api/pets`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ op: 'submit', snap })
       });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) VDGame.toast(`排行榜未上架：${result.error || '名稱未通過教育場域審核'}`);
     } catch { /* 離線不阻斷 */ }
   }
 
