@@ -111,6 +111,7 @@ body {
 body.dark .hdr-badge-i { border-color: #3a4258; }
 
 .flash-progress { text-align: center; color: var(--muted); margin-bottom: 14px; font-size: 14px; }
+.flash-session-progress { color: var(--ink); font-weight: 600; }
 .flash-card {
   background: var(--panel); border: 1px solid #dfe4ea; border-radius: 20px;
   min-height: 300px; display: flex; align-items: center; justify-content: center;
@@ -1150,6 +1151,129 @@ body.dark .lore-item i { color: rgba(255,255,255,.5); }
 .pb-face img { width: 100%; height: 100%; object-fit: cover; }
 .pb-face.me { border-color: var(--accent2); }
 .pb-hue { filter: hue-rotate(140deg) saturate(.85); }
+
+/* 詞靈競技戰鬥：雙陣營回合戰場（不影響文學家對戰共用的 .bt-arena） */
+.bt-petbattle {
+  --battle-blue: #163f56;
+  --battle-blue-bright: #2d8298;
+  --battle-red: #68261f;
+  --battle-red-bright: #bd4a38;
+  --battle-gold: #d9b763;
+  --battle-ivory: #f7edcf;
+  position: relative; display: block; overflow: hidden; isolation: isolate;
+  margin: 4px 0 18px; border: 1px solid rgba(109,81,36,.68); border-radius: 18px;
+  background: #171712; color: var(--battle-ivory);
+  box-shadow: 0 18px 42px rgba(34,23,12,.28), inset 0 0 0 1px rgba(255,231,159,.12);
+}
+.bt-petbattle::before {
+  content: ''; position: absolute; inset: 0; z-index: -2;
+  background:
+    linear-gradient(90deg, rgba(7,38,48,.8), rgba(25,22,15,.15) 47%, rgba(57,15,12,.82)),
+    url('../img/ui/h_arena.webp') center 40% / cover no-repeat;
+  filter: saturate(.78) contrast(1.12) brightness(.62);
+  transform: scale(1.03);
+}
+.bt-petbattle::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(245,202,97,.2), transparent 21%),
+    linear-gradient(90deg, rgba(4,46,62,.48) 0 37%, transparent 48% 52%, rgba(91,21,15,.52) 63% 100%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px);
+}
+.bt-round-banner {
+  position: relative; width: min(86%, 390px); margin: 14px auto 2px; padding: 8px 34px 9px;
+  display: flex; flex-direction: column; align-items: center;
+  border: 1px solid rgba(217,183,99,.72); border-radius: 6px;
+  background: linear-gradient(180deg, rgba(38,34,24,.96), rgba(14,14,11,.94));
+  box-shadow: 0 5px 18px rgba(0,0,0,.4), inset 0 0 18px rgba(217,183,99,.08);
+}
+.bt-round-banner::before, .bt-round-banner::after {
+  content: ''; position: absolute; top: 50%; width: 28px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--battle-gold));
+}
+.bt-round-banner::before { right: calc(100% + 7px); }
+.bt-round-banner::after { left: calc(100% + 7px); transform: scaleX(-1); }
+.bt-round-banner span { font: 700 9px/1 var(--font-en); letter-spacing: 3px; color: #a99054; }
+.bt-round-banner b { margin-top: 4px; font: 700 22px/1.15 var(--font-serif); letter-spacing: 4px; color: #f7dfa0;
+  text-shadow: 0 1px 8px rgba(255,196,62,.42); }
+.bt-round-banner i { margin-top: 4px; font-style: normal; font-size: 10px; letter-spacing: 1px; color: rgba(247,237,207,.65); }
+.bt-stage {
+  position: relative; display: grid; grid-template-columns: minmax(0,1fr) 48px minmax(0,1fr);
+  gap: 4px; align-items: end; padding: 14px 14px 12px;
+}
+.bt-petbattle .bt-side {
+  min-width: 0; padding: 9px 10px 10px; gap: 5px; align-items: stretch;
+  border: 1px solid rgba(217,183,99,.3); border-radius: 10px;
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  box-shadow: inset 0 0 24px rgba(0,0,0,.22), 0 8px 18px rgba(0,0,0,.2);
+}
+.bt-petbattle .bt-side.me { order: 0; background: linear-gradient(145deg, rgba(10,66,82,.88), rgba(4,29,40,.8)); }
+.bt-petbattle .bt-side.foe { order: 2; background: linear-gradient(215deg, rgba(108,37,28,.9), rgba(48,18,16,.82)); }
+.bt-camp { font-size: 9px; font-weight: 800; letter-spacing: 2px; color: rgba(247,237,207,.7); text-transform: uppercase; }
+.bt-petbattle .foe .bt-camp { text-align: right; }
+.bt-figure { min-height: 112px; display: flex; align-items: end; justify-content: center; }
+.bt-petbattle .pb-face {
+  width: 112px; height: 112px; border: 0; border-radius: 8px; overflow: visible; background: transparent;
+  filter: drop-shadow(0 12px 10px rgba(0,0,0,.48));
+}
+.bt-petbattle .pb-face img { object-fit: contain; border-radius: 6px; mix-blend-mode: screen; }
+.bt-petbattle .pb-face.me img { transform: scaleX(-1); }
+.bt-petbattle .bt-name {
+  min-height: 31px; margin: 0; display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 16px; color: #fff4cf; text-align: center; text-shadow: 0 2px 5px #000;
+}
+.bt-petbattle .bt-tier {
+  flex: none; margin: 0; padding: 2px 6px; border: 1px solid rgba(217,183,99,.45);
+  background: rgba(0,0,0,.3); color: #e7ca7e; font: 700 9px/1.2 var(--font-en); letter-spacing: 0;
+}
+.bt-stats { display: flex; justify-content: center; gap: 10px; font-size: 10px; color: rgba(247,237,207,.72); white-space: nowrap; }
+.bt-stats b { color: #fff4cf; font-family: var(--font-en); }
+.bt-petbattle .bt-hp {
+  height: 16px; border-radius: 3px; border-color: rgba(230,205,138,.42); background: rgba(5,9,9,.68);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.75);
+}
+.bt-petbattle .bt-hp-fill { background: linear-gradient(90deg, #1a7e69, #6bd39c); border-right: 1px solid rgba(255,255,255,.65); }
+.bt-petbattle .foe .bt-hp-fill { background: linear-gradient(90deg, #792b25, #dd634c); }
+.bt-petbattle .bt-hp.low .bt-hp-fill { background: linear-gradient(90deg, #9c231d, #ff7b58); }
+.bt-petbattle .bt-hp span { top: 0; right: 5px; line-height: 14px; color: #fff8df; font: 700 9px/14px var(--font-en); text-shadow: 0 1px 2px #000; }
+.bt-versus {
+  order: 1; align-self: center; z-index: 2; width: 48px; height: 48px; display: grid; place-items: center;
+  border: 1px solid rgba(238,202,111,.72); border-radius: 50%;
+  background: radial-gradient(circle, #754116 0 30%, #21160d 66%); transform: rotate(-8deg);
+  box-shadow: 0 0 20px rgba(255,180,47,.28), inset 0 0 9px rgba(255,208,99,.2);
+}
+.bt-versus span { color: #ffd97c; font: 900 17px/1 var(--font-serif); text-shadow: 0 0 9px #ff9d16; transform: rotate(8deg); }
+.bt-petbattle .bt-log {
+  order: initial; min-height: 38px; margin: 0 14px 14px; padding: 9px 12px;
+  border: 1px solid rgba(217,183,99,.32); border-radius: 8px;
+  background: rgba(14,12,9,.76); color: #f3d786; font-size: 13px; letter-spacing: .4px;
+  box-shadow: inset 0 0 14px rgba(217,183,99,.06);
+}
+.bt-pet-question { position: relative; margin-top: -2px; }
+.bt-pet-question .quiz-prompt {
+  border: 1px solid rgba(116,82,36,.34); border-radius: 12px; background: linear-gradient(180deg, #fffdf8, #f8f0df);
+  box-shadow: 0 9px 22px rgba(60,42,22,.11), inset 0 0 0 3px rgba(197,157,79,.06);
+  font-family: var(--font-en); color: #27241f;
+}
+.bt-pet-question .quiz-sub { color: #765e3e; font-weight: 600; letter-spacing: .4px; }
+.bt-pet-question .btn.opt { border: 1px solid rgba(43,68,83,.13); box-shadow: 0 3px 9px rgba(32,40,48,.05); }
+@media (max-width: 520px) {
+  .bt-stage { grid-template-columns: minmax(0,1fr) 34px minmax(0,1fr); padding: 11px 7px 9px; }
+  .bt-petbattle .bt-side { padding: 7px 6px 8px; }
+  .bt-figure { min-height: 88px; }
+  .bt-petbattle .pb-face { width: 88px; height: 88px; }
+  .bt-petbattle .bt-name { font-size: 13px; gap: 3px; }
+  .bt-stats { gap: 5px; font-size: 8px; }
+  .bt-versus { width: 34px; height: 34px; }
+  .bt-versus span { font-size: 13px; }
+  .bt-round-banner { margin-top: 10px; padding-inline: 18px; }
+  .bt-round-banner b { font-size: 18px; }
+  .bt-round-banner i { font-size: 9px; }
+}
+body.dark .bt-pet-question .quiz-prompt { background: linear-gradient(180deg, #2a2925, #211f1b); color: #f5ecd7; border-color: #665638; }
+body.dark .bt-pet-question .quiz-sub { color: #c8b58e; }
+body.high-contrast .bt-petbattle { border: 3px solid currentColor; }
+body.high-contrast .bt-petbattle .bt-side, body.high-contrast .bt-petbattle .bt-log { border: 2px solid currentColor; }
 .pb-dropcard { margin: 12px auto; padding: 14px 18px; border-radius: 14px; max-width: 300px;
   background: var(--paper2); border: 1.5px solid var(--line); font-size: 14.5px; animation: chestPop .5s ease; }
 .pb-dropcard i { display: block; font-style: normal; font-size: 13px; color: var(--ink-55); margin: 3px 0 8px; }

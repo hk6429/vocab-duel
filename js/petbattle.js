@@ -178,8 +178,9 @@ const VDPetBattle = (() => {
     return VDQuiz.randomQuestion(words);
   }
 
-  const hpBar = (hp, max, cls) => `<div class="bt-hp ${hp <= max * 0.3 ? 'low' : ''} ${cls}">
-    <div class="bt-hp-fill" style="width:${Math.round(hp / max * 100)}%"></div><span>${hp}</span></div>`;
+  const hpBar = (hp, max, cls, owner) => `<div class="bt-hp ${hp <= max * 0.3 ? 'low' : ''} ${cls}"
+    role="meter" aria-label="${owner}生命值" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${hp}">
+    <div class="bt-hp-fill" style="width:${Math.round(hp / max * 100)}%"></div><span>${hp} / ${max}</span></div>`;
 
   function draw(midTurn) {
     const q = state.q, f = state.foe, m = state.me;
@@ -187,20 +188,36 @@ const VDPetBattle = (() => {
       `<button class="btn opt ${midTurn && o === q.ans ? 'right' : ''}" ${midTurn ? 'disabled' : `data-v="${encodeURIComponent(o)}"`}>
         <span class="opt-key">${'ABCD'[i]}</span><span class="opt-text">${o}</span></button>`).join('');
     el.innerHTML = `
-      <div class="bt-arena">
-        <div class="bt-side foe">
-          <div class="pb-face">${f.img ? `<img loading="lazy" decoding="async" src="${f.img}" alt="" class="${f.hue ? 'pb-hue' : ''}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${f.ico}',style:'font-size:44px'}))">` : `<span style="font-size:44px">${f.ico}</span>`}</div>
-          <div class="bt-name">${f.name}<span class="bt-tier">Lv.${f.lv}</span></div>
-          ${hpBar(state.oHp, state.oMax, 'foe')}
+      <div class="bt-arena bt-petbattle">
+        <div class="bt-round-banner">
+          <span>WORD SPIRIT ARENA</span>
+          <b>詞靈回合戰</b>
+          <i>答對出招・答錯反擊</i>
         </div>
-        <div class="bt-log">${state.log}</div>
-        <div class="bt-side me">
-          ${hpBar(state.pHp, state.pMax, 'me')}
-          <div class="pb-face me">${`<img loading="lazy" decoding="async" src="img/pets/${m.id}_s${m.stage}.webp" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${m.ico}',style:'font-size:44px'}))">`}</div>
-          <div class="bt-name">${m.deco || ''}${m.name} ${state.combo >= 2 ? `🔥×${state.combo}` : ''}</div>
+        <div class="bt-stage">
+          <section class="bt-side me" aria-label="己方詞靈">
+            <div class="bt-camp">◆ 己方詞靈</div>
+            <div class="bt-figure">
+              <div class="pb-face me">${`<img loading="lazy" decoding="async" src="img/pets/${m.id}_s${m.stage}.webp" alt="${m.name}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${m.ico}',style:'font-size:54px'}))">`}</div>
+            </div>
+            <div class="bt-name">${m.deco || ''}${m.name}<span class="bt-tier">Lv.${m.lv}</span></div>
+            <div class="bt-stats"><span>⚔️ 攻擊 <b>${m.atk}</b></span><span>🔥 連擊 <b>${state.combo}</b></span></div>
+            ${hpBar(state.pHp, state.pMax, 'me', m.name)}
+          </section>
+          <div class="bt-versus" aria-hidden="true"><span>VS</span></div>
+          <section class="bt-side foe" aria-label="敵方詞靈">
+            <div class="bt-camp">敵方來襲 ◆</div>
+            <div class="bt-figure">
+              <div class="pb-face">${f.img ? `<img loading="lazy" decoding="async" src="${f.img}" alt="${f.name}" class="${f.hue ? 'pb-hue' : ''}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${f.ico}',style:'font-size:54px'}))">` : `<span style="font-size:54px">${f.ico}</span>`}</div>
+            </div>
+            <div class="bt-name">${f.name}<span class="bt-tier">Lv.${f.lv}</span></div>
+            <div class="bt-stats"><span>⚔️ 攻擊 <b>${f.atk}</b></span><span>🎯 命中 <b>${Math.round(f.acc * 100)}%</b></span></div>
+            ${hpBar(state.oHp, state.oMax, 'foe', f.name)}
+          </section>
         </div>
+        <div class="bt-log" role="status" aria-live="polite">${state.log}</div>
       </div>
-      <div class="bt-q">
+      <div class="bt-q bt-pet-question">
         <div class="quiz-prompt">${q.prompt}</div>
         <div class="quiz-sub">${q.sub}</div>
         <div class="quiz-opts">${opts}</div>
