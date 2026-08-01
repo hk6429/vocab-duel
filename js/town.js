@@ -98,6 +98,19 @@ const VDTownUI = (() => {
     paint();
   }
 
+  async function boardOnly(container) {
+    el = container;
+    el.innerHTML = '<div class="loading">讀取全站城榜…</div>';
+    await VDTown.init();
+    el.innerHTML = `<div class="wc-card"><div class="wc-card-body">
+      <div class="hero-sec">🏆 單字之城精熟排行榜</div>
+      <div class="pg-hint">只比較真正進入精熟狀態的單字數，取全站前 500 名；城鎮裝飾、資源與道具不影響名次。</div>
+      <div id="tw-town-board">${townBoardHtml()}</div>
+      <button class="btn ghost wide" onclick="VDApp.go('town')">🏰 前往我的單字之城</button>
+    </div></div>`;
+    loadTownBoard();
+  }
+
   /* ── 局部更新：資源列／資源補給卡各自可重繪，高頻操作不整頁 paint ── */
   let gridCache = { key: '', html: '' };   // 建築格只在 grid 資料真的變動時重建
   function gridHtml() {
@@ -772,6 +785,6 @@ const VDTownUI = (() => {
     step();
   }
 
-  return { render };
+  return { render, boardOnly };
 })();
 window.VDTownUI = VDTownUI;

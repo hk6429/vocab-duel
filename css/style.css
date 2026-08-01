@@ -729,7 +729,8 @@ body.simplified .hero-wallet { display: none; }
 body.simplified #chalBtn { display: none; }
 /* 英雄檔案分頁：班級榜／詞靈榜＝排行榜，收起只留本人戰績 */
 body.simplified .hero-tab[data-htab="class"],
-body.simplified .hero-tab[data-htab="pet"] { display: none; }
+body.simplified .hero-tab[data-htab="pet"],
+body.simplified .hero-tab[data-htab="town"] { display: none; }
 
 /* ── 3D Pixel 配圖 ── */
 .m-img { width: 46px; height: 46px; flex: none; border-radius: 10px; object-fit: cover; }
