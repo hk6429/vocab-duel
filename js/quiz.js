@@ -78,6 +78,15 @@ const VDQuiz = (() => {
     return out;
   }
 
+  /* 同級誘答優先；同級不足時由完整範圍補齊，避免跨級短清單只剩正解一個選項 */
+  function pickDistractorsWithFallback(word, preferred, fallback, n, keyFn, formal, easy) {
+    const out = pickDistractors(word, preferred, n, keyFn, formal, easy);
+    if (out.length === n) return out;
+    const used = new Set([keyFn(word), ...out.map(keyFn)]);
+    const rest = fallback.filter(x => !used.has(keyFn(x)));
+    return out.concat(pickDistractors(word, rest, n - out.length, keyFn, formal, easy));
+  }
+
   /* 為單一字建一題，pool 供同 level 誘答；allowSpell 開啟產出型拼寫題（僅自測用，對戰不出）；easy=救援模式；
      bias=true 時優先挑這個字「還沒答對過」的題型（逼題型多樣性，防止只靠同一種題型騙過系統），僅自測模式傳入 */
   function makeQuestionFor(w, pool, allowSpell, easy, bias, forceType) {
@@ -108,16 +117,16 @@ const VDQuiz = (() => {
       const enMode = localStorage.getItem('vd_quizmode') === 'en' && window.VDEnrich;
       const defOf = x => { const e = enMode ? VDEnrich.get(x.word) : null; return (e && e.def_en) || ''; };
       if (enMode && defOf(w)) {
-        const ds = pickDistractors(w, sameLevel.filter(x => defOf(x)), dn, x => defOf(x), false, easy);
+        const ds = pickDistractorsWithFallback(w, sameLevel.filter(x => defOf(x)), pool.filter(x => defOf(x)), dn, x => defOf(x), false, easy);
         if (ds.length === dn) { q = { type, prompt: w.word, sub: '哪個英文解釋符合？（英英模式）', options: shuffle([defOf(w), ...ds.map(defOf)]), ans: defOf(w) }; q.reveal = revMap([w, ...ds], defOf, x => x.word); }
       }
       if (!q) {
-        const ds = pickDistractors(w, sameLevel, dn, x => x.zh, false, easy);
+        const ds = pickDistractorsWithFallback(w, sameLevel, pool, dn, x => x.zh, false, easy);
         q = { type, prompt: w.word, sub: '這個字是什麼意思？', options: shuffle([w.zh, ...ds.map(d => d.zh)]), ans: w.zh };
         q.reveal = revMap([w, ...ds], x => x.zh, x => x.word);
       }
     } else if (type === 'z2e') {
-      const ds = pickDistractors(w, sameLevel, dn, x => x.word, fam && !easy, easy);
+      const ds = pickDistractorsWithFallback(w, sameLevel, pool, dn, x => x.word, fam && !easy, easy);
       /* 英英模式：題幹改用英文定義（缺 def_en 則 fallback 原中文） */
       const enMode = localStorage.getItem('vd_quizmode') === 'en' && window.VDEnrich;
       const e = enMode ? VDEnrich.get(w.word) : null;
@@ -126,7 +135,7 @@ const VDQuiz = (() => {
         : { type, prompt: w.zh, sub: '哪個英文字對應這個意思？', options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
       q.reveal = revMap([w, ...ds], x => x.word, x => x.zh);
     } else if (type === 'cloze') {
-      const ds = pickDistractors(w, sameLevel, dn, x => x.word, fam && !easy, easy);
+      const ds = pickDistractorsWithFallback(w, sameLevel, pool, dn, x => x.word, fam && !easy, easy);
       q = { type, prompt: clz.text, sub: `（${w.example_zh}）`, options: shuffle([w.word, ...ds.map(d => d.word)]), ans: w.word };
       q.reveal = revMap([w, ...ds], x => x.word, x => x.zh);
     } else {
@@ -146,6 +155,11 @@ const VDQuiz = (() => {
     const pool = words.slice();
     const w = pool[Math.floor(Math.random() * pool.length)];
     return makeQuestionFor(w, pool);
+  }
+
+  /* 為指定字出題：今日 10 題等流程需固定題序，不能再從題池隨機換字。 */
+  function questionFor(word, pool) {
+    return makeQuestionFor(word, (pool && pool.length ? pool : [word]), true, false, true);
   }
 
   function buildQuestions(words) {
@@ -358,5 +372,5 @@ const VDQuiz = (() => {
     else fb.querySelector('.qz-next').onclick = next;
   }
 
-  return { start, startWith, randomQuestion, conquer, unconqueredNow };
+  return { start, startWith, randomQuestion, questionFor, conquer, unconqueredNow };
 })();

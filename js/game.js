@@ -185,6 +185,20 @@ const VDGame = (() => {
     return after > before;
   }
 
+  /* 今日 10 題三選一：均對齊為 40 點價值，沿用 XP／字幣／寶箱，不發明新貨幣。 */
+  function claimHabitReward(kind) {
+    const date = VDStore.today();
+    if (g.habitRewardDate === date) return { ok: false, reason: 'claimed' };
+    if (!['xp', 'coins', 'chest'].includes(kind)) return { ok: false, reason: 'invalid' };
+    g.habitRewardDate = date;
+    g.habitRewardKind = kind;
+    if (kind === 'xp') { g.xp += 40; save(); return { ok: true, xp: 40, coins: 0 }; }
+    if (kind === 'coins') { g.coins += 40; save(); return { ok: true, xp: 0, coins: 40 }; }
+    save();
+    const chest = openChest(20, 'common');
+    return { ok: true, xp: chest.xp, coins: chest.coins, chest };
+  }
+
   /* ── 答題事件（各模式共用） ── */
   const WRONG_XP_CAP = 30; // 每日前 30 次答錯才有參與分
   const WRONG_MSGS = ['+2 XP，錯的字才是經驗值！', '+2 XP，錯題本已幫你記下這個字！', '+2 XP，再看一眼，下次就是你的分！'];
@@ -812,12 +826,12 @@ function setNick(v) {
       const ov = document.createElement('div'); ov.className = 'vg-levelup';
       ov.innerHTML = `<div class="vg-lu-card"><div class="vg-lu-ico">🏮</div>
         <div class="vg-lu-t">歡迎回城！</div>
-        <div class="vg-lu-title">${diff} 天不見，送你一個稀有寶箱</div>
-        <div class="vg-lu-sub">先從今天的 20 字開始就好</div>
-        <button class="btn" id="wbChest">🎁 直接開箱</button>
-        <button class="btn ghost" id="wbRecall">🏮 打 5 題召回關卡（獎勵更好）</button></div>`;
-      ov.onclick = () => { ov.remove(); openChest(40, 'rare'); };
+        <div class="vg-lu-title">${diff} 天不見，先用 5 題把記憶接回來</div>
+        <div class="vg-lu-sub">不用補進度、不會扣資產；完成後送回歸寶箱。</div>
+        <button class="btn" id="wbRecall">🏮 開始 5 題召回關卡</button>
+        <button class="btn ghost" id="wbLater">稍後再說</button></div>`;
       ov.querySelector('#wbRecall').onclick = e => { e.stopPropagation(); ov.remove(); VDApp.go('recall'); };
+      ov.querySelector('#wbLater').onclick = e => { e.stopPropagation(); ov.remove(); };
       document.body.appendChild(ov);
     } catch { /* vd_meta 壞資料不擋主流程 */ }
   }
@@ -884,7 +898,7 @@ function setNick(v) {
     badges: () => BADGES.map(b => ({ ...b, got: !!g.badges[b.id], date: g.badges[b.id] })),
     badgeCount: () => ({ got: Object.keys(g.badges).length, total: BADGES.length }),
     bragText, challengeCode, decodeChallenge, setSprintBest, get sprintBest() { return g.best.sprint; },
-    heroStrip, dailyPanel, toast, checkBadges, masteredAll, startRecall,
+    heroStrip, dailyPanel, toast, checkBadges, masteredAll, startRecall, claimHabitReward,
     isBeaten: id => g.unlocked.includes('beat_' + id)
   };
 })();

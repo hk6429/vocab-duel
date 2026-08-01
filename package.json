@@ -2,5 +2,11 @@
   "name": "vocab-duel",
   "version": "1.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/test-dailyquest.mjs && node scripts/test-habit-reward.mjs && node scripts/test-pwa.mjs && node scripts/test-push-core.mjs && node scripts/test-push-api.mjs && node scripts/test-push-ui.mjs && node scripts/validate.mjs"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
 }

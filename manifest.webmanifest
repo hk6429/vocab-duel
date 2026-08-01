@@ -1,0 +1,29 @@
+{
+  "id": "/",
+  "name": "字鬥英雄",
+  "short_name": "字鬥英雄",
+  "description": "每天 10 題，用文豪對戰、詞靈與單字之城記住英文單字。",
+  "lang": "zh-Hant-TW",
+  "start_url": "/?daily=1",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f0e4",
+  "theme_color": "#17383a",
+  "icons": [
+    {
+      "src": "/img/ui/h_avatar.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "今日 10 題",
+      "short_name": "今日任務",
+      "url": "/?daily=1",
+      "icons": [{ "src": "/img/ui/h_daily.webp", "sizes": "512x512", "type": "image/webp" }]
+    }
+  ]
+}
