@@ -9,6 +9,8 @@ const VDSpeak = (() => {
   let cur = null;                                      // 正在播的有道音檔
   let voicesLoaded = false, warned = false;            // TTS 語音清單是否載入、是否已提示過缺語音
   const cache = {};
+  const SPOKEN_OVERRIDES = { Mrs: 'missus', 'Mrs.': 'missus', Ms: 'miz', 'Ms.': 'miz', 'Dr.': 'doctor' };
+  const PHONETIC_OVERRIDES = { tear: { 'en-US': 'tɪr', 'en-GB': 'tɪə(r)' } };
 
   /* 選聲：依品質排序，避免抓到系統的玩具音（Albert/Bells/Zarvox…完全聽不懂） */
   const GOOD = ['google us english', 'google uk english female', 'google uk english male',
@@ -68,12 +70,13 @@ const VDSpeak = (() => {
     maybeWarnNoVoice();            // 但若確定沒英語語音，提示一次安裝
   }
   /* 有道真人音：抓失敗（斷網/被擋/整句 500）就交給 onFail 退回 TTS */
-  function playUrl(spoken, onFail) {
+  function playUrl(spoken, phonetic, onFail) {
     const type = lang === 'en-GB' ? 1 : 2;
-    const key = type + '|' + spoken;
+    const key = type + '|' + spoken + '|' + (phonetic || '');
     let a = cache[key];
     if (!a) {
-      a = new Audio('https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(spoken) + '&type=' + type);
+      const phoneticParam = phonetic ? '&phonetic=' + encodeURIComponent(phonetic) : '';
+      a = new Audio('https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(spoken) + '&type=' + type + phoneticParam);
       cache[key] = a;
     }
     a.onerror = () => { delete cache[key]; cur = null; onFail(); };
@@ -81,15 +84,30 @@ const VDSpeak = (() => {
     const p = a.play();
     if (p && p.catch) p.catch(() => { delete cache[key]; cur = null; onFail(); });
   }
+  function speechPlan(text) {
+    const raw = String(text || '').trim();
+    const spoken = SPOKEN_OVERRIDES[raw] || (/^[A-Z]{2,5}$/.test(raw) ? raw.split('').join(' ') : raw);
+    const phonetic = PHONETIC_OVERRIDES[raw]?.[lang] || '';
+    const isShort = !/[.?!,;:！？。，]/.test(spoken) && spoken.split(/\s+/).length <= 4 && spoken.length <= 40;
+    return { spoken, phonetic, isShort };
+  }
+  function diagnostics(text) {
+    const plan = speechPlan(text);
+    return {
+      accent: lang,
+      source: okAudio && plan.isShort ? 'youdao' : 'device-tts',
+      spoken: plan.spoken,
+      phonetic: plan.phonetic,
+      voice: voice?.name || '',
+      tts: ttsStatus()
+    };
+  }
   function say(text) {
     if (!text) return;
     if (cur) { cur.pause(); cur = null; }
     if (ok) speechSynthesis.cancel();
-    const raw = String(text).trim();
-    /* 全大寫縮寫（2–5 字母）逐字母唸，避免 MRT/TV/CD 被唸成一團 */
-    const spoken = /^[A-Z]{2,5}$/.test(raw) ? raw.split('').join(' ') : raw;
-    const isShort = !/[.?!,;:！？。，]/.test(raw) && raw.split(/\s+/).length <= 4 && raw.length <= 40;
-    if (okAudio && isShort) playUrl(spoken, () => tts(spoken));
+    const { spoken, phonetic, isShort } = speechPlan(text);
+    if (okAudio && isShort) playUrl(spoken, phonetic, () => tts(spoken));
     else tts(spoken);
   }
   function setAccent(l) { lang = l; localStorage.setItem(KEY, l); pick(); }
@@ -109,6 +127,6 @@ const VDSpeak = (() => {
     return spk + rpt;
   }
 
-  return { say, btn, setAccent, accent, supported, hasVoice, ttsStatus };
+  return { say, btn, setAccent, accent, supported, hasVoice, ttsStatus, diagnostics };
 })();
 if (typeof window !== 'undefined') window.VDSpeak = VDSpeak;

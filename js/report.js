@@ -4,6 +4,37 @@ const VDReport = (() => {
     ? '' : 'https://vocab-duel.pages.dev';
   const esc = (s) => (window.VDGame && VDGame.esc) ? VDGame.esc(s) : String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+  function buildPayload(word, kind, note) {
+    let candidates = [];
+    try {
+      const words = (window.VDApp && VDApp.words) ? VDApp.words() : [];
+      candidates = words
+        .filter(item => item.word === word || item.example === word)
+        .slice(0, 8)
+        .map(item => `${item.id}:${item.word}`);
+    } catch {}
+    const options = [...document.querySelectorAll('.quiz-opts .opt-text')]
+      .map(node => String(node.textContent || '').trim()).filter(Boolean).slice(0, 8);
+    let speech = {};
+    try {
+      speech = (window.VDSpeak && VDSpeak.diagnostics) ? VDSpeak.diagnostics(word) : {};
+    } catch {}
+    return {
+      word,
+      kind,
+      note,
+      context: {
+        view: document.body?.dataset?.view || '',
+        path: `${location.pathname || ''}${location.search || ''}${location.hash || ''}`,
+        candidates,
+        options,
+        viewport: (typeof innerWidth === 'number' && typeof innerHeight === 'number') ? `${innerWidth}x${innerHeight}` : '',
+        userAgent: (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '',
+        speech
+      }
+    };
+  }
+
   /* 產生一顆回報鈕，緊跟在發音鈕旁 */
   function btn(text) {
     if (!text) return '';
@@ -39,10 +70,11 @@ const VDReport = (() => {
       try {
         const r = await fetch(API + '/api/report', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            word, kind: box.querySelector('#rptKind').value,
-            note: box.querySelector('#rptNote').value,
-          }),
+          body: JSON.stringify(buildPayload(
+            word,
+            box.querySelector('#rptKind').value,
+            box.querySelector('#rptNote').value
+          )),
         });
         const body = await r.json().catch(() => ({}));
         if (body.ok) {
@@ -62,6 +94,6 @@ const VDReport = (() => {
     };
   }
 
-  return { btn, open };
+  return { btn, open, buildPayload };
 })();
 if (typeof window !== 'undefined') window.VDReport = VDReport;

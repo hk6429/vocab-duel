@@ -40,6 +40,7 @@ globalThis.fetch = async () => ({ ok: true, clone() { return this; } });
 
 new Function(read('sw.js'))();
 ok(['install', 'activate', 'fetch', 'push', 'notificationclick'].every(name => handlers[name]), 'Service Worker 五個核心事件齊全');
+ok(read('sw.js').includes("'/js/speak.js'") && read('sw.js').includes("'/js/report.js'"), '離線殼層包含發音與回報程式');
 
 let pushWork;
 handlers.push({

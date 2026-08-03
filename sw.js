@@ -1,8 +1,9 @@
 /* 字鬥英雄 PWA：離線殼層、Web Push 與今日任務深連結 */
-const CACHE = 'vocab-duel-shell-20260802a';
+const CACHE = 'vocab-duel-shell-20260803a';
 const SHELL = [
   '/', '/index.html', '/css/style.css', '/manifest.webmanifest',
   '/js/store.js', '/js/game.js', '/js/quiz.js', '/js/dailyquest.js', '/js/app.js',
+  '/js/speak.js', '/js/report.js',
   '/data/words.json', '/img/ui/h_avatar.webp', '/img/ui/h_daily.webp'
 ];
 
