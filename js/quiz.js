@@ -162,6 +162,12 @@ const VDQuiz = (() => {
     return makeQuestionFor(word, (pool && pool.length ? pool : [word]), true, false, true);
   }
 
+  /* 作答前只朗讀題幹；克漏字不得把正解單字直接念出來。 */
+  function speechTextForQuestion(question) {
+    if (question.type === 'cloze') return question.prompt;
+    return question.type === 'e2z' ? question.word : '';
+  }
+
   function buildQuestions(words) {
     /* 出題對象：低盒優先（不熟的先考），混一些沒看過的；假熟練（盒夠高但信任度低）額外扣分提前重測 */
     const pool = words.slice();
@@ -270,7 +276,8 @@ const VDQuiz = (() => {
     // 拼寫產出題：不給選項，讓學生自己打出英文（產出型記憶，比辨識強）
     if (q.type === 'spell') return renderSpell(el, q);
     // 題幹是英文時（看英想中、例句挖空）給發音鈕；看中選英的題幹是中文不給
-    const promptSpk = q.type !== 'z2e' ? VDSpeak.btn(q.word) : '';
+    const speechText = speechTextForQuestion(q);
+    const promptSpk = speechText ? VDSpeak.btn(speechText) : '';
     el.innerHTML = `
       ${rescueBanner()}
       <div class="flash-progress">第 ${idx + 1} / ${questions.length} 題　得分 ${score}</div>
@@ -372,5 +379,5 @@ const VDQuiz = (() => {
     else fb.querySelector('.qz-next').onclick = next;
   }
 
-  return { start, startWith, randomQuestion, questionFor, conquer, unconqueredNow };
+  return { start, startWith, randomQuestion, questionFor, speechTextForQuestion, conquer, unconqueredNow };
 })();

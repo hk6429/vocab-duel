@@ -46,6 +46,30 @@ const fixed = () => 0.999999;
 const exactQuestion = globalThis.VDQuiz.questionFor(words[4], words);
 ok(exactQuestion.word === 'w05' && exactQuestion.ans, '每日任務可對指定字出題');
 
+ok(
+  globalThis.VDQuiz.speechTextForQuestion({
+    type: 'cloze',
+    prompt: 'I had a ＿＿＿＿＿ for lunch.',
+    word: 'salad'
+  }) === 'I had a ＿＿＿＿＿ for lunch.',
+  '克漏字朗讀題目，不得直接朗讀答案'
+);
+
+ok(
+  globalThis.VDQuiz.speechTextForQuestion({ type: 'spell', prompt: '沙拉', word: 'salad' }) === '',
+  '拼字題作答前不得朗讀答案'
+);
+
+ok(
+  globalThis.VDQuiz.speechTextForQuestion({ type: 'e2z', prompt: 'salad', word: 'salad' }) === 'salad',
+  '英翻中仍可朗讀英文題目'
+);
+
+ok(
+  globalThis.VDQuiz.speechTextForQuestion({ type: 'z2e', prompt: '沙拉', word: 'salad' }) === '',
+  '中翻英作答前不得朗讀答案'
+);
+
 const plan = H.buildPlan(words, { random: fixed });
 ok(plan.length === 10, '每日固定 10 題');
 ok(new Set(plan.map(item => item.word)).size === 10, '題目不重複');

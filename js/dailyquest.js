@@ -258,10 +258,11 @@ const VDDailyQuest = (() => {
     const prompt = VDGame.esc(question.prompt);
     const sub = VDGame.esc(question.sub || '');
     const options = question.options || [];
+    const speechText = VDQuiz.speechTextForQuestion(question);
     el.innerHTML = `<div class="dq-session">
       <div class="dq-session-head"><span>今日 10 題</span><b>${index + 1}/${state.plan.length}</b></div>
       ${progressHtml(state)}
-      <div class="quiz-prompt">${prompt}${question.type !== 'z2e' ? VDSpeak.btn(question.word) : ''}</div>
+      <div class="quiz-prompt">${prompt}${speechText ? VDSpeak.btn(speechText) : ''}</div>
       <div class="quiz-sub">${sub}</div>
       ${question.type === 'spell' ? `<div class="spell-row"><input id="dqSpell" class="spell-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="輸入英文答案"><button class="btn" id="dqSubmit">送出</button></div><button class="btn ghost" id="dqSkip">我還不會，看答案</button>` : `<div class="quiz-opts">${options.map((option, optionIndex) => `<button class="btn opt" data-value="${encodeURIComponent(option)}"><span class="opt-key">${'ABCD'[optionIndex]}</span><span class="opt-text">${VDGame.esc(option)}</span></button>`).join('')}</div>`}
       <div id="dqFeedback" aria-live="polite"></div>
