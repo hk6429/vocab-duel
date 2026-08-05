@@ -483,6 +483,14 @@ body.dark .tts-help.warn b, body.dark .tts-lead b { color: #f0b878; }
 .av-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
 .av-opt { font-size: 32px; padding: 8px; border-radius: 12px; background: rgba(43,43,43,.06); border: 2px solid transparent; cursor: pointer; }
 .av-opt.on { border-color: #6f9fc9; background: rgba(111,159,201,.15); }
+/* 重要存檔公告：同一版本只顯示一次，層級需高於右下角共用學習工具 */
+.vd-save-announcement { z-index: 2147483600; }
+.vd-save-announcement__panel { max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+.vd-save-announcement__version { display: block; width: fit-content; margin: 0 auto 8px; padding: 3px 12px; border-radius: 99px; background: var(--accent2); color: #201b12; font-size: 12px; font-weight: 900; }
+.vd-save-announcement__list { margin: 0 0 18px; padding-left: 1.35rem; color: var(--text); }
+.vd-save-announcement__list li { margin: 0 0 9px; line-height: 1.55; }
+.vd-save-announcement__actions { display: grid; gap: 8px; }
+.vd-save-announcement__actions .btn { width: 100%; }
 /* 限時衝刺 */
 .sp-intro { text-align: center; padding-top: 10px; }
 .sp-big { font-size: 44px; font-weight: 900; color: var(--accent2); }
