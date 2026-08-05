@@ -26,6 +26,18 @@ page.on('pageerror', e => fails.push('pageerror: ' + e.message));
 
 try {
   await page.goto(`http://localhost:${port}/`);
+  // 0. 存檔公告：內容完整，同一版本確認後不重複顯示
+  await page.waitForSelector('#vd-save-announcement');
+  const announcement = await page.textContent('#vd-save-announcement');
+  if (!/右下角學習工具/.test(announcement)) fails.push('存檔公告缺右下角學習工具入口');
+  if (!/更多工具.*雲端／班級榜/s.test(announcement)) fails.push('存檔公告缺系統內雲端存檔入口');
+  await page.click('#vd-save-announcement [data-close]');
+  const seenVersion = await page.evaluate(() => localStorage.getItem('vd_save_announcement_seen'));
+  if (seenVersion !== '2026.08.05') fails.push('存檔公告確認狀態未寫入');
+  await page.reload();
+  if (await page.$('#vd-save-announcement')) fails.push('同一版存檔公告重複顯示');
+  console.log('✅ 存檔公告顯示一次且入口完整');
+
   // 1. 學段選擇
   await page.click('button[data-s="E"]');
   await page.waitForSelector('.wc-mgrid');
