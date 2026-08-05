@@ -574,10 +574,14 @@ body.dark .tts-help.warn b, body.dark .tts-lead b { color: #f0b878; }
 .av-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
 .av-opt { font-size: 32px; padding: 8px; border-radius: 12px; background: rgba(43,43,43,.06); border: 2px solid transparent; cursor: pointer; }
 .av-opt.on { border-color: #6f9fc9; background: rgba(111,159,201,.15); }
-/* 重要存檔公告：同一版本只顯示一次，層級需高於右下角共用學習工具 */
+/* 公告入口與歷史紀錄：公告層級需高於右下角共用學習工具 */
+.vd-announcement-trigger { position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 2147482990; display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 8px 13px; border: 1px solid rgba(111,159,201,.55); border-radius: 999px; color: #fff; background: rgba(23,38,31,.94); box-shadow: 0 6px 20px rgba(0,0,0,.28); font-weight: 800; cursor: pointer; }
+.vd-announcement-trigger:hover { transform: translateY(-1px); }
 .vd-save-announcement { z-index: 2147483600; }
 .vd-save-announcement__panel { max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
 .vd-save-announcement__version { display: block; width: fit-content; margin: 0 auto 8px; padding: 3px 12px; border-radius: 99px; background: var(--accent2); color: #201b12; font-size: 12px; font-weight: 900; }
+.vd-save-announcement__history-label { display: block; margin: 0 0 4px; color: var(--muted); font-size: 12px; font-weight: 800; }
+.vd-save-announcement__history { width: 100%; margin: 0 0 14px; padding: 9px 10px; border: 1px solid rgba(111,159,201,.42); border-radius: 9px; color: var(--text); background: var(--panel); font: inherit; }
 .vd-save-announcement__list { margin: 0 0 18px; padding-left: 1.35rem; color: var(--text); }
 .vd-save-announcement__list li { margin: 0 0 9px; line-height: 1.55; }
 .vd-save-announcement__actions { display: grid; gap: 8px; }
