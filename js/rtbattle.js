@@ -5,7 +5,7 @@ const VDRT = (() => {
   // 後端遷到 CF Pages（D1）後 API 實際跑在 pages.dev；同源就相對路徑，其餘平台打絕對網址（比照 cloud/town/report.js）
   const API = location.hostname.includes('pages.dev') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
     ? '' : 'https://vocab-duel.pages.dev';
-  const ROUNDS = 20, ROUND_SEC = 15, POLL_MS = 1500, DEAD_MS = 20000;
+  const ROUNDS = 20, ROUND_SEC = 15, POLL_MS = 1500, DEAD_MS = 20000, LOBBY_MAX_MS = 600000;
   let el = null, room = null, my = null, oppSnap = null, qs = [], st = null;
   let pollTimer = 0, tickTimer = 0;
 
@@ -108,7 +108,15 @@ const VDRT = (() => {
       <button class="btn ghost" id="rtCancel">取消</button>
     </div>`;
     el.querySelector('#rtCancel').onclick = () => { stopTimers(); VDApp.go('petbattle'); };
+    const lobbyEnd = Date.now() + LOBBY_MAX_MS; // 沒人加入的房間 10 分鐘自動收——別讓忘記關的分頁燒一整天額度
     pollTimer = setInterval(async () => {
+      if (document.hidden) return; // 背景分頁不打 API
+      if (Date.now() > lobbyEnd) {
+        stopTimers();
+        el.innerHTML = `<div class="card-done"><div class="big">🕰️</div><p>等太久沒人加入，房間已收起來——要打再開一間吧。</p>
+          <button class="btn ghost" onclick="VDApp.go('petbattle')">← 回競技場</button></div>`;
+        return;
+      }
       const r = await api({ op: 'poll', code: room.code, role: 'p1' });
       const w = el.querySelector('#rt-wait');
       if (w) w.textContent = '等待對手加入' + '.'.repeat((dots = (dots + 1) % 4));
@@ -146,6 +154,7 @@ const VDRT = (() => {
   }
   async function poll() {
     if (st.finished) return;
+    if (document.hidden) return; // 背景分頁不打 API；超過 DEAD_MS 對手自動判勝，等同離場
     const r = await api({ op: 'poll', code: room.code, role: room.role });
     if (!r || !r.ok) return;
     if (r.opp && r.opp.state) {

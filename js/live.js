@@ -2,7 +2,7 @@
    題目確定性：seed + 字表 → mulberry 可重現亂數，所有裝置各自出同一組題，伺服器零題目儲存。
    輪詢自清：每次 tick 檢查容器 isConnected，一切換路由就停表，不留殭屍請求。 */
 const VDLive = (() => {
-  const Q_SEC = 15, POLL_MS = 3000, LOBBY_MS = 5000;
+  const Q_SEC = 15, POLL_MS = 3000, LOBBY_MS = 5000, IDLE_MAX_MS = 600000;
   const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const api = (body) => VDCloud.api('/api/live', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null);
 
@@ -66,7 +66,7 @@ const VDLive = (() => {
         <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button></div>`;
       return;
     }
-    st = { code, nick, qs: null, answered: 0, myScore: 0, combo: 0, registered: false };
+    st = { code, nick, qs: null, answered: 0, myScore: 0, combo: 0, registered: false, idleAt: Date.now() };
     el.innerHTML = '<div class="loading">連線中…</div>';
     poll();
     pollTimer = setInterval(poll, POLL_MS);
@@ -74,17 +74,27 @@ const VDLive = (() => {
 
   async function poll() {
     if (gone()) return stopTimers();
+    if (document.hidden) return; // 背景分頁不打 API
     const r = await api({ op: 'state', code: st.code });
     if (gone()) return stopTimers();
     if (!r || !r.ok) return;
     const live = r.live;
     if (!live || live.phase === 'end') {
       if (live && live.phase === 'end' && st.qs) return finishStudent();
+      if (Date.now() - st.idleAt > IDLE_MAX_MS) { // 等 10 分鐘還沒開場就停表——別讓掛著的分頁燒額度
+        stopTimers();
+        el.innerHTML = `<div class="card-done"><div class="big">🕰️</div>
+          <p>等了一陣子還沒開場——等老師說開始後再按重新連線。</p>
+          <button class="btn" onclick="VDApp.go('live')">🔄 重新連線</button>
+          <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button></div>`;
+        return;
+      }
       el.innerHTML = `<div class="card-done"><div class="big">🕰️</div>
         <p>現在沒有進行中的隨堂考——等老師開場後再進來。</p>
         <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button></div>`;
       return;
     }
+    st.idleAt = Date.now();
     if (!st.qs) st.qs = buildQuestions(live.seed, live.words || [], live.qn);
     if (!st.registered) {
       st.registered = true;
@@ -194,6 +204,7 @@ const VDLive = (() => {
 
   async function pollTeacher(t) {
     if (tGone()) return clearInterval(tTimer);
+    if (document.hidden) return; // 背景分頁不打 API
     const r = await api({ op: 'roster', code: tState.live.code || t.code });
     if (tGone()) return clearInterval(tTimer);
     if (r && r.ok) { tState.rows = r.list || []; paintRoster(); }
