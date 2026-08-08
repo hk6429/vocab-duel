@@ -22,7 +22,21 @@ const VDStore = (() => {
     try { return JSON.parse(localStorage.getItem(key)) || fallback; }
     catch { return fallback; }
   }
-  let prog = load(PROG_KEY, {});
+  const progressKey = word => String(word || '').toLowerCase();
+  function normalizeProgress(raw) {
+    const out = {};
+    for (const [word, rec] of Object.entries(raw || {})) {
+      const key = progressKey(word);
+      // 理論上字庫沒有大小寫折疊後的重複字；舊資料若意外兩者並存，保留作答次數較多的一筆。
+      if (!out[key] || (rec.s || 0) > (out[key].s || 0)) out[key] = rec;
+    }
+    return out;
+  }
+  const loadedProg = load(PROG_KEY, {});
+  let prog = normalizeProgress(loadedProg);
+  if (Object.keys(loadedProg).some(word => word !== progressKey(word)) || Object.keys(loadedProg).length !== Object.keys(prog).length) {
+    try { localStorage.setItem(PROG_KEY, JSON.stringify(prog)); } catch { /* 儲存空間異常時仍可沿用本次記憶體進度 */ }
+  }
   let meta = load(META_KEY, { stage: null, daily: {}, lastDay: null, streak: 0 });
   /* 舊存檔容錯：補齊後來新增的欄位 */
   function normalize(m) {
@@ -42,6 +56,7 @@ const VDStore = (() => {
 
   const saveProg = () => localStorage.setItem(PROG_KEY, JSON.stringify(prog));
   const saveMeta = () => localStorage.setItem(META_KEY, JSON.stringify(meta));
+  const progressOf = word => prog[progressKey(word)];
 
   function addDays(dateStr, n) {
     const d = new Date(dateStr + 'T00:00:00');
@@ -140,7 +155,8 @@ const VDStore = (() => {
 
   /* 信任度 0–1（獨立抽出，供 trustScore() 對外方法與 isDurableNow() 內部共用邏輯一致） */
   function computeTrust(word) {
-    const h = prog[word] && prog[word].h;
+    const rec = progressOf(word);
+    const h = rec && rec.h;
     if (!h) return 1;
     const pairs = [];
     for (let i = 0; i < h.length; i += 2) pairs.push(h.slice(i, i + 2));
@@ -160,7 +176,7 @@ const VDStore = (() => {
   /* 診斷誠實化：已鞏固＝box≥5（撐過長間隔仍答對）且曾有一次「產出題(spell/cloze)親手答對」(rec.p===1)
      且近期信任度≥0.7（排除靠單一題型／快答／忽對忽錯撐起來的假熟練）。白帽：不改既有升降盒規則，只加這個更高標籤 */
   function isDurableNow(word) {
-    const r = prog[word];
+    const r = progressOf(word);
     return !!r && r.b >= 5 && r.p === 1 && computeTrust(word) >= 0.7;
   }
 
@@ -169,20 +185,21 @@ const VDStore = (() => {
     today,
     get stage() { return meta.stage; },
     set stage(v) { meta.stage = v; saveMeta(); },
-    getWord: w => prog[w] || null,
+    getWord: w => progressOf(w) || null,
     /* 答題結果回寫：source 選填 — undefined/'quiz' 完整效果、'flash' 閃卡自評、'battle' 限時競技、
        'rescue' 連錯救援降階（答對不升盒、不清錯題本、不算攻克，只記歷史供診斷參考，避免救援模式被拿來洗進度）
        opts 選填 — { qtype: 'e2z'|'z2e'|'cloze'|'spell', ms: 作答耗時毫秒 }，供信任度判讀用，不影響升降盒
        回傳 { graduated }：graduated=true 表示這次答對讓該字「首次」達到 isDurable（已鞏固） */
     record(word, correct, source, opts) {
       snapshotHist(today()); // 快照要在今天第一題「改動進度前」拍，週增量才不會少算
-      const rec = prog[word] || { b: 0, d: today(), s: 0 };
+      const key = progressKey(word);
+      const rec = prog[key] || { b: 0, d: today(), s: 0 };
       pushRecent(correct);
       if (source === 'battle' && !correct) {
         // 競技答錯：只記錯題本，不降盒、不改到期日（限時手滑不懲罰學習進度）
         rec.s += 1;
         rec.h = appendHist(rec.h, correct, opts);
-        prog[word] = rec;
+        prog[key] = rec;
         meta.wrong[word] = today();
         queueWeak(word);
         saveProg();
@@ -199,7 +216,7 @@ const VDStore = (() => {
           meta.wrong[word] = today();
           queueWeak(word);
         }
-        prog[word] = rec;
+        prog[key] = rec;
         saveProg();
         bumpDaily();
         return { graduated: false };
@@ -217,7 +234,7 @@ const VDStore = (() => {
       rec.d = addDays(today(), INTERVALS[rec.b]);
       rec.s += 1;
       rec.h = appendHist(rec.h, correct, opts);
-      prog[word] = rec;
+      prog[key] = rec;
       // 錯題本：答錯記入；答對且已達熟練（盒 ≥3）才畢業移除
       if (!correct) { meta.wrong[word] = today(); queueWeak(word); }
       else if (rec.b >= 3 && meta.wrong[word]) delete meta.wrong[word];
@@ -231,7 +248,8 @@ const VDStore = (() => {
     /* 這個字曾經「答對過」的題型集合，供自測出題偏好還沒測過的題型 */
     correctTypes(word) {
       const out = new Set();
-      const h = prog[word] && prog[word].h;
+      const rec = progressOf(word);
+      const h = rec && rec.h;
       if (!h) return out;
       for (let i = 0; i < h.length; i += 2) {
         const t = HIST_TYPE_REV[h[i]], f = h[i + 1];
@@ -243,15 +261,15 @@ const VDStore = (() => {
     trustScore(word) { return computeTrust(word); },
     /* 假熟練：已達盒 3（系統認定熟練）但信任度偏低，自測出題該優先重測 */
     isFakeMastery(word) {
-      const r = prog[word];
+      const r = progressOf(word);
       return !!r && r.b >= 3 && this.trustScore(word) < 0.7;
     },
     /* 複習中：短期記得（盒 ≥3），但不代表已鞏固 */
-    isLearning(word) { const r = prog[word]; return !!r && r.b >= 3; },
+    isLearning(word) { const r = progressOf(word); return !!r && r.b >= 3; },
     /* 已鞏固：見 isDurableNow() 說明（box≥5 且曾產出題答對且信任度足夠） */
     isDurable(word) { return isDurableNow(word); },
     durableCount(words) { return words.filter(w => isDurableNow(w.word)).length; },
-    learningCount(words) { return words.filter(w => { const r = prog[w.word]; return !!r && r.b >= 3; }).length; },
+    learningCount(words) { return words.filter(w => { const r = progressOf(w.word); return !!r && r.b >= 3; }).length; },
     isWrong: w => !!meta.wrong[w],
     /* 錯題清單：回傳仍在錯題本裡的字物件（限定 scope 範圍） */
     wrongWords(words) { return words.filter(w => meta.wrong[w.word]); },
@@ -280,8 +298,9 @@ const VDStore = (() => {
     },
     /* 加入閃卡：把字放進待複習（box0、今天到期）；已有進度則不動，回傳是否為新加入 */
     enroll(word) {
-      if (prog[word]) return false;
-      prog[word] = { b: 0, d: today(), s: 0 };
+      const key = progressKey(word);
+      if (prog[key]) return false;
+      prog[key] = { b: 0, d: today(), s: 0 };
       saveProg();
       return true;
     },
@@ -309,7 +328,7 @@ const VDStore = (() => {
       const packs = packsOf(words);
       const i = Math.min(meta.unitIdx, packs.length - 1);
       const pack = packs[i];
-      const done = pack.filter(w => (prog[w.word] ? prog[w.word].b : -1) >= 1).length;
+      const done = pack.filter(w => { const r = progressOf(w.word); return (r ? r.b : -1) >= 1; }).length;
       return { packNo: i + 1, done, total: pack.length, words: pack };
     },
     /* 本包全數 box≥1 就進下一包；回傳剛完成的包號（沒完成回傳 0） */
@@ -369,7 +388,7 @@ const VDStore = (() => {
       const a = meta.assignments[code];
       if (!a) { meta.lockAsg = null; saveMeta(); return null; }
       if (a.due && today() > a.due) { meta.lockAsg = null; saveMeta(); return null; }
-      const done = a.words.filter(w => (prog[w] ? prog[w].b : -1) >= 1).length;
+      const done = a.words.filter(w => { const r = progressOf(w); return (r ? r.b : -1) >= 1; }).length;
       if (done >= a.words.length) { meta.lockAsg = null; saveMeta(); return null; }
       if (a.words.length < 8) return null;
       return a.words;
@@ -381,17 +400,17 @@ const VDStore = (() => {
       if (!codes.length) return null;
       const code = codes.sort((a, b) => meta.assignments[b].ts - meta.assignments[a].ts)[0];
       const a = meta.assignments[code];
-      const done = a.words.filter(w => (prog[w] ? prog[w].b : -1) >= 1).length;
+      const done = a.words.filter(w => { const r = progressOf(w); return (r ? r.b : -1) >= 1; }).length;
       return { code, name: a.name, done, total: a.words.length };
     },
-    isDue: w => prog[w] && prog[w].d <= today(),
-    isSeen: w => !!prog[w],
-    box: w => (prog[w] ? prog[w].b : -1), // -1 = 未學
+    isDue: w => { const r = progressOf(w); return !!r && r.d <= today(); },
+    isSeen: w => !!progressOf(w),
+    box: w => { const r = progressOf(w); return r ? r.b : -1; }, // -1 = 未學
     stats(words) { // words = 目前學段範圍的字陣列
       const t = today();
       let mastered = 0, seen = 0, due = 0;
       for (const w of words) {
-        const r = prog[w.word];
+        const r = progressOf(w.word);
         if (!r) continue;
         seen++;
         if (r.b >= 3) mastered++;
@@ -404,7 +423,7 @@ const VDStore = (() => {
       const d = [0, 0, 0, 0, 0, 0];
       let unseen = 0;
       for (const w of words) {
-        const r = prog[w.word];
+        const r = progressOf(w.word);
         if (!r) { unseen++; continue; }
         d[Math.max(0, Math.min(5, r.b))]++;
       }
@@ -416,7 +435,7 @@ const VDStore = (() => {
     importCode(code) {
       const obj = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
       if (!obj.p || !obj.m) throw new Error('bad code');
-      prog = obj.p; meta = normalize(obj.m);
+      prog = normalizeProgress(obj.p); meta = normalize(obj.m);
       saveProg(); saveMeta();
     },
     resetAll() {

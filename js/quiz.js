@@ -205,7 +205,7 @@ const VDQuiz = (() => {
      conquerMode 讓結算畫面收斂——攻克完再檢查是否還有殘留。 */
   let conquerMode = false;
   function conquer(el) {
-    el = el || document.getElementById('app');
+    el = el || document.getElementById('mod');
     const scope = (typeof VDApp !== 'undefined' && VDApp.scopeWords) ? VDApp.scopeWords() : [];
     const todo = VDStore.todayWrongUnconquered(scope);
     if (!todo.length) { render(el); return; }

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node scripts/test-reported-speech.mjs && node scripts/test-reported-content.mjs && node scripts/test-reported-report-ui.mjs && node scripts/test-reported-report-api.mjs && node scripts/test-name-policy.mjs && node scripts/test-name-moderation-api.mjs && node scripts/test-town-leaderboard.mjs && node scripts/test-town-leaderboard-ui.mjs && node scripts/test-dailyquest.mjs && node scripts/test-habit-reward.mjs && node scripts/test-pwa.mjs && node scripts/test-push-core.mjs && node scripts/test-push-api.mjs && node scripts/test-push-ui.mjs && node scripts/validate.mjs"
+    "test": "node scripts/test-reported-learning-flow.mjs && node scripts/test-reported-speech.mjs && node scripts/test-reported-content.mjs && node scripts/test-reported-report-ui.mjs && node scripts/test-reported-report-api.mjs && node scripts/test-name-policy.mjs && node scripts/test-name-moderation-api.mjs && node scripts/test-town-leaderboard.mjs && node scripts/test-town-leaderboard-ui.mjs && node scripts/test-dailyquest.mjs && node scripts/test-habit-reward.mjs && node scripts/test-pwa.mjs && node scripts/test-push-core.mjs && node scripts/test-push-api.mjs && node scripts/test-push-ui.mjs && node scripts/validate.mjs"
   },
   "dependencies": {
     "opencc-js": "^1.4.1",
