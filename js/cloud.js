@@ -131,7 +131,7 @@ const VDCloud = (() => {
       localStorage.setItem(LS.sync, code);
       msg('syncMsg', '上傳中…', true);
       try {
-        await api('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, blob: snapshot() }) });
+        await api('/api/sync', { method: 'POST', body: JSON.stringify({ code, blob: snapshot() }) });
         msg('syncMsg', `✅ 已上傳（含詞靈與城鎮）。記住這組碼：${code}`, true);
         if (window.VDSound) VDSound.coin();
       } catch (e) { msg('syncMsg', friendly(e), false); }
@@ -159,7 +159,7 @@ const VDCloud = (() => {
       const s = myStats();
       msg('boardMsg', '上傳中…', true);
       try {
-        await api('/api/board', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'sync', code, name, ...s }) });
+        await api('/api/board', { method: 'POST', body: JSON.stringify({ action: 'sync', code, name, ...s }) });
         msg('boardMsg', `✅ 已上傳：已掌握 ${s.mastered} 字 · Lv${s.level}`, true);
         loadBoard(code, name);
         if (window.VDSound) VDSound.coin();
@@ -183,7 +183,7 @@ const VDCloud = (() => {
       if (!word || !sentence) return msg('qwMsg', '單字和例句／口訣都要填喔', false);
       msg('qwMsg', '發布中…', true);
       try {
-        await api('/api/quotes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'post', code, nick, word, sentence }) });
+        await api('/api/quotes', { method: 'POST', body: JSON.stringify({ op: 'post', code, nick, word, sentence }) });
         msg('qwMsg', '✅ 已發布！', true);
         el.querySelector('#qwWord').value = ''; el.querySelector('#qwSentence').value = '';
         if (window.VDSound) VDSound.coin();
@@ -203,7 +203,7 @@ const VDCloud = (() => {
     const box = el.querySelector('#qwBox');
     box.innerHTML = '<div class="cloud-msg">載入中…</div>';
     try {
-      const r = await api('/api/quotes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'list', code }) });
+      const r = await api('/api/quotes', { method: 'POST', body: JSON.stringify({ op: 'list', code }) });
       const list = r.list || [];
       box.innerHTML = list.length
         ? `<div class="qw-list">${list.map(q => `
@@ -308,7 +308,7 @@ const VDCloud = (() => {
     if (localStorage.getItem('vd_asg_day') === day) return;
     localStorage.setItem('vd_asg_day', day); // 先記日期：失敗也不重試轟炸，明天再來
     try {
-      const r = await api('/api/class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'get', code: cc }) });
+      const r = await api('/api/class', { method: 'POST', body: JSON.stringify({ op: 'get', code: cc }) });
       if (!r.ok || !Array.isArray(r.asgs)) return;
       const dict = new Map(VDApp.words().map(w => [w.word.toLowerCase(), w.word]));
       const today = day;
@@ -337,7 +337,7 @@ const VDCloud = (() => {
     if (!entries.length) return;
     const words = Object.fromEntries(entries.slice(0, 50));
     try {
-      const r = await api('/api/class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'weakReport', code: cc, words }) });
+      const r = await api('/api/class', { method: 'POST', body: JSON.stringify({ op: 'weakReport', code: cc, words }) });
       if (r.ok) localStorage.removeItem('vd_weakq');
     } catch (_) { /* 靜默，佇列留著下次再送 */ }
   }
@@ -359,13 +359,13 @@ const VDCloud = (() => {
     let okAny = false;
     if (cc && cn) {
       try {
-        await api('/api/board', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'sync', code: cc, name: cn, ...myStats() }) });
+        await api('/api/board', { method: 'POST', body: JSON.stringify({ action: 'sync', code: cc, name: cn, ...myStats() }) });
         okAny = true;
       } catch (_) { /* 靜默 */ }
     }
     if (sync) {
       try {
-        await api('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: sync, blob: snapshot() }) });
+        await api('/api/sync', { method: 'POST', body: JSON.stringify({ code: sync, blob: snapshot() }) });
         okAny = true;
       } catch (_) { /* 靜默 */ }
     }
@@ -384,7 +384,7 @@ const VDCloud = (() => {
     const cn = localStorage.getItem(LS.cname);
     if (!cc || !cn) return;
     try {
-      const r = await api('/api/class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'getAcc', code: cc, name: cn }) });
+      const r = await api('/api/class', { method: 'POST', body: JSON.stringify({ op: 'getAcc', code: cc, name: cn }) });
       const j = await r.json();
       if (j && j.ok && j.acc) {
         localStorage.setItem('vd_iep', JSON.stringify(j.acc));

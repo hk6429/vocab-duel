@@ -360,7 +360,7 @@ const VDPetBattle = (() => {
     let opp = null, connected = false;
     try {
       const r = await fetch(`${API}/api/pets`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify({ op: 'opponent', rating: VDPets.rating })
       });
       if (r.ok) { connected = true; opp = (await r.json()).opponent; }
@@ -389,7 +389,7 @@ const VDPetBattle = (() => {
     let rows = [];
     try {
       const r = await fetch(`${API}/api/pets`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify({ op: 'board' })
       });
       if (r.ok) rows = (await r.json()).board || [];
@@ -418,7 +418,7 @@ const VDPetBattle = (() => {
     let rows = [];
     try {
       const r = await fetch(`${API}/api/pets`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify({ op: 'board' })
       });
       if (r.ok) rows = (await r.json()).board || [];

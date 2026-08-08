@@ -14,7 +14,7 @@ const VDTeach = (() => {
   const saveSeat = (name, seat) => { const s = seats(); if (seat) s[name] = seat; else delete s[name]; localStorage.setItem(SEATS_LS, JSON.stringify(s)); };
   const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const cssId = (s) => 'n' + String(s).split('').map(c => c.charCodeAt(0).toString(36)).join('');
-  const api = (body) => VDCloud.api('/api/class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const api = (body) => VDCloud.api('/api/class', { method: 'POST', body: JSON.stringify(body) });
   const msg = (id, t, ok) => { const m = el.querySelector('#' + id); if (m) { m.textContent = t; m.className = 'cloud-msg ' + (ok ? 'ok' : 'err'); } };
 
   /* CSV 下載（含 BOM 供 Excel 正確顯示中文），欄位以逗號分隔、必要時加引號跳脫 */

@@ -466,7 +466,7 @@ const VDPets = (() => {
     if (!snap) return;
     try {
       await fetch(`${API}/api/pets`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify({ op: 'submit', snap })
       });
     } catch { /* 離線不阻斷 */ }
@@ -615,7 +615,7 @@ const VDPets = (() => {
   async function submitLore(id, entry) {
     try {
       await fetch(LORE_API + '/api/lore', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify({ op: 'submit', petId: id, word: entry.word, text: entry.text, hero: VDGame.heroName() })
       });
     } catch { /* 離線不阻斷 */ }
@@ -623,7 +623,7 @@ const VDPets = (() => {
   async function fetchLore(id) {
     try {
       const r = await fetch(LORE_API + '/api/lore', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify({ op: 'list', petId: id })
       });
       if (r.ok) return (await r.json()).lore || [];
@@ -635,7 +635,7 @@ const VDPets = (() => {
   async function reportLore(id, word, text) {
     try {
       const r = await fetch(LORE_API + '/api/lore', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify({ op: 'report', petId: id, word, text })
       });
       return r.ok;

@@ -38,7 +38,7 @@ const VDReport = (() => {
       msg.textContent = '送出中…';
       try {
         const r = await fetch(API + '/api/report', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
           body: JSON.stringify({
             word, kind: box.querySelector('#rptKind').value,
             note: box.querySelector('#rptNote').value,

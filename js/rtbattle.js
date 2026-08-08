@@ -51,7 +51,7 @@ const VDRT = (() => {
   async function api(body) {
     try {
       const r = await fetch('api/room', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify(body)
       });
       return await r.json();

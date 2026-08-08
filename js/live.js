@@ -4,7 +4,7 @@
 const VDLive = (() => {
   const Q_SEC = 15, POLL_MS = 3000, LOBBY_MS = 5000, IDLE_MAX_MS = 600000;
   const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const api = (body) => VDCloud.api('/api/live', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null);
+  const api = (body) => VDCloud.api('/api/live', { method: 'POST', body: JSON.stringify(body) }).catch(() => null);
 
   /* 可重現亂數（同 rtbattle）：同 seed → 全班同題同選項 */
   function mulberry(seed) {

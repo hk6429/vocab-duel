@@ -34,7 +34,7 @@ const VDMarket = (() => {
   async function api(body) {
     try {
       const r = await fetch(`${API}/api/market`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify(body)
       });
       return await r.json();

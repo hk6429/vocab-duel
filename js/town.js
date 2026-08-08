@@ -235,7 +235,7 @@ const VDTownUI = (() => {
     if (!box || !code) return;
     try {
       const r = await fetch(API + '/api/town', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify({ op: 'guestbook', code })
       }).then(x => x.json());
       if (!r.ok || !Array.isArray(r.list) || !r.list.length) return;
@@ -284,7 +284,7 @@ const VDTownUI = (() => {
     box.innerHTML = '<div class="loading">出發參觀…</div>';
     try {
       const r = await fetch(API + '/api/town', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify({ op: 'visit', visitCode: code })
       }).then(x => x.json());
       if (!r.ok || !r.town) { box.innerHTML = ''; return VDGame.toast(r.error || '找不到這座城（確認一下參觀碼）'); }
@@ -312,7 +312,7 @@ const VDTownUI = (() => {
         b.disabled = true;
         try {
           const rr = await fetch(API + '/api/town', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
             body: JSON.stringify({ op: 'cheer', visitCode: code, nick: VDGame.raw.nick || '路人', emoji: b.dataset.e })
           }).then(x => x.json());
           VDGame.toast(rr.ok ? `${b.dataset.e} 打氣送出，城主會在訪客簿看到你！` : (rr.error || '打氣沒送出去'));
@@ -323,7 +323,7 @@ const VDTownUI = (() => {
         box.querySelectorAll('.tw-gift').forEach(x => x.disabled = true);
         try {
           const rr = await fetch(API + '/api/town', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
             body: JSON.stringify({ op: 'gift', visitCode: code, res: b.dataset.r })
           }).then(x => x.json());
           VDGame.toast(rr.ok ? `🎁 已贈送 ${VDTown.RES_META[b.dataset.r].ico}×${rr.n}！` : (rr.error || '贈禮沒送出去'));
@@ -445,7 +445,7 @@ const VDTownUI = (() => {
     if (code.length < 4) return VDGame.toast('先輸入同步碼（至少 4 碼）');
     try {
       const r = await fetch(API + '/api/town', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
         body: JSON.stringify(op === 'save' ? { op: 'save', code, town: VDTown.exportState() } : { op: 'load', code })
       }).then(x => x.json());
       if (!r.ok) return VDGame.toast(r.error || '雲端出錯');
