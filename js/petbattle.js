@@ -47,12 +47,6 @@ const VDPetBattle = (() => {
             <button class="btn ghost" id="doMarket">🏪 裝備市場</button>
             <span class="pg-hint">目前積分：<b>${VDPets.rating}</b></span>
           </div>
-          <div class="pg-sub">⚡ 即時對戰（同教室兩台手機，同題對打）</div>
-          <div class="pb-shadowrow">
-            <button class="btn" id="rtCreate">⚡ 開房（拿 4 位數房號）</button>
-            <input class="rt-join-in" id="rtCode" maxlength="4" inputmode="numeric" placeholder="輸入房號">
-            <button class="btn ghost" id="rtJoin">加入</button>
-          </div>
           <div class="pg-sub">📮 挑戰書（收到同學的 6 碼挑戰碼？打同一組題，比比誰的輸出高）</div>
           <div class="pb-shadowrow">
             <input class="rt-join-in" id="chCode" maxlength="6" placeholder="輸入挑戰碼">
@@ -76,12 +70,6 @@ const VDPetBattle = (() => {
     el.querySelector('#doShadow').onclick = startShadow;
     el.querySelector('#doBoard').onclick = showBoard;
     el.querySelector('#doMarket').onclick = () => VDMarket.render(el);
-    el.querySelector('#rtCreate').onclick = () => VDRT.create(el);
-    el.querySelector('#rtJoin').onclick = () => {
-      const code = el.querySelector('#rtCode').value.trim();
-      if (!/^\d{4}$/.test(code)) return VDGame.toast('房號是 4 位數字');
-      VDRT.join(el, code);
-    };
     el.querySelector('#chAccept').onclick = () => {
       const code = el.querySelector('#chCode').value.trim().toUpperCase();
       if (!/^[A-Z0-9]{6}$/.test(code)) return VDGame.toast('挑戰碼是 6 碼英數字');
