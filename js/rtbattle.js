@@ -300,6 +300,18 @@ const VDRT = (() => {
 
   /* 應戰：拿挑戰碼取同一組 seed/scope 打 20 題，打完回報比分 */
   let chal = null;
+  /* 立帖：自打一場 20 題輸出賽（與應戰者同格式同公式），成績直接生成戰帖 */
+  function solo(container) {
+    el = container;
+    my = mySnap();
+    chal = null;
+    const seed = (Math.random() * 0xffffffff) >>> 0;
+    room = { code: '', role: 'solo', seed, scope: my.scope };
+    qs = buildQuestions(seed, room.scope);
+    st = { round: 0, combo: 0, correct: 0, dmg: 0, locked: false, finished: false, deadline: 0 };
+    VDGame.onBattleStart();
+    chalRound();
+  }
   async function accept(container, code) {
     el = container;
     my = mySnap();
@@ -336,8 +348,8 @@ const VDRT = (() => {
     el.innerHTML = `
       <div class="bt-arena">
         <div class="bt-side foe">
-          <div class="bt-name">📮 ${VDGame.esc(chal.nick || '挑戰者')} 的戰帖</div>
-          <div class="bt-assist">對方成績：${chal.score} 輸出——超越它！</div>
+          <div class="bt-name">${chal ? `📮 ${VDGame.esc(chal.nick || '挑戰者')} 的戰帖` : '📮 立戰帖輸出賽'}</div>
+          <div class="bt-assist">${chal ? `對方成績：${chal.score} 輸出——超越它！` : '打出你的最高輸出，打完發戰帖給同學踢館！'}</div>
         </div>
         <div class="bt-log" id="rt-log" role="status" aria-live="polite">目前輸出 ${st.dmg}</div>
         <div class="bt-side me">
@@ -378,6 +390,18 @@ const VDRT = (() => {
     st.finished = true;
     clearInterval(tickTimer);
     VDGame.onBattleFinish();
+    if (!chal) { // 立帖模式：不比分，直接用這局成績發戰帖
+      el.innerHTML = `<div class="card-done">
+        <div class="big">📮</div>
+        <p>輸出賽打完——總輸出 ${st.dmg}（答對 ${st.correct}/${ROUNDS}）</p>
+        <div class="pg-hint">發出戰帖後，同學 7 天內輸入挑戰碼就能打同一組題跟你比輸出。</div>
+        <button class="btn" id="rtChallenge">📮 發挑戰書</button>
+        <button class="btn ghost" onclick="VDApp.go('petbattle')">回競技場</button>
+        <button class="btn ghost" onclick="VDApp.go('menu')">回主選單</button>
+      </div>`;
+      el.querySelector('#rtChallenge').onclick = (e) => sendChallenge(e.currentTarget);
+      return;
+    }
     el.innerHTML = '<div class="loading">回報戰果…</div>';
     const r = await api({ op: 'challengeResult', code: chal.code, nick: my.nick, score: st.dmg });
     const cNick = (r && r.challenger && r.challenger.nick) || chal.nick || '挑戰者';
@@ -394,6 +418,6 @@ const VDRT = (() => {
     </div>`;
   }
 
-  return { create, join, accept, _build: buildQuestions };
+  return { create, join, accept, solo, _build: buildQuestions };
 })();
 window.VDRT = VDRT;
