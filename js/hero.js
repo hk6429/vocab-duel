@@ -4,7 +4,7 @@ const VDHero = (() => {
 
   function tabBar() {
     const tab = (id, label) => `<button class="hero-tab ${curTab === id ? 'on' : ''}" data-htab="${id}">${label}</button>`;
-    return `<div class="hero-tabs">${tab('me', '🦸 本人戰績')}${tab('class', '🏫 班級榜')}${tab('pet', '🐾 詞靈榜')}</div>`;
+    return `<div class="hero-tabs">${tab('me', '🦸 本人戰績')}${tab('class', '🏫 班級榜')}${tab('pet', '🐾 詞靈榜')}${tab('town', '🏰 單字城榜')}</div>`;
   }
 
   function meTab() {
@@ -171,6 +171,8 @@ const VDHero = (() => {
       VDCloud.start(body);
     } else if (curTab === 'pet') {
       VDPetBattle.boardOnly(body);
+    } else if (curTab === 'town') {
+      VDTownUI.boardOnly(body);
     }
   }
 

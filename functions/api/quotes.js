@@ -2,13 +2,13 @@
 // POST { op:'post', code, nick, word, sentence } → 發布一則（限長、走黑名單審核、LPUSH 保 200 筆）
 // POST { op:'list', code }                       → 讀該班最新語錄
 import { redisFor, vercelToPages } from "./_redis.js";
+import { isEducationSafeName, reviewEducationName } from "./name-policy.js";
 let redis;
 
 
 const TTL = 240 * 24 * 60 * 60; // 一學年左右，跟 board.js 一致
 const KEY = (code) => `vd:quote:${code}`;
 const okCode = (c) => typeof c === "string" && /^[一-鿿A-Za-z0-9_-]{2,16}$/.test(c);
-const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n);
 const okWord = (w) => typeof w === "string" && w.trim().length >= 1 && w.trim().length <= 20 && !/[<>&"']/.test(w);
 const okSentence = (s) => typeof s === "string" && s.trim().length >= 1 && s.trim().length <= 60 && !/[<>&"']/.test(s);
 // 暱稱／內容黑名單：與 board.js／town.js 同一份常見中英文辱罵字詞（非窮舉）
@@ -44,13 +44,14 @@ async function handler(req, res, env) {
     if (op === "post") {
       if (await rateLimited(req, "quotepost", 10)) return res.status(429).json({ error: "發布太頻繁，請稍候再試" });
       const { nick, word, sentence } = req.body || {};
-      if (!okNick(nick)) return res.status(200).json({ ok: 0, error: "暱稱須為 1–12 字" });
+      const nickReview = reviewEducationName(nick);
+      if (!nickReview.ok) return res.status(200).json({ ok: 0, error: nickReview.error });
       if (!okWord(word)) return res.status(200).json({ ok: 0, error: "單字須為 1–20 字" });
       if (!okSentence(sentence)) return res.status(200).json({ ok: 0, error: "例句／口訣須為 1–60 字" });
-      if (BAD_WORDS.test(nick) || BAD_WORDS.test(word) || BAD_WORDS.test(sentence))
+      if (BAD_WORDS.test(word) || BAD_WORDS.test(sentence))
         return res.status(200).json({ ok: 0, error: "內容含不當字詞，請更換" });
       const k = KEY(code);
-      await redis.lpush(k, JSON.stringify({ nick: nick.trim(), word: word.trim(), sentence: sentence.trim(), ts: Date.now() }));
+      await redis.lpush(k, JSON.stringify({ nick: nickReview.name, word: word.trim(), sentence: sentence.trim(), ts: Date.now() }));
       await redis.ltrim(k, 0, 199); // 只保最新 200 筆
       await redis.expire(k, TTL);
       return res.status(200).json({ ok: 1 });
@@ -61,7 +62,7 @@ async function handler(req, res, env) {
       const raw = await redis.lrange(KEY(code), 0, 49); // 最新 50 筆
       const list = raw
         .map((x) => { try { return typeof x === "string" ? JSON.parse(x) : x; } catch { return null; } })
-        .filter(Boolean);
+        .filter((x) => x && isEducationSafeName(x.nick));
       return res.status(200).json({ ok: 1, list });
     }
 

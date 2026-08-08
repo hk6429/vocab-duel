@@ -5,6 +5,10 @@ let redis;
 let TOKEN, CHAT_ID;                       // 於 handler 內從 env 帶入（CF Pages secret）
 
 const KIND_LABEL = { pron: "🔊 發音", mean: "📖 中文解釋", other: "❓ 其他" };
+const clean = (value, max = 160) => String(value || "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim().slice(0, max);
+const cleanList = (value, maxItems = 8, maxEach = 80) => Array.isArray(value)
+  ? value.slice(0, maxItems).map(item => clean(item, maxEach)).filter(Boolean)
+  : [];
 
 // CORS 白名單：只回信任的來源，其餘退回主站
 const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
@@ -42,12 +46,28 @@ async function handler(req, res, env) {
     if (!word) return res.status(200).json({ ok: 0, error: "缺少單字內容" });
     const kind = KIND_LABEL[req.body?.kind] ? req.body.kind : "other";
     const note = String(req.body?.note || "").trim().slice(0, 200);
+    const context = req.body?.context && typeof req.body.context === "object" ? req.body.context : {};
+    const speech = context.speech && typeof context.speech === "object" ? context.speech : {};
+    const candidates = cleanList(context.candidates, 8, 50);
+    const options = cleanList(context.options, 8, 100);
+    const locationParts = [clean(context.view, 30), clean(context.path, 140), candidates.join(", ")].filter(Boolean);
+    const speechParts = [
+      clean(speech.accent, 20), clean(speech.source, 30), clean(speech.voice, 80),
+      speech.tts ? `TTS ${clean(speech.tts, 20)}` : "",
+      speech.spoken && speech.spoken !== word ? `朗讀 ${clean(speech.spoken, 80)}` : "",
+      speech.phonetic ? `音標 ${clean(speech.phonetic, 40)}` : ""
+    ].filter(Boolean);
+    const deviceParts = [clean(context.viewport, 30), clean(context.userAgent, 180)].filter(Boolean);
 
     const text = [
       "🚩 字鬥英雄・單字回報",
       `內容：${word}`,
       `類型：${KIND_LABEL[kind]}`,
       note ? `備註：${note}` : "",
+      locationParts.length ? `定位：${locationParts.join("｜")}` : "",
+      options.length ? `選項：${options.join("｜")}` : "",
+      speechParts.length ? `發音：${speechParts.join("｜")}` : "",
+      deviceParts.length ? `裝置：${deviceParts.join("｜")}` : "",
       `來源：${req.headers.origin || "unknown"}`,
     ].filter(Boolean).join("\n");
 

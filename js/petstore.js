@@ -90,7 +90,7 @@ const VDPets = (() => {
     if (data) return;
     load();
     [data, affixData] = await Promise.all([
-      (await fetch('data/pets.json')).json(),
+      (await fetch('data/pets.json?v=20260802b')).json(),
       (await fetch('data/affixes.json')).json()
     ]);
     // 預計算每寵家族單字集合（同 form 的重複條目一併納入）
@@ -465,10 +465,12 @@ const VDPets = (() => {
     const snap = snapshot();
     if (!snap) return;
     try {
-      await fetch(`${API}/api/pets`, {
+      const response = await fetch(`${API}/api/pets`, {
         method: 'POST',
         body: JSON.stringify({ op: 'submit', snap })
       });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) VDGame.toast(`排行榜未上架：${result.error || '名稱未通過教育場域審核'}`);
     } catch { /* 離線不阻斷 */ }
   }
 

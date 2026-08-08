@@ -11,6 +11,7 @@
 // POST { op:'setAcc', code, pin, name, acc:{...} }  → 老師設定單一學生 IEP 調節（PIN 驗證）
 // POST { op:'getAcc', code, name }                  → 讀某暱稱目前調節設定（供學生端 VDMode 套用）
 import { redisFor, vercelToPages } from "./_redis.js";
+import { isEducationSafeName, reviewEducationName } from "./name-policy.js";
 let redis;
 
 
@@ -26,7 +27,6 @@ const okCode = (c) => typeof c === "string" && /^[一-鿿A-Za-z0-9_-]{2,16}$/.te
 const okPin = (p) => typeof p === "string" && /^\d{4,8}$/.test(p);
 const okName = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 20 && !/[<>&"']/.test(n);
 const okWord = (w) => typeof w === "string" && /^[a-z' .-]{1,24}$/i.test(w);
-const BAD_WORDS = /笨蛋|白癡|智障|廢物|去死|三小|幹你|靠北|媽的|垃圾|腦殘|fuck|shit|bitch|asshole|idiot|stupid|retard/i;
 
 // CORS 白名單：只回信任的來源，其餘退回主站
 const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
@@ -117,11 +117,11 @@ async function handler(req, res, env) {
       if (await rateLimited(req, "clsclaim", 5)) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
       const { pin, name } = req.body || {};
       if (!okPin(pin)) return res.status(200).json({ ok: 0, error: "PIN 須為 4–8 位數字" });
-      if (!okName(name)) return res.status(200).json({ ok: 0, error: "班級名稱須為 1–20 字" });
-      if (BAD_WORDS.test(name)) return res.status(200).json({ ok: 0, error: "名稱含不當字詞，請更換" });
+      const nameReview = reviewEducationName(name, { max: 20 });
+      if (!nameReview.ok) return res.status(200).json({ ok: 0, error: nameReview.error });
       if (await redis.exists(KEY(code))) return res.status(200).json({ ok: 0, error: "這個班級碼已被認領，換一組吧" });
-      await redis.set(KEY(code), JSON.stringify({ pin, name: name.trim(), ts: Date.now() }), { ex: TTL });
-      return res.status(200).json({ ok: 1, name: name.trim() });
+      await redis.set(KEY(code), JSON.stringify({ pin, name: nameReview.name, ts: Date.now() }), { ex: TTL });
+      return res.status(200).json({ ok: 1, name: nameReview.name });
     }
 
     if (op === "get") {
@@ -129,7 +129,7 @@ async function handler(req, res, env) {
       const cls = parse(await redis.get(KEY(code)));
       if (!cls) return res.status(200).json({ ok: 0, error: "這個班級還沒被老師認領" });
       const asgs = parse(await redis.get(ASG_KEY(code))) || [];
-      return res.status(200).json({ ok: 1, name: cls.name, asgs }); // 絕不回 PIN
+      return res.status(200).json({ ok: 1, name: isEducationSafeName(cls.name, { max: 20 }) ? cls.name : "未命名班級", asgs }); // 絕不回 PIN
     }
 
     if (op === "setAsg" || op === "delAsg") {
@@ -182,14 +182,15 @@ async function handler(req, res, env) {
       if (await rateLimited(req, "clsself", 20)) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
       if (!(await redis.exists(KEY(code)))) return res.status(200).json({ ok: 0, error: "班級不存在" });
       const { name, durable, learning, weak } = req.body || {};
-      if (!okName(name)) return res.status(200).json({ ok: 0, error: "暱稱格式不對" });
+      const nameReview = reviewEducationName(name, { max: 20 });
+      if (!nameReview.ok) return res.status(200).json({ ok: 0, error: nameReview.error });
       const rec = {
         durable: Math.max(0, Math.min(6205, Math.round(Number(durable) || 0))),
         learning: Math.max(0, Math.min(6205, Math.round(Number(learning) || 0))),
         weak: cleanWeakList(weak),
         ts: Date.now(),
       };
-      await redis.hset(SW_KEY(code), { [name.trim()]: JSON.stringify(rec) });
+      await redis.hset(SW_KEY(code), { [nameReview.name]: JSON.stringify(rec) });
       await redis.expire(SW_KEY(code), TTL);
       return res.status(200).json({ ok: 1 });
     }
@@ -199,11 +200,12 @@ async function handler(req, res, env) {
       if (await rateLimited(req, "clslog", 20)) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
       if (!(await redis.exists(KEY(code)))) return res.status(200).json({ ok: 0, error: "班級不存在" });
       const { name, asgId, results } = req.body || {};
-      if (!okName(name)) return res.status(200).json({ ok: 0, error: "暱稱格式不對" });
+      const nameReview = reviewEducationName(name, { max: 20 });
+      if (!nameReview.ok) return res.status(200).json({ ok: 0, error: nameReview.error });
       if (!/^[a-z0-9]{1,8}$/.test(String(asgId || ""))) return res.status(200).json({ ok: 0, error: "指派 ID 不對" });
       const cleaned = cleanResults(results);
       if (!cleaned) return res.status(200).json({ ok: 0, error: "作答紀錄格式不對" });
-      await redis.hset(LOG_KEY(code), { [`${name.trim()}::${asgId}`]: JSON.stringify({ results: cleaned, ts: Date.now() }) });
+      await redis.hset(LOG_KEY(code), { [`${nameReview.name}::${asgId}`]: JSON.stringify({ results: cleaned, ts: Date.now() }) });
       await redis.expire(LOG_KEY(code), TTL);
       return res.status(200).json({ ok: 1 });
     }
@@ -214,8 +216,9 @@ async function handler(req, res, env) {
       const cls = await authed(code, req.body.pin);
       if (!cls) return res.status(200).json({ ok: 0, error: "班級碼或 PIN 不對" });
       const { name } = req.body || {};
-      if (!okName(name)) return res.status(200).json({ ok: 0, error: "暱稱格式不對" });
-      const nm = name.trim();
+      const nameReview = reviewEducationName(name, { max: 20 });
+      if (!nameReview.ok) return res.status(200).json({ ok: 0, error: nameReview.error });
+      const nm = nameReview.name;
       const swRaw = await redis.hget(SW_KEY(code), nm);
       const sw = swRaw ? parse(swRaw) : null;
       const allLogs = (await redis.hgetall(LOG_KEY(code))) || {};
@@ -241,9 +244,10 @@ async function handler(req, res, env) {
       const cls = await authed(code, req.body.pin);
       if (!cls) return res.status(200).json({ ok: 0, error: "班級碼或 PIN 不對" });
       const { name, acc } = req.body || {};
-      if (!okName(name)) return res.status(200).json({ ok: 0, error: "暱稱格式不對" });
+      const nameReview = reviewEducationName(name, { max: 20 });
+      if (!nameReview.ok) return res.status(200).json({ ok: 0, error: nameReview.error });
       const cleaned = cleanAcc(acc);
-      await redis.hset(ACC_KEY(code), { [name.trim()]: JSON.stringify(cleaned) });
+      await redis.hset(ACC_KEY(code), { [nameReview.name]: JSON.stringify(cleaned) });
       await redis.expire(ACC_KEY(code), TTL);
       return res.status(200).json({ ok: 1, acc: cleaned });
     }
@@ -252,8 +256,9 @@ async function handler(req, res, env) {
       // 學生端（或老師端預覽）讀某暱稱目前的調節設定；無 PIN，公開唯讀，不含任何機敏資料
       if (await rateLimited(req, "clsacc", 30)) return res.status(429).json({ error: "操作太頻繁，請稍候再試" });
       const { name } = req.body || {};
-      if (!okName(name)) return res.status(200).json({ ok: 0, error: "暱稱格式不對" });
-      const raw = await redis.hget(ACC_KEY(code), name.trim());
+      const nameReview = reviewEducationName(name, { max: 20 });
+      if (!nameReview.ok) return res.status(200).json({ ok: 0, error: nameReview.error });
+      const raw = await redis.hget(ACC_KEY(code), nameReview.name);
       return res.status(200).json({ ok: 1, acc: raw ? parse(raw) : null });
     }
 

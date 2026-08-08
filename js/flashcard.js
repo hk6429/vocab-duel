@@ -56,7 +56,7 @@ const VDFlash = (() => {
       // streak 修復入口（斷 1 天且無護盾，當天或隔天可用字幣接回）
       const rep = VDStore.streakRepairInfo();
       el.innerHTML = `<div class="card-done"><div class="big">✅</div><p>${doneMsg}</p>
-        ${rep ? `<div class="pg-hint">🔥 連續 ${rep.was} 天斷掉了！花 ${rep.cost} 字幣可以接回來</div>
+        ${rep ? `<div class="pg-hint">🏮 今天重新接上就好。可用 ${rep.cost} 字幣接回原本的學習記錄</div>
         <button class="btn" id="repairBtn">🛠️ 修復連續紀錄（${rep.cost} 字幣）</button>` : ''}
         ${doneCount > 0 && queue.length ? `<button class="btn" id="gradBtn">🎓 用自測畢業這批字</button>` : ''}
         <button class="btn ${doneCount > 0 ? 'ghost' : ''}" onclick="VDApp.go('flash')">再來一回合</button>
@@ -80,7 +80,7 @@ const VDFlash = (() => {
       : `<div class="flash-zh big">${w.zh}</div><div class="flash-pos">${w.pos.join(', ')}</div><div class="flash-hint">點卡片看英文</div>`;
     const unit = curOpts.raw ? null : VDStore.unitInfo(curWords);
     el.innerHTML = `
-      <div class="flash-progress">${idx + 1} / ${queue.length}　${boxNum >= 0 ? `<span title="盒子越大＝越熟，隔越多天才再考你">盒 ${boxNum}（越大越熟）</span>` : '新字'}${unit ? `　<span title="新字按 20 字一包依序出牌">📦 第 ${unit.packNo} 包・本包 ${unit.done}/${unit.total}</span>` : ''}</div>
+      <div class="flash-progress">${idx + 1} / ${queue.length}　${boxNum >= 0 ? `<span title="盒子越大＝越熟，隔越多天才再考你">盒 ${boxNum}（越大越熟）</span>` : '新字'}${unit ? `　<span title="本包進度＝目前已進入第 1 盒以上的字數；前面的回合題目可能是到期複習字，因此本包數字不一定每題增加">📦 第 ${unit.packNo} 包・本包 ${unit.done}/${unit.total}</span>` : ''}<span class="flash-session-progress">・本回合已答 ${idx}/${queue.length}</span></div>
       <div class="flash-ctrl">
         <button class="chip" id="dirBtn">${dir === 'e2z' ? '英→中' : '中→英'} 🔄</button>
         ${acc ? `<button class="chip" id="accBtn">${acc}腔</button>` : ''}

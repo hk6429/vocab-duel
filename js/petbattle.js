@@ -178,8 +178,9 @@ const VDPetBattle = (() => {
     return VDQuiz.randomQuestion(words);
   }
 
-  const hpBar = (hp, max, cls) => `<div class="bt-hp ${hp <= max * 0.3 ? 'low' : ''} ${cls}">
-    <div class="bt-hp-fill" style="width:${Math.round(hp / max * 100)}%"></div><span>${hp}</span></div>`;
+  const hpBar = (hp, max, cls, owner) => `<div class="bt-hp ${hp <= max * 0.3 ? 'low' : ''} ${cls}"
+    role="meter" aria-label="${owner}生命值" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${hp}">
+    <div class="bt-hp-fill" style="width:${Math.round(hp / max * 100)}%"></div><span>${hp} / ${max}</span></div>`;
 
   function draw(midTurn) {
     const q = state.q, f = state.foe, m = state.me;
@@ -187,20 +188,38 @@ const VDPetBattle = (() => {
       `<button class="btn opt ${midTurn && o === q.ans ? 'right' : ''}" ${midTurn ? 'disabled' : `data-v="${encodeURIComponent(o)}"`}>
         <span class="opt-key">${'ABCD'[i]}</span><span class="opt-text">${o}</span></button>`).join('');
     el.innerHTML = `
-      <div class="bt-arena">
-        <div class="bt-side foe">
-          <div class="pb-face">${f.img ? `<img loading="lazy" decoding="async" src="${f.img}" alt="" class="${f.hue ? 'pb-hue' : ''}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${f.ico}',style:'font-size:44px'}))">` : `<span style="font-size:44px">${f.ico}</span>`}</div>
-          <div class="bt-name">${f.name}<span class="bt-tier">Lv.${f.lv}</span></div>
-          ${hpBar(state.oHp, state.oMax, 'foe')}
+      <div class="bt-arena bt-petbattle">
+        <div class="bt-round-banner">
+          <span>WORD SPIRIT ARENA</span>
+          <b>詞靈回合戰</b>
+          <i>答對出招・答錯反擊</i>
         </div>
-        <div class="bt-log">${state.log}</div>
-        <div class="bt-side me">
-          ${hpBar(state.pHp, state.pMax, 'me')}
-          <div class="pb-face me">${`<img loading="lazy" decoding="async" src="img/pets/${m.id}_s${m.stage}.webp" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${m.ico}',style:'font-size:44px'}))">`}</div>
-          <div class="bt-name">${m.deco || ''}${m.name} ${state.combo >= 2 ? `🔥×${state.combo}` : ''}</div>
+        <div class="bt-stage">
+          <section class="bt-side me" aria-label="己方詞靈">
+            <img class="bt-fighter-art" loading="eager" decoding="async" src="img/pets/${m.id}_s${m.stage}.webp" alt="${m.name}" onerror="this.onerror=null;this.src='img/ui/h_arena.webp'">
+            <span class="bt-fighter-shade"></span>
+            <div class="bt-fighter-copy">
+              <div class="bt-camp">己方詞靈</div>
+              <div class="bt-name">${m.deco || ''}${m.name}<span class="bt-tier">Lv.${m.lv}</span></div>
+              <div class="bt-stats"><span>攻擊 <b>${m.atk}</b></span><span>連擊 <b>${state.combo}</b></span></div>
+              ${hpBar(state.pHp, state.pMax, 'me', m.name)}
+            </div>
+          </section>
+          <div class="bt-versus" aria-hidden="true"><span>VS</span></div>
+          <section class="bt-side foe" aria-label="敵方詞靈">
+            <img class="bt-fighter-art ${f.hue ? 'pb-hue' : ''}" loading="eager" decoding="async" src="${f.img || 'img/ui/h_arena.webp'}" alt="${f.name}" onerror="this.onerror=null;this.src='img/ui/h_arena.webp'">
+            <span class="bt-fighter-shade"></span>
+            <div class="bt-fighter-copy">
+              <div class="bt-camp">敵方來襲</div>
+              <div class="bt-name">${f.name}<span class="bt-tier">Lv.${f.lv}</span></div>
+              <div class="bt-stats"><span>攻擊 <b>${f.atk}</b></span><span>命中 <b>${Math.round(f.acc * 100)}%</b></span></div>
+              ${hpBar(state.oHp, state.oMax, 'foe', f.name)}
+            </div>
+          </section>
         </div>
+        <div class="bt-log" role="status" aria-live="polite">${state.log}</div>
       </div>
-      <div class="bt-q">
+      <div class="bt-q bt-pet-question">
         <div class="quiz-prompt">${q.prompt}</div>
         <div class="quiz-sub">${q.sub}</div>
         <div class="quiz-opts">${opts}</div>
@@ -330,7 +349,7 @@ const VDPetBattle = (() => {
     const myAtk = Math.max(1, active ? VDPets.atk(active) : 30);
     if (n <= wild.length) {
       const ratio = 0.35 + 0.03 * (n - 1);   // 第1層≈玩家攻擊力 1/3，第10層約玩家攻擊力 6 成（原追平太兇，小朋友會被電到沒信心）
-      return { name: base.name, ico: base.ico, lv: base.lv, acc: base.acc, dropTier: base.dropTier, floorNo: n, atk: Math.round(myAtk * ratio), hp: 80 + 6 * base.lv };
+      return { name: base.name, ico: base.ico, img: base.img, lv: base.lv, acc: base.acc, dropTier: base.dropTier, floorNo: n, atk: Math.round(myAtk * ratio), hp: 80 + 6 * base.lv };
     }
     // 40 層前線性 +15%/層（原手感）；40 層後怪也走幾何成長，追上裝備每 30 層升 1 階（數值×1.8）的曲線，
     // 否則深層會被一擊秒殺。血 ×1.65/30層＝耐打但磨得死；攻 ×1.5/30層＝容錯隨深度緩慢回升
@@ -341,7 +360,7 @@ const VDPetBattle = (() => {
     const baseIdx = VDPets.tierIdx(base.dropTier === 'common' ? 'rare' : base.dropTier);
     const dropTier = VDPets.TIERS[Math.min(VDPets.TIERS.length - 1, baseIdx + Math.floor(cycle / 3))];
     return {
-      name: `${base.name}・輪迴 ${cycle}`, ico: base.ico,
+      name: `${base.name}・輪迴 ${cycle}`, ico: base.ico, img: base.img,
       lv: Math.round(base.lv * kAtk),
       acc: Math.min(0.92, base.acc + 0.02 * cycle),
       dropTier,
@@ -353,7 +372,7 @@ const VDPetBattle = (() => {
   }
   function startWild(n) {
     const w = floorDef(n);
-    startFight({ ...w, replay: n < VDPets.wildFloor, hue: true }, 'wild'); // replay＝已通關層重打
+    startFight({ ...w, replay: n < VDPets.wildFloor }, 'wild'); // replay＝已通關層重打
   }
 
   /* ── 影子對戰（Task 6 接雲端；離線退本機幻影） ── */

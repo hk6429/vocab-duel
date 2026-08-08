@@ -84,6 +84,10 @@ export function redisFor(db) {
       const c = await db.prepare('SELECT COUNT(*) AS c FROM hash WHERE k=?1 AND (exp IS NULL OR exp>?2)').bind(k, now()).first('c');
       return Number(c || 0);
     },
+    async hdel(k, ...fields) {
+      for (const field of fields) await db.prepare('DELETE FROM hash WHERE k=?1 AND f=?2').bind(k, field).run();
+      return fields.length;
+    },
 
     // ---- list（新的在前，用 id 遞增定序）----
     async lpush(k, ...vals) {

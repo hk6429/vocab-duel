@@ -1,0 +1,24 @@
+name: Dispatch daily learning reminders
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger encrypted Web Push dispatch
+        env:
+          PUSH_DISPATCH_SECRET: ${{ secrets.PUSH_DISPATCH_SECRET }}
+        run: |
+          test -n "$PUSH_DISPATCH_SECRET"
+          curl --fail --silent --show-error \
+            -X POST "https://vocab-duel.pages.dev/api/push" \
+            -H "Authorization: Bearer $PUSH_DISPATCH_SECRET" \
+            -H "Content-Type: application/json" \
+            --data '{"op":"dispatch"}'

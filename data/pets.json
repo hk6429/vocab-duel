@@ -8,16 +8,16 @@
     "resonate": { "ico": "✨", "name": "詞源共鳴", "desc": "詞源之力 >60% 時傷害再 +25%" }
   },
   "wild": [
-    { "name": "迷霧幼狼", "ico": "🐺", "lv": 2, "acc": 0.5, "dropTier": "common" },
-    { "name": "草原野兔", "ico": "🐇", "lv": 4, "acc": 0.55, "dropTier": "common" },
-    { "name": "溪谷石蟹", "ico": "🦀", "lv": 6, "acc": 0.58, "dropTier": "common" },
-    { "name": "林間夜梟", "ico": "🦉", "lv": 9, "acc": 0.62, "dropTier": "rare" },
-    { "name": "荒原鬣狗", "ico": "🐕", "lv": 12, "acc": 0.66, "dropTier": "rare" },
-    { "name": "沼澤巨蟒", "ico": "🐍", "lv": 15, "acc": 0.7, "dropTier": "rare" },
-    { "name": "雪嶺白豹", "ico": "🐆", "lv": 18, "acc": 0.75, "dropTier": "rare" },
-    { "name": "火山蜥王", "ico": "🦎", "lv": 21, "acc": 0.8, "dropTier": "legendary" },
-    { "name": "深淵墨鯨", "ico": "🐋", "lv": 24, "acc": 0.85, "dropTier": "legendary" },
-    { "name": "遠古辭靈", "ico": "🐲", "lv": 28, "acc": 0.9, "dropTier": "legendary" }
+    { "name": "迷霧幼狼", "ico": "🐺", "img": "img/wild/mist-wolf.webp", "lv": 2, "acc": 0.5, "dropTier": "common" },
+    { "name": "草原野兔", "ico": "🐇", "img": "img/wild/grass-hare.webp", "lv": 4, "acc": 0.55, "dropTier": "common" },
+    { "name": "溪谷石蟹", "ico": "🦀", "img": "img/wild/stone-crab.webp", "lv": 6, "acc": 0.58, "dropTier": "common" },
+    { "name": "林間夜梟", "ico": "🦉", "img": "img/wild/night-owl.webp", "lv": 9, "acc": 0.62, "dropTier": "rare" },
+    { "name": "荒原鬣狗", "ico": "🐕", "img": "img/wild/waste-hyena.webp", "lv": 12, "acc": 0.66, "dropTier": "rare" },
+    { "name": "沼澤巨蟒", "ico": "🐍", "img": "img/wild/swamp-python.webp", "lv": 15, "acc": 0.7, "dropTier": "rare" },
+    { "name": "雪嶺白豹", "ico": "🐆", "img": "img/wild/snow-leopard.webp", "lv": 18, "acc": 0.75, "dropTier": "rare" },
+    { "name": "火山蜥王", "ico": "🦎", "img": "img/wild/volcano-lizard.webp", "lv": 21, "acc": 0.8, "dropTier": "legendary" },
+    { "name": "深淵墨鯨", "ico": "🐋", "img": "img/wild/abyss-whale.webp", "lv": 24, "acc": 0.85, "dropTier": "legendary" },
+    { "name": "遠古辭靈", "ico": "🐲", "img": "img/wild/ancient-spirit.webp", "lv": 28, "acc": 0.9, "dropTier": "legendary" }
   ],
   "pets": [
     { "id": "inkfox", "name": "墨影狐", "ico": "🦊", "kind": "字首", "theme": "月夜墨霧中的狐，掌否定與內化之力",

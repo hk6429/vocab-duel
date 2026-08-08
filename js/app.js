@@ -156,6 +156,7 @@ const VDApp = (() => {
         </div>
         ${intro}
         ${VDGame.heroStrip()}
+        ${VDDailyQuest.homeCard(words)}
         ${VDGame.dailyPanel()}
         ${dashboard(words, stageName)}
         ${lockChip}
@@ -250,6 +251,10 @@ const VDApp = (() => {
       // 範圍太小（如老師鎖定的短字表）：誘答池改用完整學段，避免選項重複／不足
       if (ws.length < 12) VDQuiz.startWith(ws, document.getElementById('mod'), scopeWords(true));
       else VDQuiz.start(ws, document.getElementById('mod'));
+    },
+    dailyquest() {
+      $view().innerHTML = header('今日 10 題') + '<div id="mod"></div>';
+      VDDailyQuest.start(scopeWords(), document.getElementById('mod'));
     },
     listen() {
       $view().innerHTML = header('聽力理解') + '<div id="mod"></div>';
@@ -414,7 +419,8 @@ const VDApp = (() => {
     VDGame.init();      // 遊戲化引擎：XP／稱號／徽章／每日任務／字幣／護盾
     applyFontScale();
     applyTheme();
-    const first = VDStore.stage ? 'menu' : 'stage';
+    const dailyLink = new URLSearchParams(location.search).get('daily') === '1';
+    const first = VDStore.stage ? (dailyLink ? 'dailyquest' : 'menu') : 'stage';
     go(first, true);
     history.replaceState({ v: first }, '');
     // 返回鍵：popstate 回上一個 view；狀態不明就留在 menu，不直接退出

@@ -11,9 +11,24 @@ export const SAVE_ANNOUNCEMENT = Object.freeze({
   ]),
 });
 
+export const ANNOUNCEMENTS = Object.freeze([
+  Object.freeze({
+    version: '2026.08.05-2',
+    title: '公告收進左下角，需要時隨時回來看',
+    items: Object.freeze([
+      '公告關閉後，左下角會保留一枚「公告」按鈕，點一下就能重新打開。',
+      '公告卡新增「公告紀錄」，可以切換並查看以前的舊版本。',
+      '右下角仍保留學習工具，左、右入口分開，不會互相遮住。',
+    ]),
+  }),
+  SAVE_ANNOUNCEMENT,
+]);
+
+export const LATEST_ANNOUNCEMENT = ANNOUNCEMENTS[0];
+
 export function shouldShowSaveAnnouncement(storage = globalThis.localStorage) {
   try {
-    return storage.getItem(SAVE_ANNOUNCEMENT_SEEN_KEY) !== SAVE_ANNOUNCEMENT.version;
+    return storage.getItem(SAVE_ANNOUNCEMENT_SEEN_KEY) !== LATEST_ANNOUNCEMENT.version;
   } catch {
     return true;
   }
@@ -21,29 +36,42 @@ export function shouldShowSaveAnnouncement(storage = globalThis.localStorage) {
 
 export function markSaveAnnouncementSeen(storage = globalThis.localStorage) {
   try {
-    storage.setItem(SAVE_ANNOUNCEMENT_SEEN_KEY, SAVE_ANNOUNCEMENT.version);
+    storage.setItem(SAVE_ANNOUNCEMENT_SEEN_KEY, LATEST_ANNOUNCEMENT.version);
   } catch {
     // 無法使用 localStorage 時，仍允許玩家關閉公告並繼續操作。
   }
 }
 
-export function initSaveAnnouncement(
+function renderAnnouncement(overlay, announcement) {
+  overlay.querySelector('[data-version]').textContent = announcement.version;
+  overlay.querySelector('[data-title]').textContent = announcement.title;
+  const list = overlay.querySelector('[data-list]');
+  list.replaceChildren(...announcement.items.map((item) => {
+    const li = overlay.ownerDocument.createElement('li');
+    li.textContent = item;
+    return li;
+  }));
+  overlay.querySelector('[data-history]').value = announcement.version;
+}
+
+export function openSaveAnnouncement(
   doc = globalThis.document,
   storage = globalThis.localStorage,
 ) {
   if (!doc?.body || doc.getElementById('vd-save-announcement')) return false;
-  if (!shouldShowSaveAnnouncement(storage)) return false;
 
   const overlay = doc.createElement('div');
   overlay.id = 'vd-save-announcement';
   overlay.className = 'av-modal vd-save-announcement';
   overlay.innerHTML = `
     <div class="av-panel vd-save-announcement__panel" role="dialog" aria-modal="true" aria-labelledby="vd-save-announcement-title">
-      <span class="vd-save-announcement__version">重要提醒</span>
-      <div id="vd-save-announcement-title" class="av-title">${SAVE_ANNOUNCEMENT.title}</div>
-      <ul class="vd-save-announcement__list">
-        ${SAVE_ANNOUNCEMENT.items.map((item) => `<li>${item}</li>`).join('')}
-      </ul>
+      <span class="vd-save-announcement__version" data-version></span>
+      <div id="vd-save-announcement-title" class="av-title" data-title></div>
+      <label class="vd-save-announcement__history-label" for="vd-save-announcement-history">公告紀錄</label>
+      <select id="vd-save-announcement-history" class="vd-save-announcement__history" data-history aria-label="選擇公告版本">
+        ${ANNOUNCEMENTS.map((item) => `<option value="${item.version}">${item.version}｜${item.title}</option>`).join('')}
+      </select>
+      <ul class="vd-save-announcement__list" data-list></ul>
       <div class="vd-save-announcement__actions">
         <button class="btn" type="button" data-save-now>現在去存檔</button>
         <button class="btn ghost" type="button" data-close>我會先存檔，再離開</button>
@@ -52,14 +80,21 @@ export function initSaveAnnouncement(
 
   const close = () => {
     markSaveAnnouncementSeen(storage);
+    const trigger = doc.getElementById('vd-announcement-trigger');
+    trigger?.setAttribute('aria-expanded', 'false');
     doc.removeEventListener('keydown', onKeydown);
     overlay.remove();
+    trigger?.focus({ preventScroll: true });
   };
   const onKeydown = (event) => {
     if (event.key === 'Escape') close();
   };
 
   overlay.querySelector('[data-close]').addEventListener('click', close);
+  overlay.querySelector('[data-history]').addEventListener('change', (event) => {
+    const announcement = ANNOUNCEMENTS.find((item) => item.version === event.target.value);
+    if (announcement) renderAnnouncement(overlay, announcement);
+  });
   overlay.querySelector('[data-save-now]').addEventListener('click', () => {
     close();
     globalThis.VDApp?.go?.('cloud');
@@ -69,7 +104,31 @@ export function initSaveAnnouncement(
   });
   doc.addEventListener('keydown', onKeydown);
   doc.body.appendChild(overlay);
+  renderAnnouncement(overlay, LATEST_ANNOUNCEMENT);
+  doc.getElementById('vd-announcement-trigger')?.setAttribute('aria-expanded', 'true');
   overlay.querySelector('[data-save-now]').focus();
+  return true;
+}
+
+export function initSaveAnnouncement(
+  doc = globalThis.document,
+  storage = globalThis.localStorage,
+) {
+  if (!doc?.body) return false;
+  let trigger = doc.getElementById('vd-announcement-trigger');
+  if (!trigger) {
+    trigger = doc.createElement('button');
+    trigger.id = 'vd-announcement-trigger';
+    trigger.className = 'vd-announcement-trigger';
+    trigger.type = 'button';
+    trigger.setAttribute('aria-controls', 'vd-save-announcement');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-label', '打開公告紀錄');
+    trigger.innerHTML = '<span aria-hidden="true">📢</span><span>公告</span>';
+    trigger.addEventListener('click', () => openSaveAnnouncement(doc, storage));
+    doc.body.appendChild(trigger);
+  }
+  if (shouldShowSaveAnnouncement(storage)) openSaveAnnouncement(doc, storage);
   return true;
 }
 

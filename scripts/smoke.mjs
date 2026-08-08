@@ -26,17 +26,27 @@ page.on('pageerror', e => fails.push('pageerror: ' + e.message));
 
 try {
   await page.goto(`http://localhost:${port}/`);
-  // 0. 存檔公告：內容完整，同一版本確認後不重複顯示
+  // 0. 公告：可切換舊版、同一版本確認後不重複自動顯示，左下角仍可重開
   await page.waitForSelector('#vd-save-announcement');
+  const latestAnnouncement = await page.textContent('#vd-save-announcement');
+  if (!/左下角.*公告/.test(latestAnnouncement)) fails.push('最新版公告缺左下角重開說明');
+  await page.selectOption('#vd-save-announcement-history', '2026.08.05');
   const announcement = await page.textContent('#vd-save-announcement');
   if (!/右下角學習工具/.test(announcement)) fails.push('存檔公告缺右下角學習工具入口');
   if (!/更多工具.*雲端／班級榜/s.test(announcement)) fails.push('存檔公告缺系統內雲端存檔入口');
   await page.click('#vd-save-announcement [data-close]');
   const seenVersion = await page.evaluate(() => localStorage.getItem('vd_save_announcement_seen'));
-  if (seenVersion !== '2026.08.05') fails.push('存檔公告確認狀態未寫入');
+  if (seenVersion !== '2026.08.05-2') fails.push('公告確認狀態未寫入最新版');
   await page.reload();
   if (await page.$('#vd-save-announcement')) fails.push('同一版存檔公告重複顯示');
-  console.log('✅ 存檔公告顯示一次且入口完整');
+  await page.waitForSelector('#vd-announcement-trigger');
+  await page.click('#vd-announcement-trigger');
+  await page.waitForSelector('#vd-save-announcement');
+  await page.selectOption('#vd-save-announcement-history', '2026.08.05');
+  if (!/離開前.*存檔/.test(await page.textContent('#vd-save-announcement-title'))) fails.push('左下角公告入口無法打開舊版存檔提醒');
+  await page.click('#vd-save-announcement [data-close]');
+  if (await page.evaluate(() => document.activeElement?.id !== 'vd-announcement-trigger')) fails.push('關閉公告後鍵盤焦點未回到左下角公告入口');
+  console.log('✅ 公告自動顯示一次，左下角可重開並切換舊版本');
 
   // 1. 學段選擇
   await page.click('button[data-s="E"]');

@@ -7,6 +7,7 @@
 // POST { op:'cancel', id, claimKey }              → 下架，回 { item }
 // POST { op:'claim', id, claimKey }               → 已售出的掛單領貨款，回 { coins, buyer }
 import { redisFor, vercelToPages } from "./_redis.js";
+import { isEducationSafeName, reviewEducationName } from "./name-policy.js";
 import { createHmac, randomBytes } from "node:crypto";
 let redis;
 
@@ -47,8 +48,6 @@ const PERKS = ["", "xp10", "sprint5", "wrong2"];
 let SECRET = "vd";                        // 於 handler 內以 env.MARKET_SECRET 覆寫（CF Pages secret）
 const secret = () => SECRET;
 const sigOf = (item) => createHmac("sha256", secret()).update(JSON.stringify(item)).digest("hex").slice(0, 24);
-const BAD_WORDS = /笨蛋|白癡|白痴|智障|廢物|去死|王八蛋|三小|幹你|靠北|媽的|滾蛋|垃圾|腦殘|廢咖|fuck|shit|bitch|asshole|idiot|stupid|retard/i; // 賣家/預留者暱稱在市場公開可見，擋常見髒話羞辱字眼
-const okNick = (n) => typeof n === "string" && n.trim().length >= 1 && n.trim().length <= 12 && !/[<>&"']/.test(n) && !BAD_WORDS.test(n); // 拒收危險字元
 
 // CORS 白名單：只回信任的來源，其餘退回主站
 const ORIGINS = ["https://vocab-duel.vercel.app", "https://vocab-duel.pages.dev", "https://vocab-duel.netlify.app", "http://localhost:8765"];
@@ -111,7 +110,8 @@ async function handler(req, res, env) {
       const list = [];
       for (let i = 0; i < raw.length; i += 2) {
         const m = parse(raw[i]);
-        if (m) list.push({ ...m, price: Math.round(Number(raw[i + 1]) || 0) });
+        if (m && isEducationSafeName(m.seller) && (!m.reserveFor || isEducationSafeName(m.reserveFor)))
+          list.push({ ...m, price: Math.round(Number(raw[i + 1]) || 0) });
       }
       return res.status(200).json({ ok: 1, list });
     }
@@ -121,22 +121,24 @@ async function handler(req, res, env) {
       const price = Math.round(Number(req.body.price) || 0);
       const seller = req.body.seller;
       if (!item) return res.status(200).json({ ok: 0, error: "裝備數值不合法" });
-      if (!okNick(seller)) return res.status(200).json({ ok: 0, error: "暱稱不合法" });
+      const sellerReview = reviewEducationName(seller);
+      if (!sellerReview.ok) return res.status(200).json({ ok: 0, error: sellerReview.error });
       const [lo, hi] = PRICE_BAND[item.tier];
       if (price < lo || price > hi) return res.status(200).json({ ok: 0, error: `這一階定價要在 ${lo}–${hi} 字幣` });
       // 同賣家最多 3 筆掛單
       const raw = await redis.zrange(ZKEY, 0, 199);
-      const mine = raw.map(parse).filter(x => x && x.seller === seller.trim());
+      const mine = raw.map(parse).filter(x => x && x.seller === sellerReview.name);
       if (mine.length >= 3) return res.status(200).json({ ok: 0, error: "最多同時掛 3 件" });
       // 選填：保留給指定同學（淨化＋限長；填了只有這位暱稱買得走）
       let reserveFor = "";
       if (req.body.reserveFor != null && String(req.body.reserveFor).trim()) {
-        if (!okNick(req.body.reserveFor)) return res.status(200).json({ ok: 0, error: "保留對象暱稱不合法" });
-        reserveFor = String(req.body.reserveFor).trim().slice(0, 12);
+        const reserveReview = reviewEducationName(req.body.reserveFor);
+        if (!reserveReview.ok) return res.status(200).json({ ok: 0, error: `保留對象：${reserveReview.error}` });
+        reserveFor = reserveReview.name;
       }
       const id = randomBytes(6).toString("hex");
       const claimKey = randomBytes(12).toString("hex");
-      const entry = { id, item, seller: seller.trim(), ts: Date.now() };
+      const entry = { id, item, seller: sellerReview.name, ts: Date.now() };
       if (reserveFor) entry.reserveFor = reserveFor;
       // 簽章涵蓋整筆掛單（item＋price＋seller＋id），杜絕掉包
       const sig = sigOf({ item, price, seller: entry.seller, id });
@@ -147,18 +149,19 @@ async function handler(req, res, env) {
 
     if (op === "buy") {
       const { id, nick } = req.body;
-      if (typeof id !== "string" || !okNick(nick)) return res.status(400).json({ error: "bad req" });
+      const buyerReview = reviewEducationName(nick);
+      if (typeof id !== "string" || !buyerReview.ok) return res.status(400).json({ error: buyerReview.error || "bad req" });
       const rec = parse(await redis.get(ITEM(id)));
       if (!rec || rec.sold) return res.status(200).json({ ok: 0, error: "這件已被買走或下架了" });
-      if (rec.seller === nick.trim()) return res.status(200).json({ ok: 0, error: "不能買自己的掛單" });
+      if (rec.seller === buyerReview.name) return res.status(200).json({ ok: 0, error: "不能買自己的掛單" });
       // 保留單：只有被指定的同學買得走（在計數前擋，不燒配額）
-      if (rec.reserveFor && rec.reserveFor !== nick.trim())
+      if (rec.reserveFor && rec.reserveFor !== buyerReview.name)
         return res.status(200).json({ ok: 0, error: `這是保留給 ${rec.reserveFor} 的` });
       // 先驗新版全物件簽章，再退回舊版 item-only 簽章（相容既有掛單）
       const sigNew = sigOf({ item: rec.item, price: rec.price, seller: rec.seller, id: rec.id });
       if (sigNew !== rec.sig && sigOf(rec.item) !== rec.sig) return res.status(200).json({ ok: 0, error: "簽章不符，掛單作廢" });
       // 每日限購：所有驗證通過後才計數，買失敗不燒配額
-      const buys = await redis.incr(BUYS(nick.trim()), 86400);
+      const buys = await redis.incr(BUYS(buyerReview.name), 86400);
       if (buys > DAILY_BUY_CAP) return res.status(200).json({ ok: 0, error: "每日限購 3 件（保護自己打寶的樂趣）" });
       // 殺價：由掛單 id 決定固定折扣 0/5/10/15%（不含暱稱，杜絕改名重抽）；賣家收款按折後價 ×0.9
       let disc = 0;
@@ -168,7 +171,7 @@ async function handler(req, res, env) {
         disc = [0, 5, 10, 15][h % 4];
       }
       const finalPrice = Math.ceil(rec.price * (100 - disc) / 100);
-      rec.sold = 1; rec.soldTs = Date.now(); rec.price = finalPrice; rec.buyer = nick.trim();
+      rec.sold = 1; rec.soldTs = Date.now(); rec.price = finalPrice; rec.buyer = buyerReview.name;
       await redis.set(ITEM(id), JSON.stringify(rec), { ex: ITEM_TTL });
       await redis.zrem(ZKEY, memberOf(rec));
       return res.status(200).json({ ok: 1, item: rec.item, price: finalPrice, disc });

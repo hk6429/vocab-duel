@@ -24,6 +24,43 @@ html, body { overflow-x: clip; }
   --font-en: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", var(--cjk);
   --font-serif: "Baskerville", "Georgia", "Times New Roman", "Noto Serif TC", var(--cjk);
 }
+
+/* ── 今日 10 題：首頁單一主行動與短回合進度 ── */
+.dq-home{position:relative;min-height:330px;overflow:hidden;padding:0!important;border:1px solid rgba(212,167,58,.6);background:#172a2d;color:#fff}
+.dq-home-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 44%;filter:saturate(.86) contrast(1.05)}
+.dq-home-shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,20,24,.96) 0%,rgba(10,26,29,.84) 46%,rgba(10,20,22,.28) 100%)}
+.dq-home-content{position:relative;z-index:1;display:flex;min-height:330px;max-width:620px;box-sizing:border-box;padding:34px;flex-direction:column;justify-content:center;align-items:flex-start;text-shadow:0 2px 12px rgba(0,0,0,.55)}
+.dq-kicker{color:#f3cf73;font-size:.82rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.dq-home h2{margin:8px 0 6px;font-size:clamp(2rem,6vw,3.4rem);line-height:1.05;color:#fff}
+.dq-home p{margin:0 0 17px;color:#f6f0de;font-size:1rem}
+.dq-home-meta{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0 18px;font-size:.86rem;color:#fff4cb}
+.dq-home-meta span{padding:6px 10px;border:1px solid rgba(243,207,115,.5);border-radius:999px;background:rgba(7,20,23,.58)}
+.dq-primary{min-width:min(100%,330px);font-size:1.08rem;background:linear-gradient(135deg,#e1a62c,#f4cf70)!important;color:#2a1a05!important;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.dq-steps{display:grid;grid-template-columns:repeat(10,minmax(24px,1fr));gap:6px;width:100%;max-width:520px}
+.dq-steps span{display:grid;aspect-ratio:1;place-items:center;border-radius:7px;border:1px solid #c7d1d1;background:rgba(255,255,255,.9);color:#526060;font-size:.72rem;font-weight:800;text-shadow:none}
+.dq-steps span.ok{border-color:#2b9a72;background:#45b88a;color:#fff}
+.dq-steps span.review{border-color:#d09232;background:#f2c35e;color:#513609}
+.dq-session,.dq-done{max-width:760px;margin:0 auto}
+.dq-session-head{display:flex;justify-content:space-between;align-items:center;margin:10px 0 12px;color:var(--ink,#2e342f)}
+.dq-session>.dq-steps,.dq-done>.dq-steps{max-width:none;margin-bottom:22px}
+.dq-week,.dq-teaser,.dq-reward-picked{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:14px 0;padding:14px 16px;border-radius:12px;background:#f5edd8;border:1px solid #dfc784;color:#4b3b20}
+.dq-rewards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+.dq-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.install-card{margin-top:20px;padding:18px;text-align:left;border:1px solid #b9c9bf;border-radius:14px;background:#f4f8f4;color:#253a32}
+.install-card b{font-size:1.05rem}.install-card p{margin:7px 0 12px}.install-card ol{margin:8px 0 0;padding-left:1.4em}
+.push-card{margin-top:14px;padding-top:14px;border-top:1px solid #cbd7cf}.push-card p{margin:7px 0 12px}.push-card label{display:flex;gap:10px;align-items:center;font-weight:700}.push-card select{min-width:105px;padding:9px;border:1px solid #aab9b0;border-radius:9px;background:#fff}.push-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.push-status{min-height:1.4em;margin-top:9px;color:#35654e}
+
+@media(max-width:620px){
+  .dq-home{min-height:420px;margin-left:-8px;margin-right:-8px;border-radius:18px}
+  .dq-home-art{object-position:60% center}
+  .dq-home-shade{background:linear-gradient(0deg,rgba(6,18,21,.98) 0%,rgba(7,21,24,.8) 62%,rgba(7,20,22,.28) 100%)}
+  .dq-home-content{min-height:420px;padding:170px 20px 22px;justify-content:flex-end}
+  .dq-home h2{font-size:2.2rem}
+  .dq-home-meta{margin:10px 0 14px}
+  .dq-rewards,.dq-actions{grid-template-columns:1fr}
+  .dq-week{align-items:flex-start;flex-direction:column}
+  .dq-steps{gap:4px}.dq-steps span{border-radius:5px;font-size:.64rem}
+}
 body {
   font-family: var(--cjk);
   background:
@@ -111,6 +148,7 @@ body {
 body.dark .hdr-badge-i { border-color: #3a4258; }
 
 .flash-progress { text-align: center; color: var(--muted); margin-bottom: 14px; font-size: 14px; }
+.flash-session-progress { color: var(--ink); font-weight: 600; }
 .flash-card {
   background: var(--panel); border: 1px solid #dfe4ea; border-radius: 20px;
   min-height: 300px; display: flex; align-items: center; justify-content: center;
@@ -191,13 +229,34 @@ body.dark .tts-help.warn b, body.dark .tts-lead b { color: #f0b878; }
 
 /* ── 文學家對戰 ── */
 .bt-pick { display: grid; gap: 14px; margin-top: 20px; }
+.bt-modegrid { grid-template-columns: 1fr; }
+.bt-modecard {
+  position: relative; min-height: 190px; padding: 0; overflow: hidden; cursor: pointer;
+  border: 1px solid rgba(111,82,39,.48); border-radius: 18px; background: #171712; color: #fff;
+  box-shadow: 0 14px 32px rgba(42,30,18,.2); text-align: left;
+}
+.bt-modecard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s ease; }
+.bt-modecard::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 25%, rgba(8,8,7,.88) 100%); }
+.bt-modecard:hover img { transform: scale(1.035); }
+.bt-modecopy { position: absolute; z-index: 1; left: 20px; right: 20px; bottom: 17px; display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.bt-modecopy b { font: 800 23px/1.15 var(--font-serif); letter-spacing: 2px; text-shadow: 0 2px 8px #000; }
+.bt-modecopy small { font-size: 12px; color: rgba(255,247,220,.76); letter-spacing: 1px; }
 .bt-oppgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
 .bt-oppcard {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
-  padding: 16px 10px; text-align: center; cursor: pointer; color: var(--text);
-  box-shadow: 0 6px 18px rgba(43,43,43,.06);
+  position: relative; min-height: 280px; overflow: hidden;
+  background: #171712; border: 1px solid rgba(111,82,39,.48); border-radius: 18px;
+  padding: 0; text-align: left; cursor: pointer; color: #fff;
+  box-shadow: 0 8px 22px rgba(43,43,43,.14);
   transition: transform .12s, box-shadow .12s;
 }
+.bt-oppcard > .bt-portrait { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 0; object-fit: cover; box-shadow: none; }
+.bt-oppveil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(6,8,10,.04) 30%, rgba(9,10,10,.92) 100%); }
+.bt-oppcopy { position: absolute; z-index: 2; left: 15px; right: 15px; bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.bt-oppcopy .bt-name { margin: 0; color: #fff8df; font-size: 19px; text-shadow: 0 2px 7px #000; }
+.bt-oppcopy .bt-tier { margin: 0; background: rgba(11,11,9,.72); border: 1px solid rgba(242,220,159,.35); color: #f0d894; }
+.bt-opptaunt { flex-basis: 100%; font-size: 10px; line-height: 1.35; color: rgba(255,249,229,.68); }
+.bt-oppcard.locked > .bt-portrait { filter: grayscale(1) brightness(.48); }
+.bt-oppcard.locked .bt-oppveil { background: linear-gradient(180deg, rgba(8,8,8,.48), rgba(8,8,8,.94)); }
 .bt-oppcard:active { transform: scale(.97); }
 .bt-oppcard:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(74,123,166,.18); }
 .bt-face { font-size: 40px; }
@@ -237,6 +296,38 @@ body.dark .tts-help.warn b, body.dark .tts-lead b { color: #f0b878; }
 .bt-portrait.big { width: 120px; height: 120px; }
 .bt-face-emoji { font-size: 40px; }
 .bt-face-emoji.big { font-size: 54px; }
+
+/* 文學家對戰：雙方圖片撐滿戰場，所有資料直接疊在立繪上 */
+.bt-literary-arena {
+  --lit-gold: #d7b65d; display: block; overflow: hidden; position: relative;
+  border: 1px solid rgba(111,82,39,.62); border-radius: 18px; background: #15130f;
+  box-shadow: 0 18px 42px rgba(42,28,15,.24); color: #fff8df;
+}
+.bt-literary-stage { position: relative; display: grid; grid-template-columns: 1fr 1fr; min-height: clamp(310px, 49vw, 430px); }
+.bt-duelist { position: relative; min-width: 0; overflow: hidden; isolation: isolate; }
+.bt-duelist:first-child { border-right: 1px solid rgba(216,183,95,.48); }
+.bt-duelist > .bt-portrait, .bt-duelist > .bt-player-art {
+  position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; border: 0; border-radius: 0;
+  object-fit: cover; display: block; filter: saturate(.9) contrast(1.06); transform: scale(1.015);
+}
+.bt-duelist.foe > .bt-portrait { object-position: 50% 30%; }
+.bt-duelist.me > .bt-player-art { object-position: 50% 35%; }
+.bt-duelist-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,7,5,.02) 28%, rgba(10,8,5,.38) 58%, rgba(8,7,5,.96) 100%); }
+.bt-duelist.foe .bt-duelist-shade { background: linear-gradient(180deg, rgba(64,16,12,.04) 24%, rgba(72,19,14,.42) 58%, rgba(34,10,8,.97) 100%); }
+.bt-duelist.me .bt-duelist-shade { background: linear-gradient(180deg, rgba(8,37,52,.03) 24%, rgba(8,45,62,.4) 58%, rgba(4,23,32,.97) 100%); }
+.bt-duelist-copy { position: absolute; z-index: 2; left: 14px; right: 14px; bottom: 13px; }
+.bt-duelist-copy .bt-camp { display: block; margin-bottom: 4px; color: rgba(255,244,210,.68); }
+.bt-duelist-copy .bt-name { display: flex; align-items: center; gap: 6px; margin: 0 0 7px; color: #fff7db; font-size: 20px; text-shadow: 0 2px 7px #000; }
+.bt-duelist-copy .bt-name small { font: 700 10px/1 var(--font-sans); color: #f0cf72; }
+.bt-duelist-copy .bt-tier { margin: 0; background: rgba(0,0,0,.48); border: 1px solid rgba(216,183,95,.5); color: #f0d589; }
+.bt-literary-vs { position: absolute; z-index: 4; left: 50%; top: 42%; transform: translate(-50%,-50%) rotate(-7deg); width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid rgba(240,206,112,.8); border-radius: 50%; background: radial-gradient(circle,#74400f 0 30%,#21150b 68%); color: #ffdf87; font: 900 17px/1 var(--font-serif); box-shadow: 0 0 22px rgba(255,176,33,.38); text-shadow: 0 0 8px #ff9e16; }
+.bt-literary-arena > .bt-log { margin: 0; padding: 10px 14px; min-height: 40px; border-top: 1px solid rgba(216,183,95,.36); background: rgba(15,13,9,.96); color: #f0d37d; }
+.bt-literary-arena .bt-hp { height: 17px; border-color: rgba(234,210,145,.48); background: rgba(4,5,5,.7); }
+.bt-literary-arena .bt-hp span { color: #fff8df; text-shadow: 0 1px 2px #000; }
+.bt-literary-arena .bt-assist { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; color: rgba(255,249,228,.86); }
+.bt-literary-arena .bt-assist img { width: 34px; height: 34px; flex: none; border-radius: 50%; object-fit: cover; border: 1px solid rgba(216,183,95,.58); background: #ede7d8; }
+.bt-literary-arena .bt-assist span { font-size: 10px; line-height: 1.15; }
+.bt-literary-arena .bt-assist small { color: rgba(255,249,228,.6); }
 
 /* ── 字綴心智圖 ── */
 .af-tabs { display: flex; gap: 8px; margin: 6px 0 12px; }
@@ -483,10 +574,14 @@ body.dark .tts-help.warn b, body.dark .tts-lead b { color: #f0b878; }
 .av-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
 .av-opt { font-size: 32px; padding: 8px; border-radius: 12px; background: rgba(43,43,43,.06); border: 2px solid transparent; cursor: pointer; }
 .av-opt.on { border-color: #6f9fc9; background: rgba(111,159,201,.15); }
-/* 重要存檔公告：同一版本只顯示一次，層級需高於右下角共用學習工具 */
+/* 公告入口與歷史紀錄：公告層級需高於右下角共用學習工具 */
+.vd-announcement-trigger { position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 2147482990; display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 8px 13px; border: 1px solid rgba(111,159,201,.55); border-radius: 999px; color: #fff; background: rgba(23,38,31,.94); box-shadow: 0 6px 20px rgba(0,0,0,.28); font-weight: 800; cursor: pointer; }
+.vd-announcement-trigger:hover { transform: translateY(-1px); }
 .vd-save-announcement { z-index: 2147483600; }
 .vd-save-announcement__panel { max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
 .vd-save-announcement__version { display: block; width: fit-content; margin: 0 auto 8px; padding: 3px 12px; border-radius: 99px; background: var(--accent2); color: #201b12; font-size: 12px; font-weight: 900; }
+.vd-save-announcement__history-label { display: block; margin: 0 0 4px; color: var(--muted); font-size: 12px; font-weight: 800; }
+.vd-save-announcement__history { width: 100%; margin: 0 0 14px; padding: 9px 10px; border: 1px solid rgba(111,159,201,.42); border-radius: 9px; color: var(--text); background: var(--panel); font: inherit; }
 .vd-save-announcement__list { margin: 0 0 18px; padding-left: 1.35rem; color: var(--text); }
 .vd-save-announcement__list li { margin: 0 0 9px; line-height: 1.55; }
 .vd-save-announcement__actions { display: grid; gap: 8px; }
@@ -646,7 +741,8 @@ body.simplified .hero-wallet { display: none; }
 body.simplified #chalBtn { display: none; }
 /* 英雄檔案分頁：班級榜／詞靈榜＝排行榜，收起只留本人戰績 */
 body.simplified .hero-tab[data-htab="class"],
-body.simplified .hero-tab[data-htab="pet"] { display: none; }
+body.simplified .hero-tab[data-htab="pet"],
+body.simplified .hero-tab[data-htab="town"] { display: none; }
 
 /* ── 3D Pixel 配圖 ── */
 .m-img { width: 46px; height: 46px; flex: none; border-radius: 10px; object-fit: cover; }
@@ -1158,6 +1254,137 @@ body.dark .lore-item i { color: rgba(255,255,255,.5); }
 .pb-face img { width: 100%; height: 100%; object-fit: cover; }
 .pb-face.me { border-color: var(--accent2); }
 .pb-hue { filter: hue-rotate(140deg) saturate(.85); }
+
+/* 詞靈競技戰鬥：雙陣營回合戰場（不影響文學家對戰共用的 .bt-arena） */
+.bt-petbattle {
+  --battle-blue: #163f56;
+  --battle-blue-bright: #2d8298;
+  --battle-red: #68261f;
+  --battle-red-bright: #bd4a38;
+  --battle-gold: #d9b763;
+  --battle-ivory: #f7edcf;
+  position: relative; display: block; overflow: hidden; isolation: isolate;
+  margin: 4px 0 18px; border: 1px solid rgba(109,81,36,.68); border-radius: 18px;
+  background: #171712; color: var(--battle-ivory);
+  box-shadow: 0 18px 42px rgba(34,23,12,.28), inset 0 0 0 1px rgba(255,231,159,.12);
+}
+.bt-petbattle::before {
+  content: ''; position: absolute; inset: 0; z-index: -2;
+  background:
+    linear-gradient(90deg, rgba(7,38,48,.8), rgba(25,22,15,.15) 47%, rgba(57,15,12,.82)),
+    url('../img/ui/h_arena.webp') center 40% / cover no-repeat;
+  filter: saturate(.78) contrast(1.12) brightness(.62);
+  transform: scale(1.03);
+}
+.bt-petbattle::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(245,202,97,.2), transparent 21%),
+    linear-gradient(90deg, rgba(4,46,62,.48) 0 37%, transparent 48% 52%, rgba(91,21,15,.52) 63% 100%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px);
+}
+.bt-round-banner {
+  position: relative; width: min(86%, 390px); margin: 14px auto 2px; padding: 8px 34px 9px;
+  display: flex; flex-direction: column; align-items: center;
+  border: 1px solid rgba(217,183,99,.72); border-radius: 6px;
+  background: linear-gradient(180deg, rgba(38,34,24,.96), rgba(14,14,11,.94));
+  box-shadow: 0 5px 18px rgba(0,0,0,.4), inset 0 0 18px rgba(217,183,99,.08);
+}
+.bt-round-banner::before, .bt-round-banner::after {
+  content: ''; position: absolute; top: 50%; width: 28px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--battle-gold));
+}
+.bt-round-banner::before { right: calc(100% + 7px); }
+.bt-round-banner::after { left: calc(100% + 7px); transform: scaleX(-1); }
+.bt-round-banner span { font: 700 9px/1 var(--font-en); letter-spacing: 3px; color: #a99054; }
+.bt-round-banner b { margin-top: 4px; font: 700 22px/1.15 var(--font-serif); letter-spacing: 4px; color: #f7dfa0;
+  text-shadow: 0 1px 8px rgba(255,196,62,.42); }
+.bt-round-banner i { margin-top: 4px; font-style: normal; font-size: 10px; letter-spacing: 1px; color: rgba(247,237,207,.65); }
+.bt-stage {
+  position: relative; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: 0; align-items: stretch; margin-top: 10px; padding: 0;
+  min-height: clamp(300px, 48vw, 420px); border-top: 1px solid rgba(217,183,99,.32); border-bottom: 1px solid rgba(217,183,99,.32);
+}
+.bt-petbattle .bt-side {
+  position: relative; min-width: 0; padding: 0; gap: 0; align-items: stretch; overflow: hidden; isolation: isolate;
+  border: 0; border-radius: 0; box-shadow: inset 0 0 28px rgba(0,0,0,.28);
+}
+.bt-petbattle .bt-side.me { order: 0; background: #19485e; border-right: 1px solid rgba(217,183,99,.42); }
+.bt-petbattle .bt-side.foe { order: 2; background: #702c24; }
+.bt-fighter-art { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; display: block; filter: saturate(1.04) contrast(1.08); transform: scale(1.02); }
+.bt-petbattle .me .bt-fighter-art { mix-blend-mode: multiply; filter: saturate(1.18) contrast(1.12) brightness(1.18); }
+.bt-fighter-shade { position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, transparent 25%, rgba(5,14,18,.18) 48%, rgba(3,18,25,.98) 100%); }
+.bt-petbattle .foe .bt-fighter-shade { background: linear-gradient(180deg, transparent 25%, rgba(43,10,8,.15) 48%, rgba(34,9,7,.98) 100%); }
+.bt-fighter-copy { position: absolute; z-index: 2; left: 12px; right: 12px; bottom: 12px; }
+.bt-camp { font-size: 9px; font-weight: 800; letter-spacing: 2px; color: rgba(247,237,207,.7); text-transform: uppercase; }
+.bt-petbattle .foe .bt-camp { text-align: right; }
+.bt-petbattle .bt-name {
+  min-height: 28px; margin: 2px 0 3px; display: flex; align-items: center; justify-content: flex-start; gap: 6px;
+  font-size: 18px; color: #fff4cf; text-align: left; text-shadow: 0 2px 6px #000;
+}
+.bt-petbattle .foe .bt-name { justify-content: flex-end; text-align: right; }
+.bt-petbattle .bt-tier {
+  flex: none; margin: 0; padding: 2px 6px; border: 1px solid rgba(217,183,99,.45);
+  background: rgba(0,0,0,.3); color: #e7ca7e; font: 700 9px/1.2 var(--font-en); letter-spacing: 0;
+}
+.bt-stats { display: flex; justify-content: center; gap: 10px; font-size: 10px; color: rgba(247,237,207,.72); white-space: nowrap; }
+.bt-stats b { color: #fff4cf; font-family: var(--font-en); }
+.bt-petbattle .bt-hp {
+  height: 16px; border-radius: 3px; border-color: rgba(230,205,138,.42); background: rgba(5,9,9,.68);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.75);
+}
+.bt-petbattle .bt-hp-fill { background: linear-gradient(90deg, #1a7e69, #6bd39c); border-right: 1px solid rgba(255,255,255,.65); }
+.bt-petbattle .foe .bt-hp-fill { background: linear-gradient(90deg, #792b25, #dd634c); }
+.bt-petbattle .bt-hp.low .bt-hp-fill { background: linear-gradient(90deg, #9c231d, #ff7b58); }
+.bt-petbattle .bt-hp span { top: 0; right: 5px; line-height: 14px; color: #fff8df; font: 700 9px/14px var(--font-en); text-shadow: 0 1px 2px #000; }
+.bt-versus {
+  position: absolute; z-index: 4; left: 50%; top: 43%; transform: translate(-50%,-50%) rotate(-8deg); width: 50px; height: 50px; display: grid; place-items: center;
+  border: 1px solid rgba(238,202,111,.72); border-radius: 50%;
+  background: radial-gradient(circle, #754116 0 30%, #21160d 66%);
+  box-shadow: 0 0 20px rgba(255,180,47,.28), inset 0 0 9px rgba(255,208,99,.2);
+}
+.bt-versus span { color: #ffd97c; font: 900 17px/1 var(--font-serif); text-shadow: 0 0 9px #ff9d16; transform: rotate(8deg); }
+.bt-petbattle .bt-log {
+  order: initial; min-height: 38px; margin: 0 14px 14px; padding: 9px 12px;
+  border: 1px solid rgba(217,183,99,.32); border-radius: 8px;
+  background: rgba(14,12,9,.76); color: #f3d786; font-size: 13px; letter-spacing: .4px;
+  box-shadow: inset 0 0 14px rgba(217,183,99,.06);
+}
+.bt-pet-question { position: relative; margin-top: -2px; }
+.bt-pet-question .quiz-prompt {
+  border: 1px solid rgba(116,82,36,.34); border-radius: 12px; background: linear-gradient(180deg, #fffdf8, #f8f0df);
+  box-shadow: 0 9px 22px rgba(60,42,22,.11), inset 0 0 0 3px rgba(197,157,79,.06);
+  font-family: var(--font-en); color: #27241f;
+}
+.bt-pet-question .quiz-sub { color: #765e3e; font-weight: 600; letter-spacing: .4px; }
+.bt-pet-question .btn.opt { border: 1px solid rgba(43,68,83,.13); box-shadow: 0 3px 9px rgba(32,40,48,.05); }
+@media (max-width: 520px) {
+  .bt-modecard { min-height: 170px; }
+  .bt-modecopy { left: 14px; right: 14px; bottom: 13px; }
+  .bt-modecopy b { font-size: 20px; }
+  .bt-oppgrid { gap: 9px; }
+  .bt-oppcard { min-height: 240px; }
+  .bt-oppcopy { left: 11px; right: 11px; bottom: 11px; }
+  .bt-oppcopy .bt-name { font-size: 16px; }
+  .bt-opptaunt { display: none; }
+  .bt-literary-stage { min-height: 300px; }
+  .bt-duelist-copy { left: 9px; right: 9px; bottom: 10px; }
+  .bt-duelist-copy .bt-name { font-size: 16px; gap: 4px; }
+  .bt-literary-vs { width: 40px; height: 40px; font-size: 13px; }
+  .bt-stage { min-height: 270px; }
+  .bt-fighter-copy { left: 8px; right: 8px; bottom: 9px; }
+  .bt-petbattle .bt-name { font-size: 14px; gap: 3px; }
+  .bt-stats { gap: 6px; font-size: 8px; }
+  .bt-versus { width: 34px; height: 34px; }
+  .bt-versus span { font-size: 13px; }
+  .bt-round-banner { margin-top: 10px; padding-inline: 18px; }
+  .bt-round-banner b { font-size: 18px; }
+  .bt-round-banner i { font-size: 9px; }
+}
+body.dark .bt-pet-question .quiz-prompt { background: linear-gradient(180deg, #2a2925, #211f1b); color: #f5ecd7; border-color: #665638; }
+body.dark .bt-pet-question .quiz-sub { color: #c8b58e; }
+body.high-contrast .bt-petbattle { border: 3px solid currentColor; }
+body.high-contrast .bt-petbattle .bt-side, body.high-contrast .bt-petbattle .bt-log { border: 2px solid currentColor; }
 .pb-dropcard { margin: 12px auto; padding: 14px 18px; border-radius: 14px; max-width: 300px;
   background: var(--paper2); border: 1.5px solid var(--line); font-size: 14.5px; animation: chestPop .5s ease; }
 .pb-dropcard i { display: block; font-style: normal; font-size: 13px; color: var(--ink-55); margin: 3px 0 8px; }
@@ -1422,3 +1649,6 @@ body.dark .vd-guide.vd-guide-page{box-shadow:none}
 .btn.opt.wrong .opt-reveal{color:#fff;opacity:.95;margin-right:6px}  /* 紅底：白色 */
 body.dark .btn.opt .opt-reveal{color:#ff9b8a}  /* 深色中性底：亮紅 */
 body.dark .btn.opt.right .opt-reveal{color:#0b3320}
+.tw-board-head{display:flex;justify-content:space-between;gap:12px;margin:10px 4px 6px;color:var(--muted);font-size:.82rem;font-weight:800}
+.tw-board-scroll{max-height:520px;overflow:auto;overscroll-behavior:contain;padding-right:4px;margin-bottom:10px}
+.tw-board-scroll .pb-brow{grid-template-columns:48px minmax(0,1fr) minmax(48px,auto)}
